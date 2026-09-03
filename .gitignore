@@ -1,0 +1,8 @@
+.zig-cache/
+.build/
+.native/
+.toolchains/
+out/
+src/
+/file
+/file.exe

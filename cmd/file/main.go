@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -8,14 +9,20 @@ import (
 )
 
 func main() {
-	if err := run(os.Args[1:]...); err != nil {
+	mime := flag.Bool("mime", false, "enable mime type")
+	flag.Parse()
+	if err := run(*mime, flag.Args()...); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(files ...string) error {
-	m, err := magic.New(magic.None)
+func run(mime bool, files ...string) error {
+	flags := magic.None
+	if mime {
+		flags = magic.MimeType
+	}
+	m, err := magic.New(flags)
 	if err != nil {
 		return err
 	}

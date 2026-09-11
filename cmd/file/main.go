@@ -26,6 +26,7 @@ func run(mime bool, files ...string) error {
 	if err != nil {
 		return err
 	}
+	defer m.Close()
 	for _, f := range files {
 		typ, err := m.File(f)
 		if err != nil {

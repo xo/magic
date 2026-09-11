@@ -1,0 +1,153 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Native build + test on every platform that has a hosted runner. The
+  # prebuilt archives under libmagic/ are static, so there is nothing to
+  # install -- but each platform has its own #cgo LDFLAGS line, and the only
+  # way to know a line is complete is to link it.
+  test:
+    name: test ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: linux/amd64, os: ubuntu-latest}
+          # Hosted arm64 Linux. Free for public repos; private repos need a
+          # paid plan, in which case drop this entry -- the cross job below
+          # still link-checks linux/arm64.
+          - {name: linux/arm64, os: ubuntu-24.04-arm}
+          - {name: macos/amd64, os: macos-13}
+          - {name: macos/arm64, os: macos-14}
+          - {name: windows/amd64, os: windows-latest}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # The runner images ship mingw-w64, but where gcc lands has moved
+      # around, so find it rather than assume it is on PATH.
+      - name: Locate a C compiler (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Get-Command gcc -ErrorAction SilentlyContinue) { exit 0 }
+          $cands = @(
+            'C:\mingw64\bin',
+            'C:\ProgramData\mingw64\mingw64\bin',
+            'C:\Strawberry\c\bin'
+          ) | Where-Object { Test-Path (Join-Path $_ 'gcc.exe') }
+          if ($cands.Count -eq 0) {
+            choco install -y --no-progress mingw
+            $cands = @('C:\ProgramData\mingw64\mingw64\bin')
+          }
+          $cands[0] | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+
+      - name: Environment
+        shell: bash
+        run: |
+          go version
+          go env GOOS GOARCH CGO_ENABLED CC
+          gcc --version || cc --version || true
+
+      - name: gofmt
+        shell: bash
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then
+            echo "not gofmt'd:"; echo "$out"; exit 1
+          fi
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      # -race is what backs the "safe to share a handle" claim in the docs:
+      # TestConcurrent drives one cookie from 16 goroutines.
+      - name: Test
+        run: go test -race -count=1 -v ./...
+
+      - name: Smoke test cmd/file
+        shell: bash
+        run: |
+          go build -o . ./cmd/file
+          ./file testdata/gif.gif testdata/utf8.txt testdata/xlsx.xlsx
+
+  # Link-check the targets that have no hosted runner -- notably linux/arm
+  # (armv7), which magic.go declares but nothing above exercises. A missing
+  # -l<lib> in one #cgo line only shows up at link time, so this job exists
+  # to catch that class of bug on the platforms CI cannot otherwise reach.
+  cross:
+    name: cross-link
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: mlugg/setup-zig@v1
+        with:
+          version: 0.16.0
+
+      - name: Cross-link every declared target
+        shell: bash
+        run: |
+          set -uo pipefail
+          cat > /tmp/zcc <<'EOF'
+          #!/bin/sh
+          exec zig cc -target "$ZTARGET" "$@"
+          EOF
+          chmod +x /tmp/zcc
+
+          # zig cc leaves a stray "-.o" behind when handed -o /dev/null, so
+          # build into a scratch dir instead.
+          out_dir=$(mktemp -d)
+          rc=0
+          # goos|goarch|goarm|zig target|what
+          #
+          # darwin links the package only: zig has no macOS SDK here, so the
+          # final executable link fails on -lresolv from Go's own runtime,
+          # not on anything in this repo. The macos/* jobs above do the real
+          # link and run the tests.
+          while IFS='|' read -r goos goarch goarm zt what; do
+            printf '%-16s ' "$goos/$goarch${goarm:+v$goarm}"
+            if out=$(env ZTARGET="$zt" CGO_ENABLED=1 GOOS="$goos" GOARCH="$goarch" \
+                       ${goarm:+GOARM=$goarm} CC=/tmp/zcc \
+                       go build -o "$out_dir/out" "$what" 2>&1); then
+              echo OK
+            else
+              echo FAIL; echo "$out" | sed 's/^/    /'; rc=1
+            fi
+          done <<'EOF'
+          linux|amd64||x86_64-linux-musl|./cmd/file
+          linux|arm64||aarch64-linux-musl|./cmd/file
+          linux|arm|7|arm-linux-musleabihf|./cmd/file
+          windows|amd64||x86_64-windows-gnu|./cmd/file
+          darwin|amd64||x86_64-macos|./
+          darwin|arm64||aarch64-macos|./
+          EOF
+          # cgo's "compile from stdin" probe makes zig cc drop a "-.o" in the
+          # module root on darwin targets. Harmless, but don't leave it.
+          rm -f ./-.o
+          exit $rc

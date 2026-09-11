@@ -11,7 +11,7 @@ package magic
 #cgo linux,arm     LDFLAGS: -L${SRCDIR}/libmagic/linux-armv7 -lmagic -lz -lbz2 -llzma -lzstd
 #cgo darwin,amd64  LDFLAGS: -L${SRCDIR}/libmagic/macos-amd64 -lmagic -lz -lbz2 -llzma -lzstd
 #cgo darwin,arm64  LDFLAGS: -L${SRCDIR}/libmagic/macos-arm64 -lmagic -lz -lbz2 -llzma -lzstd
-#cgo windows,amd64 LDFLAGS: -L${SRCDIR}/libmagic/windows-amd64 -lmagic -lgnurx -lz -lbz2 -llzma -lzstd
+#cgo windows,amd64 LDFLAGS: -L${SRCDIR}/libmagic/windows-amd64 -lmagic -lgnurx -lz -lbz2 -llzma -lzstd -lshlwapi
 
 #include <stdlib.h>
 #include <string.h>
@@ -32,17 +32,27 @@ import (
 	_ "embed"
 	"fmt"
 	"runtime"
+	"sync"
 	"unsafe"
 )
 
 // Magic is an open libmagic handle with the embedded database loaded.
 //
 // A magic_t cookie holds mutable per-lookup state and is not safe for
-// concurrent use. Give each goroutine its own Magic, or guard one with a
-// mutex.
+// concurrent use, so every method below serializes on mu. That makes a single
+// Magic safe to share across goroutines, at the cost of serializing lookups:
+// for parallel throughput, give each worker its own handle.
 type Magic struct {
 	cookie C.magic_t
 	db     unsafe.Pointer
+
+	mu sync.Mutex
+	// flags is the handle's configured flag set, from New or SetFlags.
+	flags int
+	// cur is what is actually applied to the cookie right now, which differs
+	// from flags only while a With/Types call is borrowing it. Tracking it
+	// lets consecutive lookups at the same flags skip the magic_setflags.
+	cur int
 }
 
 // New opens a handle and loads the embedded database.
@@ -65,14 +75,18 @@ func New(flags int) (*Magic, error) {
 		return nil, err
 	}
 
-	m := &Magic{cookie: cookie, db: db}
+	m := &Magic{cookie: cookie, db: db, flags: flags, cur: flags}
 	// Backstop only -- callers should still Close explicitly.
 	runtime.SetFinalizer(m, (*Magic).Close)
 	return m, nil
 }
 
-// Close releases the handle and the database copy. It is safe to call twice.
+// Close releases the handle and the database copy. It is safe to call twice,
+// and safe to race with other methods: they report a closed handle rather
+// than touching a freed cookie.
 func (m *Magic) Close() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.cookie != nil {
 		C.magic_close(m.cookie)
 		m.cookie = nil
@@ -85,13 +99,123 @@ func (m *Magic) Close() error {
 	return nil
 }
 
-// Buffer identifies the contents of buf.
-func (m *Magic) Buffer(buf []byte) (string, error) {
+// Flags returns the handle's configured flags.
+func (m *Magic) Flags() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.flags
+}
+
+// SetFlags changes the flags on an open handle.
+func (m *Magic) SetFlags(flags int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.cookie == nil {
-		return "", fmt.Errorf("magic: handle is closed")
+		return errClosed
+	}
+	if err := m.apply(flags); err != nil {
+		return err
+	}
+	m.flags = flags
+	return nil
+}
+
+// Buffer identifies the contents of buf using the handle's flags.
+func (m *Magic) Buffer(buf []byte) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.buffer(m.flags, buf)
+}
+
+// File identifies the file at name using the handle's flags.
+func (m *Magic) File(name string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.file(m.flags, name)
+}
+
+// BufferWith identifies the contents of buf using flags, leaving the handle's
+// configured flags unchanged.
+func (m *Magic) BufferWith(flags int, buf []byte) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.buffer(flags, buf)
+}
+
+// FileWith identifies the file at name using flags, leaving the handle's
+// configured flags unchanged.
+func (m *Magic) FileWith(flags int, name string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.file(flags, name)
+}
+
+// BufferTypes identifies the contents of buf once per entry in flags,
+// returning a result for each. Passing no flags uses the handle's own.
+//
+// The whole sequence runs under a single lock, so the results describe the
+// same buffer through the same handle with no other goroutine interleaving:
+//
+//	desc, err := m.BufferTypes(buf, magic.None, magic.MimeType, magic.Extension)
+func (m *Magic) BufferTypes(buf []byte, flags ...int) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.each(flags, func(f int) (string, error) {
+		return m.buffer(f, buf)
+	})
+}
+
+// FileTypes identifies the file at name once per entry in flags, returning a
+// result for each. Passing no flags uses the handle's own.
+//
+// The whole sequence runs under a single lock, so the results describe the
+// same file through the same handle with no other goroutine interleaving:
+//
+//	desc, err := m.FileTypes("x.png", magic.None, magic.MimeType, magic.Extension)
+func (m *Magic) FileTypes(name string, flags ...int) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.each(flags, func(f int) (string, error) {
+		return m.file(f, name)
+	})
+}
+
+// each runs fn once per flag set and collects the results. Caller must hold
+// m.mu.
+func (m *Magic) each(flags []int, fn func(int) (string, error)) ([]string, error) {
+	if m.cookie == nil {
+		return nil, errClosed
+	}
+	if len(flags) == 0 {
+		flags = []int{m.flags}
+	}
+	// Hand the cookie back on the configured flags. Purely an optimization:
+	// cur is reconciled lazily, so a plain lookup would fix it up anyway --
+	// doing it once here just saves a magic_setflags per borrow. The error
+	// is moot for the same reason, and m.flags applied cleanly already.
+	defer func() { _ = m.apply(m.flags) }()
+
+	out := make([]string, len(flags))
+	for i, f := range flags {
+		s, err := fn(f)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = s
+	}
+	return out, nil
+}
+
+// buffer is Buffer without the locking. Caller must hold m.mu.
+func (m *Magic) buffer(flags int, buf []byte) (string, error) {
+	if m.cookie == nil {
+		return "", errClosed
 	}
 	if len(buf) == 0 {
 		return "", fmt.Errorf("magic: empty buffer")
+	}
+	if err := m.apply(flags); err != nil {
+		return "", err
 	}
 
 	// Only borrowed for the duration of the call, so a Go pointer is fine.
@@ -103,10 +227,13 @@ func (m *Magic) Buffer(buf []byte) (string, error) {
 	return C.GoString(s), nil
 }
 
-// File identifies the file at name.
-func (m *Magic) File(name string) (string, error) {
+// file is File without the locking. Caller must hold m.mu.
+func (m *Magic) file(flags int, name string) (string, error) {
 	if m.cookie == nil {
-		return "", fmt.Errorf("magic: handle is closed")
+		return "", errClosed
+	}
+	if err := m.apply(flags); err != nil {
+		return "", err
 	}
 
 	cname := C.CString(name)
@@ -119,13 +246,21 @@ func (m *Magic) File(name string) (string, error) {
 	return C.GoString(s), nil
 }
 
-// SetFlags changes the flags on an open handle.
-func (m *Magic) SetFlags(flags int) error {
+// apply points the cookie at flags, skipping the call when it is already
+// there. Caller must hold m.mu and must have checked for a closed handle.
+func (m *Magic) apply(flags int) error {
+	if m.cur == flags {
+		return nil
+	}
 	if C.magic_setflags(m.cookie, C.int(flags)) != 0 {
 		return cookieErr(m.cookie, "magic_setflags")
 	}
+	m.cur = flags
 	return nil
 }
+
+// errClosed is returned by every method that needs a live cookie.
+var errClosed = fmt.Errorf("magic: handle is closed")
 
 // Version returns the libmagic version as a dotted string, e.g. "5.48".
 //

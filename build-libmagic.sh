@@ -5,6 +5,16 @@
 #   ./build-libmagic.sh                 # build every enabled target
 #   ./build-libmagic.sh linux-arm64     # build just these
 #
+# Dependency versions are resolved from upstream on each run, so an unmodified
+# invocation builds against the current releases. Override per dependency, or
+# turn the lookups off entirely:
+#
+#   FILE_VER=5.46 ./build-libmagic.sh   # pin one, resolve the rest
+#   PINNED=1 ./build-libmagic.sh        # no lookups; use the fallbacks below
+#
+# Bumping file(1) changes magic.mgc and the strings libmagic reports, so the
+# Go tests that assert exact descriptions may need regenerating afterwards.
+#
 # Layout produced, ready for cgo:
 #
 #   libmagic/magic.h                    (shared: no target-conditional content)
@@ -13,17 +23,21 @@
 #   libmagic/<target>/libz.a  libbz2.a  liblzma.a  libzstd.a
 #   libmagic/<target>/libgnurx.a        (windows only)
 #
-# Requires: zig 0.13+, curl, tar, make, and a native C compiler.
+# Requires: zig 0.13+, curl, tar, make, and a native C compiler. Resolving
+# versions also wants git and a sort(1) with -V; without them the lookups fail
+# soft and the fallback pins below are used.
 #
 # NOTE: verify tarball checksums yourself before using this for anything real.
 
 set -euo pipefail
 
-ZLIB_VER=1.3.2
-BZIP2_VER=1.0.8
-XZ_VER=5.8.3
-ZSTD_VER=1.5.7
-FILE_VER=5.48
+# Known-good versions: what the archives currently committed under libmagic/
+# were built from. Used when PINNED is set, and whenever a lookup fails.
+ZLIB_FALLBACK=1.3.2
+BZIP2_FALLBACK=1.0.8
+XZ_FALLBACK=5.8.3
+ZSTD_FALLBACK=1.5.7
+FILE_FALLBACK=5.48
 
 # MinGW only: mingw-w64's CRT has no POSIX regex and file(1) requires it.
 # libgnurx is glibc's regex engine packaged for Windows -- one tarball, one
@@ -31,15 +45,14 @@ FILE_VER=5.48
 # configure probes for, so nothing needs patching or aliasing.
 # Note it's LGPL 2.1, unlike everything else here.
 #
-# SourceForge has reorganised this project's file tree more than once, so the
-# candidates below are tried in order. If they all 404, find a working mirror
-# and override:  GNURX_URL=https://... ./build-libmagic.sh windows-amd64
-GNURX_VER=2.5.1
-GNURX_URLS=(
-  "https://downloads.sourceforge.net/mingw/mingw-libgnurx-$GNURX_VER-src.tar.gz"
-  "https://downloads.sourceforge.net/project/mingw/Other/UserContributed/regex/mingw-regex-$GNURX_VER/mingw-libgnurx-$GNURX_VER-src.tar.gz"
-)
-[ -n "${GNURX_URL:-}" ] && GNURX_URLS=("$GNURX_URL")
+# SourceForge has reorganised this project's file tree more than once, so
+# resolve_versions builds a list of candidate URLs that are tried in order. If
+# they all 404, find a working mirror and override:
+#   GNURX_URL=https://... ./build-libmagic.sh windows-amd64
+#
+# There is no "latest" to look up: upstream last shipped in 2007 and the
+# tarball is the only release there has ever been, so this one stays pinned.
+GNURX_FALLBACK=2.5.1
 
 ROOT="$PWD"
 SRC="$ROOT/src"
@@ -89,6 +102,82 @@ os_of() {
   esac
 }
 
+# --------------------------------------------------------------- versions ----
+# Each dependency resolves to its newest upstream release. Precedence is
+# explicit env var, then the lookup, then the fallback pin -- a lookup that
+# fails is a warning, not a build failure, since there is always a known-good
+# version to fall back to.
+#
+# Pre-release tags are filtered out deliberately. These archives get committed,
+# so the script must never quietly pick up an alpha or a beta.
+
+# Highest vX.Y[.Z...] tag on a git remote. Uses the git protocol rather than
+# the GitHub API, which avoids the unauthenticated rate limit.
+latest_git_tag() {
+  git ls-remote --tags --refs "$1" 2>/dev/null \
+    | sed 's#.*refs/tags/##' \
+    | grep -E '^v[0-9]+(\.[0-9]+)+$' \
+    | sed 's/^v//' \
+    | sort -V | tail -1
+}
+
+# Highest version of <name>-X.Y.tar.gz in an Apache-style directory index.
+# The name is matched and stripped literally rather than by "leading
+# non-digits", which would mangle a package whose name contains one (bzip2).
+latest_index() {
+  local url="$1" name="$2"
+  curl -fsSL "$url" 2>/dev/null \
+    | grep -oE "$name-[0-9]+(\.[0-9]+)*\.tar\.gz" \
+    | sed -E "s/^$name-//; s/\.tar\.gz\$//" \
+    | sort -V | tail -1
+}
+
+# Named latest_<var> so resolve_ver can find them from the variable name.
+latest_ZLIB_VER()  { latest_git_tag https://github.com/madler/zlib; }
+latest_XZ_VER()    { latest_git_tag https://github.com/tukaani-project/xz; }
+latest_ZSTD_VER()  { latest_git_tag https://github.com/facebook/zstd; }
+latest_BZIP2_VER() { latest_index https://sourceware.org/pub/bzip2/ bzip2; }
+latest_FILE_VER()  { latest_index https://astron.com/pub/file/ file; }
+
+resolve_ver() {
+  local var="$1" fallback="$2" val how
+  # Separate statement: bash expands every word of a `local` line before any
+  # of its assignments take effect, so ${!var} here would not see var yet.
+  val="${!var:-}"
+  if [ -n "$val" ]; then
+    how="pinned via \$$var"
+  elif [ -n "${PINNED:-}" ]; then
+    val="$fallback"; how="pinned via \$PINNED"
+  elif val="$("latest_$var")" && [ -n "$val" ]; then
+    how="latest"
+  else
+    val="$fallback"; how="fallback -- lookup failed"
+    echo "WARNING: could not resolve latest $var, using $val" >&2
+  fi
+  printf -v "$var" '%s' "$val"
+  printf '  %-6s %-10s %s\n' "${var%_VER}" "$val" "$how" >&2
+}
+
+resolve_versions() {
+  echo "dependency versions:" >&2
+  resolve_ver ZLIB_VER  "$ZLIB_FALLBACK"
+  resolve_ver BZIP2_VER "$BZIP2_FALLBACK"
+  resolve_ver XZ_VER    "$XZ_FALLBACK"
+  resolve_ver ZSTD_VER  "$ZSTD_FALLBACK"
+  resolve_ver FILE_VER  "$FILE_FALLBACK"
+
+  # No lookup for gnurx -- see the note by GNURX_FALLBACK.
+  GNURX_VER="${GNURX_VER:-$GNURX_FALLBACK}"
+  printf '  %-6s %-10s %s\n' GNURX "$GNURX_VER" "pinned (no upstream releases)" >&2
+
+  GNURX_URLS=(
+    "https://downloads.sourceforge.net/mingw/mingw-libgnurx-$GNURX_VER-src.tar.gz"
+    "https://downloads.sourceforge.net/project/mingw/Other/UserContributed/regex/mingw-regex-$GNURX_VER/mingw-libgnurx-$GNURX_VER-src.tar.gz"
+  )
+  [ -n "${GNURX_URL:-}" ] && GNURX_URLS=("$GNURX_URL")
+  return 0
+}
+
 # ---------------------------------------------------------------- fetch ----
 
 fetch() {
@@ -113,12 +202,16 @@ fetch_any() {
     rm -f "$SRC/$file"
   done
   echo "error: could not fetch $dir from any known URL." >&2
-  echo "       Set GNURX_URL=<working mirror> and re-run." >&2
   return 1
 }
 
 fetch_all() {
-  fetch "https://zlib.net/zlib-$ZLIB_VER.tar.gz" "zlib-$ZLIB_VER"
+  # zlib.net serves only the current release at the top level and moves
+  # everything else to fossils/, so an explicitly pinned older version needs
+  # the second URL.
+  fetch_any "zlib-$ZLIB_VER" \
+    "https://zlib.net/zlib-$ZLIB_VER.tar.gz" \
+    "https://zlib.net/fossils/zlib-$ZLIB_VER.tar.gz"
   fetch "https://sourceware.org/pub/bzip2/bzip2-$BZIP2_VER.tar.gz" "bzip2-$BZIP2_VER"
   fetch "https://github.com/tukaani-project/xz/releases/download/v$XZ_VER/xz-$XZ_VER.tar.gz" "xz-$XZ_VER"
   fetch "https://github.com/facebook/zstd/releases/download/v$ZSTD_VER/zstd-$ZSTD_VER.tar.gz" "zstd-$ZSTD_VER"
@@ -255,7 +348,8 @@ build_bzip2() {
 
 build_gnurx() {
   local prefix="$1" build="$2"
-  fetch_any "mingw-libgnurx-$GNURX_VER" "${GNURX_URLS[@]}"
+  fetch_any "mingw-libgnurx-$GNURX_VER" "${GNURX_URLS[@]}" \
+    || { echo "       Set GNURX_URL=<working mirror> and re-run." >&2; return 1; }
   rm -rf "$build"; cp -r "$SRC/mingw-libgnurx-$GNURX_VER" "$build"
   ( cd "$build"
     # regex.c #includes regcomp.c/regexec.c/regex_internal.c, so one
@@ -340,6 +434,7 @@ stage_out() {
 
 # ----------------------------------------------------------------- main ----
 
+resolve_versions
 fetch_all
 FILE_COMPILE="$(build_native_file)"
 echo "native magic compiler: $FILE_COMPILE"

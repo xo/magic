@@ -6,3 +6,6 @@ out/
 src/
 /file
 /file.exe
+
+# The Claude Code permissions of one person. See D15.
+.claude/settings.local.json

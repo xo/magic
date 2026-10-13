@@ -24,9 +24,10 @@ Otherwise the test skips.
 
 ## Rebuild the archives
 
-`build-libmagic.sh` builds libmagic and its compression libraries for all six
+`build-libmagic.sh` builds libmagic and its compression libraries for all eight
 targets with `zig cc`. It needs zig 0.13 or later, curl, tar, make, git and a
-native C compiler. The header of the script gives every option.
+native C compiler. The windows_arm64 target also needs `llvm-windres`. The
+header of the script gives every option.
 
 ```bash
 ./build-libmagic.sh
@@ -41,6 +42,25 @@ changed. D11 in `docs/PLAN.md` says why the tests expect exact values.
 
 The script writes its downloads and build folders to `src/`, `.build/`,
 `.native/`, `.toolchains/` and `.zig-cache/`. Git ignores all five.
+
+## Release
+
+A target is a Go module of its own, and its tag is the path of its folder and
+the version of file that it holds. The root module has a plain semver tag. D17
+and D18 in `docs/PLAN.md` give the reasons. Tag only when Ken says so.
+
+1. Push the commit that holds the archives to `main`.
+2. Tag each target module that changed, with the commands that
+   `build-libmagic.sh` prints at its end, such as
+   `git tag libmagic/linux_amd64/v5.48.0`. Push the tags.
+3. If the version of a target changed, edit the `require` lines of `go.mod`.
+   Push that commit.
+4. Tag the root, and push the tag. A change to the wrapper alone bumps the
+   root. A new target bumps the root minor.
+
+Never move a tag that is published, because the module proxy caches it. If a
+target needs a rebuild at the same version of file, give it the next patch
+number.
 
 ## Documents
 

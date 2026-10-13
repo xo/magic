@@ -56,9 +56,19 @@ The repository has archives for these targets:
 | --- | --- |
 | linux | amd64, arm64, arm (armv7) |
 | darwin | amd64, arm64 |
-| windows | amd64 |
+| windows | amd64, arm64 |
+| freebsd | amd64 |
 
 A build for any other target fails.
+
+Each platform is a Go module of its own, such as
+`github.com/xo/magic/libmagic/linux_amd64/v5`. Go downloads the module of your
+platform and no other. The Linux archives are built for musl and are static, so
+a program links them under glibc and under musl.
+
+These targets are tested less than the others. The archives for windows/arm64
+and freebsd/amd64 link into a program, and nothing has run them yet. On
+windows/arm64, only `zig cc` is tested as the C compiler.
 
 ## Documents
 

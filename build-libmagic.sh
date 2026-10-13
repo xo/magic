@@ -3,7 +3,8 @@
 # using `zig cc` as the toolchain.
 #
 #   ./build-libmagic.sh                 # build every enabled target
-#   ./build-libmagic.sh linux-arm64     # build just these
+#   ./build-libmagic.sh linux_arm64     # build just these
+#   ./build-libmagic.sh modules         # rewrite go.mod and link.go, build nothing
 #
 # Dependency versions are resolved from upstream on each run, so an unmodified
 # invocation builds against the current releases. Override per dependency, or
@@ -15,6 +16,8 @@
 # Bumping file(1) changes magic.mgc and the strings libmagic reports, so the
 # Go tests that assert exact descriptions may need regenerating afterwards.
 #
+# A target is named <goos>_<goarch>, as Go names it, and linux_arm is armv7.
+#
 # Layout produced, ready for cgo:
 #
 #   libmagic/magic.h                    (shared: no target-conditional content)
@@ -22,6 +25,12 @@
 #   libmagic/<target>/libmagic.a
 #   libmagic/<target>/libz.a  libbz2.a  liblzma.a  libzstd.a
 #   libmagic/<target>/libgnurx.a        (windows only)
+#   libmagic/<target>/go.mod            (each target is a Go module of its own)
+#   libmagic/<target>/link.go           (the #cgo line that links the archives)
+#
+# Each target is a module so that a user who builds for one platform downloads
+# the archives of that platform only. The script prints the tag commands at
+# the end. See D17 in docs/PLAN.md.
 #
 # Requires: zig 0.13+, curl, tar, make, and a native C compiler. Resolving
 # versions also wants git and a sort(1) with -V; without them the lookups fail
@@ -35,7 +44,7 @@ set -euo pipefail
 # were built from. Used when PINNED is set, and whenever a lookup fails.
 ZLIB_FALLBACK=1.3.2
 BZIP2_FALLBACK=1.0.8
-XZ_FALLBACK=5.8.3
+XZ_FALLBACK=5.8.4
 ZSTD_FALLBACK=1.5.7
 FILE_FALLBACK=5.48
 
@@ -48,7 +57,7 @@ FILE_FALLBACK=5.48
 # SourceForge has reorganised this project's file tree more than once, so
 # resolve_versions builds a list of candidate URLs that are tried in order. If
 # they all 404, find a working mirror and override:
-#   GNURX_URL=https://... ./build-libmagic.sh windows-amd64
+#   GNURX_URL=https://... ./build-libmagic.sh windows_amd64
 #
 # There is no "latest" to look up: upstream last shipped in 2007 and the
 # tarball is the only release there has ever been, so this one stays pinned.
@@ -62,19 +71,29 @@ ORIG_PATH="$PATH"
 
 export ZIG_GLOBAL_CACHE_DIR="${ZIG_GLOBAL_CACHE_DIR:-$ROOT/.zig-cache}"
 
-# name|zig target|autotools --host|extra cflags
+# name|zig target|autotools --host|extra cflags|cannot run on the build host
 #
 # --host only needs to LOOK like a GNU triplet -- it just flips configure into
 # cross-compile mode. The real target comes from the wrapper scripts. Some
 # vendored config.sub copies reject musl-flavoured triplets, hence the gnu
 # spelling for arm.
+#
+# The last field is "noexec" for a target whose programs cannot run here. A
+# configure script with only --host decides whether it is cross-compiling by
+# trying to run a test program. On a host with wine, wine tries to run the
+# windows_arm64 program and hangs. Passing --build as well makes configure
+# assume a cross build and run nothing. It is not set for the first six
+# targets, because their test programs run (under qemu or wine) and the
+# archives already committed were built that way. Every later target sets it.
 TARGETS=(
-  "linux-amd64|x86_64-linux-musl|x86_64-linux-musl|"
-  "linux-arm64|aarch64-linux-musl|aarch64-linux-musl|"
-  "linux-armv7|arm-linux-musleabihf|arm-linux-gnueabihf|-mcpu=generic+v7a"
-  "macos-amd64|x86_64-macos|x86_64-apple-darwin|"
-  "macos-arm64|aarch64-macos|aarch64-apple-darwin|"
-  "windows-amd64|x86_64-windows-gnu|x86_64-w64-mingw32|"
+  "linux_amd64|x86_64-linux-musl|x86_64-linux-musl|"
+  "linux_arm64|aarch64-linux-musl|aarch64-linux-musl|"
+  "linux_arm|arm-linux-musleabihf|arm-linux-gnueabihf|-mcpu=generic+v7a"
+  "darwin_amd64|x86_64-macos|x86_64-apple-darwin|"
+  "darwin_arm64|aarch64-macos|aarch64-apple-darwin|"
+  "windows_amd64|x86_64-windows-gnu|x86_64-w64-mingw32|"
+  "windows_arm64|aarch64-windows-gnu|aarch64-w64-mingw32||noexec"
+  "freebsd_amd64|x86_64-freebsd|x86_64-unknown-freebsd||noexec"
 )
 
 # ----------------------------------------------------------------- utils ----
@@ -98,6 +117,7 @@ os_of() {
   case "$1" in
     *-windows-*) echo windows ;;
     *-macos*)    echo macos ;;
+    *-freebsd*)  echo freebsd ;;
     *)           echo linux ;;
   esac
 }
@@ -229,7 +249,7 @@ build_native_file() {
 
   mkdir -p "$ROOT/.native"
   rm -rf "$dir"
-  cp -r "$SRC/file-$FILE_VER" "$dir"
+  cp -rp "$SRC/file-$FILE_VER" "$dir"
   ( cd "$dir"
     # env -u: this one must be a genuine host build, so scrub any cross vars.
     env -u CC -u CXX -u AR -u RANLIB -u NM -u STRIP \
@@ -289,13 +309,29 @@ EOF
   chmod +x "$bin"/*
 }
 
+# xz compiles a version resource for Windows, and its configure looks for
+# <host>-windres. The host has windres only for x86_64 and i686, so any other
+# Windows target needs one. llvm-windres picks its target from the name that
+# it runs as, so it is linked under that name. It needs the mingw headers
+# that zig carries to preprocess a .rc file, so a wrapper passes the path.
+make_windres() {
+  local host="$1" bin="$2" zig_lib
+  have llvm-windres || { echo "error: llvm-windres is required for $host" >&2; return 1; }
+  zig_lib="$(zig env | sed -n 's/.*\.lib_dir = "\(.*\)".*/\1/p')"
+  mkdir -p "$bin/real"
+  ln -sf "$(command -v llvm-windres)" "$bin/real/$host-windres"
+  printf '#!/bin/sh\nexec "%s/real/%s-windres" -I "%s/libc/include/any-windows-any" "$@"\n' \
+    "$bin" "$host" "$zig_lib" > "$bin/$host-windres"
+  chmod +x "$bin/$host-windres"
+}
+
 # ----------------------------------------------------------- components ----
 # Everything installs into a staging prefix under .build; the flattened,
 # Go-friendly copy is assembled at the end by stage_out.
 
 build_zlib() {
   local prefix="$1" build="$2" os="$3"
-  rm -rf "$build"; cp -r "$SRC/zlib-$ZLIB_VER" "$build"
+  rm -rf "$build"; cp -rp "$SRC/zlib-$ZLIB_VER" "$build"
   ( cd "$build"
     if [ "$os" = windows ]; then
       # zlib's ./configure is a Unix-only shell script that mangles the mingw
@@ -317,7 +353,7 @@ build_zlib() {
 
 build_bzip2() {
   local prefix="$1" build="$2"
-  rm -rf "$build"; cp -r "$SRC/bzip2-$BZIP2_VER" "$build"
+  rm -rf "$build"; cp -rp "$SRC/bzip2-$BZIP2_VER" "$build"
   ( cd "$build"
     # Compile directly rather than driving bzip2's Makefile, which has two
     # problems here:
@@ -350,7 +386,7 @@ build_gnurx() {
   local prefix="$1" build="$2"
   fetch_any "mingw-libgnurx-$GNURX_VER" "${GNURX_URLS[@]}" \
     || { echo "       Set GNURX_URL=<working mirror> and re-run." >&2; return 1; }
-  rm -rf "$build"; cp -r "$SRC/mingw-libgnurx-$GNURX_VER" "$build"
+  rm -rf "$build"; cp -rp "$SRC/mingw-libgnurx-$GNURX_VER" "$build"
   ( cd "$build"
     # regex.c #includes regcomp.c/regexec.c/regex_internal.c, so one
     # translation unit is the whole library -- don't compile the others
@@ -367,9 +403,9 @@ build_gnurx() {
 
 build_xz() {
   local prefix="$1" build="$2" host="$3"
-  rm -rf "$build"; cp -r "$SRC/xz-$XZ_VER" "$build"
+  rm -rf "$build"; cp -rp "$SRC/xz-$XZ_VER" "$build"
   ( cd "$build"
-    ./configure --host="$host" --prefix="$prefix" \
+    ./configure --host="$host" "${CONFIGURE_BUILD[@]}" --prefix="$prefix" \
       --enable-static --disable-shared \
       --disable-xz --disable-xzdec --disable-lzmadec --disable-lzmainfo \
       --disable-lzma-links --disable-scripts --disable-doc --disable-nls
@@ -380,7 +416,7 @@ build_xz() {
 
 build_zstd() {
   local prefix="$1" build="$2"
-  rm -rf "$build"; cp -r "$SRC/zstd-$ZSTD_VER" "$build"
+  rm -rf "$build"; cp -rp "$SRC/zstd-$ZSTD_VER" "$build"
   ( cd "$build/lib"
     # Single-threaded is the default for the static lib and is all libmagic
     # needs; keeps pthreads out of the link.
@@ -391,11 +427,11 @@ build_zstd() {
 
 build_libmagic() {
   local prefix="$1" build="$2" host="$3" os="$4" file_compile="$5"
-  rm -rf "$build"; cp -r "$SRC/file-$FILE_VER" "$build"
+  rm -rf "$build"; cp -rp "$SRC/file-$FILE_VER" "$build"
 
   local -a cache=()
   case "$os" in
-    linux|macos)
+    linux|macos|freebsd)
       # AC_FUNC_MMAP uses a run-time test, which always reports failure under
       # cross-compilation and silently degrades libmagic to read(). (On a
       # native-arch musl target configure can actually run the test, so this
@@ -408,7 +444,7 @@ build_libmagic() {
   esac
 
   ( cd "$build"
-    ./configure --host="$host" --prefix="$prefix" \
+    ./configure --host="$host" "${CONFIGURE_BUILD[@]}" --prefix="$prefix" \
       --enable-static --disable-shared \
       --enable-zlib --enable-bzlib --enable-xzlib --enable-zstdlib \
       --disable-lzlib --disable-libseccomp \
@@ -432,7 +468,58 @@ stage_out() {
   chmod 644 "$dest"/*.a
 }
 
+# Each target folder is a Go module of its own, with one file that links the
+# archives. The root module imports it for its platform, in link_<target>.go.
+# The file is generated, so the link line is the same everywhere but for
+# Windows, which also needs libgnurx and shlwapi.
+#
+# Go wants a module at major version 2 or higher to end its path in /vN, so
+# the file version 5.48 gives the module path .../libmagic/<target>/v5. The
+# module is still in the folder libmagic/<target>, and its tags are
+# libmagic/<target>/v5.48.0.
+write_module() {
+  local name="$1" os="$2" libs="-lmagic -lz -lbz2 -llzma -lzstd"
+  local major="v${FILE_VER%%.*}"
+  if [ "$os" = windows ]; then
+    libs="-lmagic -lgnurx -lz -lbz2 -llzma -lzstd -lshlwapi"
+  fi
+  printf 'module github.com/xo/magic/libmagic/%s/%s\n\ngo 1.21\n' "$name" "$major" \
+    > "$OUT/$name/go.mod"
+  cat > "$OUT/$name/link.go" <<EOF
+// Code generated by build-libmagic.sh. DO NOT EDIT.
+
+// Package archive holds the static libmagic archives for $name. The root
+// module imports it for that platform, and the line below links them.
+package archive
+
+/*
+#cgo LDFLAGS: -L\${SRCDIR} $libs
+*/
+import "C"
+EOF
+  # The file name ends in _<goos>_<goarch>, which Go reads as a build
+  # constraint, so the module is imported on that platform only.
+  cat > "$ROOT/link_$name.go" <<EOF
+// Code generated by build-libmagic.sh. DO NOT EDIT.
+
+package magic
+
+import _ "github.com/xo/magic/libmagic/$name/$major"
+EOF
+}
+
 # ----------------------------------------------------------------- main ----
+
+# "modules" rewrites the module files of every target that has a folder, and
+# builds nothing. It needs no network.
+if [ "${1:-}" = modules ]; then
+  FILE_VER="${FILE_VER:-$FILE_FALLBACK}"
+  for entry in "${TARGETS[@]}"; do
+    IFS='|' read -r name ztarget _ <<< "$entry"
+    if [ -d "$OUT/$name" ]; then write_module "$name" "$(os_of "$ztarget")"; fi
+  done
+  exit 0
+fi
 
 resolve_versions
 fetch_all
@@ -443,7 +530,7 @@ wanted=("$@")
 built=()
 
 for entry in "${TARGETS[@]}"; do
-  IFS='|' read -r name ztarget host extra <<< "$entry"
+  IFS='|' read -r name ztarget host extra noexec <<< "$entry"
 
   if [ ${#wanted[@]} -gt 0 ]; then
     match=0
@@ -452,6 +539,10 @@ for entry in "${TARGETS[@]}"; do
   fi
 
   os="$(os_of "$ztarget")"
+  CONFIGURE_BUILD=()
+  if [ "$noexec" = noexec ]; then
+    CONFIGURE_BUILD=(--build="$(PATH="$ORIG_PATH" cc -dumpmachine)")
+  fi
   echo
   echo "=== $name ($ztarget, $os) ==="
 
@@ -462,6 +553,9 @@ for entry in "${TARGETS[@]}"; do
   rm -rf "$build"
   mkdir -p "$prefix"
   make_toolchain "$ztarget" "$bin" "$extra"
+  if [ "$noexec" = noexec ] && [ "$os" = windows ]; then
+    make_windres "$host" "$bin"
+  fi
 
   # Reset from ORIG_PATH every iteration -- prepending inside the loop would
   # otherwise leave every previous target's wrappers on PATH.
@@ -480,6 +574,7 @@ for entry in "${TARGETS[@]}"; do
   build_libmagic "$prefix" "$build/file"  "$host" "$os" "$FILE_COMPILE"
 
   stage_out "$prefix" "$OUT/$name"
+  write_module "$name" "$os"
 
   # magic.h is generated from magic.h.in by substituting the version string;
   # it has no target-conditional content. magic.mgc is produced by the native
@@ -501,3 +596,13 @@ if [ ${#built[@]} -eq 0 ]; then
   exit 1
 fi
 echo "done: ${built[*]}"
+
+# A module version is the file version with a patch number. Never move a tag
+# that is published, because the module proxy caches it. A rebuild at the same
+# file version, such as one for a new xz, needs the next patch number.
+tagver="v$FILE_VER"
+case "$FILE_VER" in *.*.*) ;; *) tagver="$tagver.0" ;; esac
+echo
+echo "After the commit is pushed, tag each module, push the tags, edit the"
+echo "require block of go.mod to name them, and then tag the root:"
+for n in "${built[@]}"; do echo "  git tag libmagic/$n/$tagver"; done

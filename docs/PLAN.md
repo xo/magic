@@ -13,11 +13,15 @@ repository carries both (D1, D3).
 
 ## Current state
 
-On 2026-09-27, `magic` is at commit `a629036` and has no release tag. It
+The tags `v0.1.0` (`7b14d3f`), `v0.2.0` (`dedf132`) and `v0.2.1` (`a629036`)
+hold the archives in the root module. No document says what rule chose their
+numbers. Ken chose `v0.3.0` on 2026-10-14 for the first release with a module
+for each target (D17). It
 wraps libmagic 5.48 from file 5.48, and links it with zlib 1.3.2, bzip2 1.0.8,
 xz 5.8.4 and zstd 1.5.7. The Windows archives also hold libgnurx 2.5.1.
 
-The package is one file, `magic.go`, of 312 lines. It has these parts:
+The package is `magic.go`, with one generated file `link_<goos>_<goarch>.go`
+for each of the eight targets (D17, D19). `magic.go` has these parts:
 
 - `New` opens a handle and loads the embedded database.
 - `Buffer` and `File` identify a buffer or a file with the flags of the
@@ -32,9 +36,10 @@ The package is one file, `magic.go`, of 312 lines. It has these parts:
 A handle is safe to share across goroutines (D9).
 
 The tests in `magic_test.go` pass on linux/amd64 with Go 1.27.1. CI runs them
-on five hosted runners. Four of them pass. The macOS amd64 job never starts,
-so every run ends as cancelled. `docs/BACKLOG.md` holds that item and the
-other known work.
+on six hosted runners, and freebsd/amd64 has no job (D19). The windows/arm64
+runner has not run yet (D16). Of the other five, four passed on the last run. The macOS amd64 job never starts, so
+every run ends as cancelled. `docs/BACKLOG.md` holds that item and the other
+known work.
 
 ## Direction
 
@@ -70,8 +75,8 @@ If neither gives a reason, the entry says "Reason not recorded".
 
 | Decision | Title | Status |
 | --- | --- | --- |
-| [D1](#d1-the-package-links-static-libmagic-archives-that-the-repository-carries-decided) | The package links static libmagic archives that the repository carries | Decided |
-| [D2](#d2-build-libmagicsh-cross-compiles-the-archives-with-zig-cc-decided) | build-libmagic.sh cross-compiles the archives with zig cc | Decided |
+| [D1](#d1-the-package-links-static-libmagic-archives-that-the-repository-carries-decided-amended-by-d16-amended-by-d17-amended-by-d19) | The package links static libmagic archives that the repository carries | Decided. Amended by D16. Amended by D17. Amended by D19 |
+| [D2](#d2-build-libmagicsh-cross-compiles-the-archives-with-zig-cc-decided-amended-by-d16-amended-by-d17) | build-libmagic.sh cross-compiles the archives with zig cc | Decided. Amended by D16. Amended by D17 |
 | [D3](#d3-the-magic-database-is-embedded-and-one-copy-serves-every-target-decided) | The magic database is embedded, and one copy serves every target | Decided |
 | [D4](#d4-libmagic-reads-compressed-files-through-zlib-bzip2-xz-and-zstd-decided) | libmagic reads compressed files through zlib, bzip2, xz and zstd | Decided |
 | [D5](#d5-the-api-follows-the-libmagic-c-api-decided) | The API follows the libmagic C API | Decided |
@@ -81,12 +86,16 @@ If neither gives a reason, the entry says "Reason not recorded".
 | [D9](#d9-a-handle-is-safe-to-share-across-goroutines-decided-amends-d6) | A handle is safe to share across goroutines | Decided. Amends D6 |
 | [D10](#d10-a-lookup-can-use-other-flags-and-leave-the-flags-of-the-handle-alone-decided) | A lookup can use other flags and leave the flags of the handle alone | Decided |
 | [D11](#d11-the-tests-expect-what-libmagic-548-reports-and-file1-is-the-reference-decided) | The tests expect what libmagic 5.48 reports, and file(1) is the reference | Decided |
-| [D12](#d12-ci-builds-and-tests-only-on-hosted-runners-decided) | CI builds and tests only on hosted runners | Decided |
+| [D12](#d12-ci-builds-and-tests-only-on-hosted-runners-decided-amended-by-d16) | CI builds and tests only on hosted runners | Decided. Amended by D16 |
 | [D13](#d13-the-script-builds-against-the-newest-stable-release-of-each-dependency-decided) | The script builds against the newest stable release of each dependency | Decided |
 | [D14](#d14-the-module-has-no-go-dependencies-proposed) | The module has no Go dependencies | Proposed |
 | [D15](#d15-magic-is-set-up-for-coding-agents-as-every-xo-repository-is-decided) | magic is set up for coding agents as every xo repository is | Decided |
+| [D16](#d16-windowsarm64-is-a-target-decided-amends-d1-amends-d2-amends-d12-amended-by-d17) | windows/arm64 is a target | Decided. Amends D1. Amends D2. Amends D12. Amended by D17 |
+| [D17](#d17-each-target-is-a-go-module-of-its-own-tagged-as-resvg-tags-its-modules-decided-amends-d1-amends-d2-amends-d16) | Each target is a Go module of its own, tagged as resvg tags its modules | Decided. Amends D1. Amends D2. Amends D16 |
+| [D18](#d18-a-target-version-has-a-patch-number-and-a-target-module-declares-go-121-decided) | A target version has a patch number, and a target module declares go 1.21 | Decided |
+| [D19](#d19-magic-builds-the-targets-that-resvg-builds-decided-amends-d1) | magic builds the targets that resvg builds | Decided. Amends D1 |
 
-### D1. The package links static libmagic archives that the repository carries. Decided.
+### D1. The package links static libmagic archives that the repository carries. Decided. Amended by D16. Amended by D17. Amended by D19.
 
 Commit `7b14d3f` (2026-09-04).
 
@@ -103,7 +112,7 @@ archives get committed", and it filters out pre-release tags for that reason
 
 A consequence: a platform that has no line in `magic.go` does not build.
 
-### D2. build-libmagic.sh cross-compiles the archives with zig cc. Decided.
+### D2. build-libmagic.sh cross-compiles the archives with zig cc. Decided. Amended by D16. Amended by D17.
 
 Commit `7b14d3f` (2026-09-04). Commit `a629036` changed how the versions are
 chosen (D13).
@@ -247,7 +256,7 @@ Found on 2026-09-27: the names of the cases and 16 of the 21 files in
 names "json issue#239" and "jar in zip #639" name issues of mimetype, not of
 this repository. Nothing in this repository says so.
 
-### D12. CI builds and tests only on hosted runners. Decided.
+### D12. CI builds and tests only on hosted runners. Decided. Amended by D16.
 
 Commit `dbcd068` (2026-09-12) added `.github/workflows/test.yml`. Commit
 `dedf132` (2026-09-12) removed two parts of it.
@@ -277,7 +286,8 @@ shipped its last release in 2007.
 The comment on the fallback versions says that they are what the committed
 archives were built from. The same commit rebuilt the archives, and every
 `liblzma.a` changed. The archives now hold xz 5.8.4, and `XZ_FALLBACK` still
-says 5.8.3. `docs/BACKLOG.md` holds that item.
+said 5.8.3. On 2026-10-14, Ken asked for a check of every dependency. Each
+was at its newest stable release, and `XZ_FALLBACK` was set to 5.8.4.
 
 ### D14. The module has no Go dependencies. Proposed.
 
@@ -317,6 +327,152 @@ The tests in `skills_test.go` and `docs_test.go` hold the setup:
 `TestAnAmendmentPointsBothWays` and `TestEveryDecisionReferenceExists`. They
 use only the standard library.
 
+### D16. windows/arm64 is a target. Decided. Amends D1. Amends D2. Amends D12. Amended by D17.
+
+Ken decided on 2026-10-14 to add windows/arm64, after he asked Gemini Pro and
+DeepSeek Pro which platforms to add. Gemini Pro recommended it, because
+Windows on arm64 hardware is growing and GitHub has a hosted runner for it.
+DeepSeek Pro put it on request and said that no hosted runner exists. The
+label list of `actionlint` holds `windows-11-arm`, so that claim was wrong.
+
+What changed:
+
+- `libmagic/windows-arm64/` holds the same six archives as `windows-amd64`,
+  8.2 MB in all. `build-libmagic.sh` built them with `zig cc` for
+  `aarch64-windows-gnu`. All six are `coff-arm64`.
+- `magic.go` has a `#cgo` line for windows/arm64.
+- The `test` workflow has a `windows/arm64` job on `windows-11-arm`. That
+  runner has no arm64 mingw-w64, so the job uses `zig cc` as the C compiler.
+  It does not pass `-race`, because Go does not support the race detector on
+  windows/arm64.
+
+Two things differ from the other targets in the script, and neither changes
+an archive of another target:
+
+- A configure script with only `--host` runs a test program to find out
+  whether it is cross-compiling. On this host, wine tries to run the arm64
+  program and hangs. The `noexec` field in `TARGETS` makes the script pass
+  `--build` as well, so that configure runs nothing.
+- xz builds a version resource for Windows, and its configure looks for
+  `<host>-windres`. The host has `windres` only for x86_64 and i686, so the
+  script links `llvm-windres` under the name of the host and gives it the
+  mingw headers of zig. The resource is in `liblzma.a` for both Windows
+  targets.
+
+The same change copies each source tree with `cp -rp`. Without `-p`, the
+copy gets new timestamps, and `make` then tried to regenerate `aclocal.m4`
+in xz and failed.
+
+Test status: the build host links a `file.exe` and a test binary for
+windows/arm64 with `zig cc`. It cannot run them, because it has no arm64
+Windows. The first run of the CI job is the first time that the tests run on
+windows/arm64. `docs/BACKLOG.md` holds that item.
+
+Ken also asked magic to match the targets of resvg. The list of resvg is not
+final, and open question 8 holds what is left.
+
+### D17. Each target is a Go module of its own, tagged as resvg tags its modules. Decided. Amends D1. Amends D2. Amends D16.
+
+Ken decided on 2026-10-14 that magic follows the tagging pattern of resvg. That
+pattern is in D9 of resvg and in `libresvg/README.md` of resvg. One module for
+all targets made every user download every archive, and each new target made it
+worse.
+
+What changed:
+
+- Each folder `libmagic/<goos>_<goarch>/` is a module with its own `go.mod`,
+  its archives and a generated `link.go` that holds the `#cgo` line. The name
+  `linux_arm` is armv7. The new names replace `linux-armv7`, `macos-amd64` and
+  `macos-arm64`.
+- `magic.go` has no `#cgo LDFLAGS` line for a platform any more. A file
+  `link_<goos>_<goarch>.go` in the root imports the module of its platform.
+  Go reads the end of the file name as a build constraint. The script writes
+  both files.
+- The root `go.mod` requires each target module and has a `replace` line that
+  points it at its folder. The replace lines make the repository build before
+  the tags exist. A user of the root module ignores them.
+- A folder that has a `go.mod` is not part of the module above it. The root
+  module no longer holds the archives, so a user downloads the archives of one
+  platform and no other.
+- `magic.h` and `magic.mgc` stay in `libmagic/` in the root module, because
+  they are the same for every target.
+
+The tags follow resvg, with one difference that Go forces:
+
+- The root tag is a plain semver, with no prefix and no upstream version. It
+  tracks the API of the package. A change to the wrapper alone bumps the root.
+  A new target bumps the root minor. The root tags that exist are `v0.1.0`,
+  `v0.2.0` and `v0.2.1`.
+- A target tag is the path of the folder and the version of file that the
+  archives hold, such as `libmagic/linux_amd64/v5.48.0`. A new release of file
+  means new tags for every target, then an edit of the `require` lines, then a
+  new root tag.
+- The module path ends in `/v5`, such as
+  `github.com/xo/magic/libmagic/linux_amd64/v5`. Go wants `/vN` on a module at
+  version 2 or higher. resvg has no suffix, because its versions start with
+  `v0`. The folder and the tags do not change.
+- The order of a release is: push the commit, tag and push the target modules,
+  edit the `require` lines if a version changed, then tag and push the root.
+  A published tag never moves, because the module proxy caches it.
+
+`TestEveryTargetIsWired` and `TestNoLinkFileWithoutATarget` hold the layout.
+
+Nothing is tagged by this decision, because Ken did not say to tag. The tests
+pass with the replace lines. No one has run `go get` from an empty module
+against real tags, because the tags do not exist. `docs/BACKLOG.md` holds that
+item.
+
+### D18. A target version has a patch number, and a target module declares go 1.21. Decided.
+
+These two details follow resvg and a limit of Go. Ken accepted them on
+2026-10-14.
+
+A version of file has two parts, such as 5.48, and a Go version has three. The
+script adds `.0`, so the tag is `v5.48.0`. A published tag never moves. If a
+rebuild keeps the same version of file, for example for a new xz, the tag
+needs the next patch number, `v5.48.1`. The script prints `.0` and does not
+know about a patch.
+
+The `go.mod` of a target module says `go 1.21`, as the platform modules of
+resvg do. The root says `go 1.25`. Nothing in a target module needs more than
+1.21.
+
+
+### D19. magic builds the targets that resvg builds. Decided. Amends D1.
+
+Ken decided on 2026-10-14 that magic covers only the targets of resvg, and that
+it needs no linux/ppc64le and no linux/s390x. The targets are linux/amd64,
+linux/arm64, linux/arm, darwin/amd64, darwin/arm64, windows/amd64,
+windows/arm64 (D16) and freebsd/amd64.
+
+freebsd/amd64 is new. The script builds it with `zig cc` for `x86_64-freebsd`
+and the `noexec` field of D16. It has no CI job, because GitHub has no hosted
+FreeBSD runner.
+
+resvg also has `linux_amd64_musl` and `linux_arm64_musl`, which a user selects
+with `-tags musl`. magic does not add them. Its Linux archives are built for
+musl and are static, so a program links them under glibc and under musl. Ken
+accepted this on 2026-10-14. On linux/amd64, the tests passed when the program
+was linked with the glibc gcc of the host and with `zig cc` for musl. On
+linux/arm and linux/arm64, they passed linked with `zig cc` for musl and run
+under qemu. A glibc link of arm and arm64 was not tried.
+
+Archives for linux/riscv64, linux/ppc64le and linux/s390x were built on
+2026-10-14 and deleted, and none was committed.
+
+What ran on 2026-10-14:
+
+- The tests passed on linux/amd64, linux/arm and linux/arm64, and on
+  windows/amd64 under wine.
+- The program and the test binary linked, and nothing ran them, for
+  windows/arm64 and freebsd/amd64.
+- The package compiled, and was not linked, for darwin/amd64 and
+  darwin/arm64. `zig` has no macOS SDK, so the CI jobs on macOS do the link.
+
+The targets of resvg are not final. resvg staged windows/arm64 and
+freebsd/amd64 and did not commit them. If resvg drops one, Ken decides whether
+magic does too.
+
 ## Open questions for Ken
 
 1. Is D14 a rule? If it is, a test can read `go.mod` and fail on a `require`
@@ -325,8 +481,9 @@ use only the standard library.
    script builds it, but no CI job built it after `dedf132` removed the
    `cross` job (D12). Do you want the `cross` job back?
 3. The `macos-13` job never gets a runner, so every CI run since `dbcd068`
-   ends as cancelled after 24 hours. Do you want to move macOS amd64 to
-   another runner, or remove it?
+   ends as cancelled after 24 hours. `actionlint` lists `macos-15-intel` as a
+   current Intel runner. Do you want to move macOS amd64 to it, or remove
+   it?
 4. `dedf132` removed the `gofmt` step from CI. Do you want it back?
 5. The test data and the case names came from gabriel-vasile/mimetype, which
    is under the MIT license (D11). Do you want the repository to carry the
@@ -337,3 +494,7 @@ use only the standard library.
    that license?
 7. The repository has no `.golangci.yml`, and CI runs no linter. Do you want
    one?
+8. resvg tagged its modules before CI finished on the commit, and says that
+   no rule requires CI to pass first. Do you want a rule that CI passes before
+   any tag, for magic? CI cannot run freebsd/amd64, so that target would stay
+   untested.

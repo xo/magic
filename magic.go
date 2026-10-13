@@ -6,13 +6,6 @@ package magic
 /*
 #cgo CFLAGS: -I${SRCDIR}/libmagic
 
-#cgo linux,amd64   LDFLAGS: -L${SRCDIR}/libmagic/linux-amd64 -lmagic -lz -lbz2 -llzma -lzstd
-#cgo linux,arm64   LDFLAGS: -L${SRCDIR}/libmagic/linux-arm64 -lmagic -lz -lbz2 -llzma -lzstd
-#cgo linux,arm     LDFLAGS: -L${SRCDIR}/libmagic/linux-armv7 -lmagic -lz -lbz2 -llzma -lzstd
-#cgo darwin,amd64  LDFLAGS: -L${SRCDIR}/libmagic/macos-amd64 -lmagic -lz -lbz2 -llzma -lzstd
-#cgo darwin,arm64  LDFLAGS: -L${SRCDIR}/libmagic/macos-arm64 -lmagic -lz -lbz2 -llzma -lzstd
-#cgo windows,amd64 LDFLAGS: -L${SRCDIR}/libmagic/windows-amd64 -lmagic -lgnurx -lz -lbz2 -llzma -lzstd -lshlwapi
-
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>

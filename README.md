@@ -63,8 +63,10 @@ A build for any other target fails.
 
 Each platform is a Go module of its own, such as
 `github.com/xo/magic/libmagic/linux_amd64/v5`. Go downloads the module of your
-platform and no other. The Linux archives are built for musl and are static, so
-a program links them under glibc and under musl.
+platform and no other when it builds. `go get` and `go mod tidy` fetch every
+platform once, because they read the imports for all platforms. The Linux
+archives are built for musl and are static, so a program links them under glibc
+and under musl.
 
 The archives for freebsd/amd64 link into a program, and nothing has run them
 yet, because GitHub has no hosted FreeBSD runner. The tests run in CI on

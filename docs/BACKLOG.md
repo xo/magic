@@ -32,44 +32,40 @@ decision goes in `docs/PLAN.md`.
 
 ## Modules and tags
 
-6. Nothing tested the module layout against real tags. The tests use the
-   `replace` lines. After the tags exist, make an empty module, run `go get`
-   for the root tag, build a program that calls `magic.New`, and make sure
-   that Go downloaded the archives of one platform only. Source: D17.
-7. A rule for CI before a tag is not decided. resvg tagged before CI finished.
+6. A rule for CI before a tag is not decided. resvg tagged before CI finished.
    For `v0.3.0`, the tags waited for CI. Source: open question 8 in `docs/PLAN.md`.
-8. The script prints a tag with the patch number `.0` and does not know about
+7. The script prints a tag with the patch number `.0` and does not know about
    a rebuild at the same version of file. Source: D18.
 
 ## The build script
 
-9. The script downloads each tarball and does not compare it with a known
+8. The script downloads each tarball and does not compare it with a known
    checksum. The header says "verify tarball checksums yourself". Source:
    `build-libmagic.sh`, line 30.
 
 ## The package
 
-10. The errors of the package differ from `go-pedantry`. `errClosed` is not
+9. The errors of the package differ from `go-pedantry`. `errClosed` is not
    exported, so a caller cannot use `errors.Is` on it. `New` returns
    `magic_open failed` without the `magic: ` prefix that the other errors
    have. No error text is in the gerund form that `go-pedantry` asks for.
    Ken did not decide yet which one wins. Source: `magic.go`, found when the
    code was compared with `go-pedantry`.
-11. If Ken decides D14, add a test that reads `go.mod` and fails on a
+10. If Ken decides D14, add a test that reads `go.mod` and fails on a
    `require` line, as dburl does. Source: open question 1 in `docs/PLAN.md`.
 
 ## The tests
 
-12. The case names and 16 of the 21 files in `testdata/` came from the tests
+11. The case names and 16 of the 21 files in `testdata/` came from the tests
    of `github.com/gabriel-vasile/mimetype`, which is under the MIT license.
    The repository does not carry its copyright notice. Two case names, "json
    issue#239" and "jar in zip #639", cite issues of mimetype and do not name
    it. Source: `magic_test.go` and `testdata/`, compared with mimetype
    v1.4.15. Open question 5 in `docs/PLAN.md`.
-13. Some cases in `mimeTests` repeat. "kml 2.2" and "ogg" are each the
+12. Some cases in `mimeTests` repeat. "kml 2.2" and "ogg" are each the
     name of two cases, so `go test` reports the second one as `ogg#01`.
     "rpm" has the same input as "rpm 1". "svg with comment prefix" has the
     same input as "svg no xml header" and holds no comment. Source:
     `magic_test.go`.
-14. `TestVersion` logs the version and fails on nothing. Source:
+13. `TestVersion` logs the version and fails on nothing. Source:
     `magic_test.go`.

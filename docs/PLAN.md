@@ -425,8 +425,15 @@ The tags follow resvg, with one difference that Go forces:
 
 Nothing is tagged by this decision, because Ken did not say to tag. The tests
 pass with the replace lines. No one has run `go get` from an empty module
-against real tags, because the tags do not exist. `docs/BACKLOG.md` holds that
-item.
+against real tags, because the tags do not exist.
+
+On 2026-10-14, Ken said to tag and publish. The target tags and `v0.3.0` are
+on the commit `5a87245`, where CI passed on every job that gets a runner. Then
+a program in an empty module ran `go get github.com/xo/magic@v0.3.0` and
+printed the version and a type, as the layout intends. `go get` fetched all
+eight target modules, because it reads the imports for every platform. A plain
+`go build` from an empty module cache then downloaded the root module and the
+`linux_amd64` module only.
 
 ### D18. A target version has a patch number, and a target module declares go 1.21. Decided.
 

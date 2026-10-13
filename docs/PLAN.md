@@ -36,9 +36,9 @@ for each of the eight targets (D17, D19). `magic.go` has these parts:
 A handle is safe to share across goroutines (D9).
 
 The tests in `magic_test.go` pass on linux/amd64 with Go 1.27.1. CI runs them
-on six hosted runners, and freebsd/amd64 has no job (D19). The windows/arm64
-runner has not run yet (D16). Of the other five, four passed on the last run. The macOS amd64 job never starts, so
-every run ends as cancelled. `docs/BACKLOG.md` holds that item and the other
+on six hosted runners, and freebsd/amd64 has no job (D19). Five of the six
+passed on the last run, including windows/arm64 (D16). The macOS amd64 job
+never starts, so every run ends as cancelled. `docs/BACKLOG.md` holds that item and the other
 known work.
 
 ## Direction
@@ -366,7 +366,13 @@ in xz and failed.
 Test status: the build host links a `file.exe` and a test binary for
 windows/arm64 with `zig cc`. It cannot run them, because it has no arm64
 Windows. The first run of the CI job is the first time that the tests run on
-windows/arm64. `docs/BACKLOG.md` holds that item.
+windows/arm64.
+
+The first run failed, because zig for arm64 Windows crashed on the runner
+with exit 0xc0000005 while it built `runtime/cgo`. The job now installs
+llvm-mingw 20261006 and uses its clang as the C compiler. On that run, every
+test passed on windows/arm64, and `TestOracle` passed. So the archives that
+zig built link and work under a second compiler.
 
 Ken also asked magic to match the targets of resvg. The list of resvg is not
 final, and open question 8 holds what is left.
@@ -464,8 +470,9 @@ What ran on 2026-10-14:
 
 - The tests passed on linux/amd64, linux/arm and linux/arm64, and on
   windows/amd64 under wine.
-- The program and the test binary linked, and nothing ran them, for
-  windows/arm64 and freebsd/amd64.
+- The program and the test binary linked, and nothing ran them here, for
+  windows/arm64 and freebsd/amd64. After the commit, windows/arm64 ran in
+  CI and passed, as D16 says. freebsd/amd64 has not run.
 - The package compiled, and was not linked, for darwin/amd64 and
   darwin/arm64. `zig` has no macOS SDK, so the CI jobs on macOS do the link.
 

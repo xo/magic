@@ -66,9 +66,9 @@ Each platform is a Go module of its own, such as
 platform and no other. The Linux archives are built for musl and are static, so
 a program links them under glibc and under musl.
 
-These targets are tested less than the others. The archives for windows/arm64
-and freebsd/amd64 link into a program, and nothing has run them yet. On
-windows/arm64, only `zig cc` is tested as the C compiler.
+The archives for freebsd/amd64 link into a program, and nothing has run them
+yet, because GitHub has no hosted FreeBSD runner. The tests run in CI on
+windows/arm64, with clang from llvm-mingw as the C compiler.
 
 ## Documents
 

@@ -13,6 +13,9 @@
 #   FILE_VER=5.46 ./build-libmagic.sh   # pin one, resolve the rest
 #   PINNED=1 ./build-libmagic.sh        # no lookups; use the fallbacks below
 #
+# The tags that the script prints end in .0. After a rebuild at the same file
+# version, set the next patch number for the tags: MODULE_PATCH=1.
+#
 # Bumping file(1) changes magic.mgc and the strings libmagic reports, so the
 # Go tests that assert exact descriptions may need regenerating afterwards.
 #
@@ -42,7 +45,7 @@ set -euo pipefail
 
 # Known-good versions: what the archives currently committed under libmagic/
 # were built from. Used when PINNED is set, and whenever a lookup fails.
-ZLIB_FALLBACK=1.3.2
+ZLIB_FALLBACK=1.4
 BZIP2_FALLBACK=1.0.8
 XZ_FALLBACK=5.8.4
 ZSTD_FALLBACK=1.5.7
@@ -78,6 +81,12 @@ export ZIG_GLOBAL_CACHE_DIR="${ZIG_GLOBAL_CACHE_DIR:-$ROOT/.zig-cache}"
 # vendored config.sub copies reject musl-flavoured triplets, hence the gnu
 # spelling for arm.
 #
+# The windows targets pass -Wno-incompatible-pointer-types. file 5.48 passes
+# &ts.tv_sec, a long *, where readcdf.c wants a const time_t *, and the two
+# differ in size on Windows. The clang in zig 0.16 warned about it and the
+# clang in zig 0.17 stops with an error. The flag keeps the code that zig 0.16
+# built, and does not fix the mismatch. See the backlog.
+#
 # The last field is "noexec" for a target whose programs cannot run here. A
 # configure script with only --host decides whether it is cross-compiling by
 # trying to run a test program. On a host with wine, wine tries to run the
@@ -91,8 +100,8 @@ TARGETS=(
   "linux_arm|arm-linux-musleabihf|arm-linux-gnueabihf|-mcpu=generic+v7a"
   "darwin_amd64|x86_64-macos|x86_64-apple-darwin|"
   "darwin_arm64|aarch64-macos|aarch64-apple-darwin|"
-  "windows_amd64|x86_64-windows-gnu|x86_64-w64-mingw32|"
-  "windows_arm64|aarch64-windows-gnu|aarch64-w64-mingw32||noexec"
+  "windows_amd64|x86_64-windows-gnu|x86_64-w64-mingw32|-Wno-incompatible-pointer-types"
+  "windows_arm64|aarch64-windows-gnu|aarch64-w64-mingw32|-Wno-incompatible-pointer-types|noexec"
   "freebsd_amd64|x86_64-freebsd|x86_64-unknown-freebsd||noexec"
 )
 
@@ -599,9 +608,10 @@ echo "done: ${built[*]}"
 
 # A module version is the file version with a patch number. Never move a tag
 # that is published, because the module proxy caches it. A rebuild at the same
-# file version, such as one for a new xz, needs the next patch number.
+# file version, such as one for a new zlib, needs the next patch number. Set
+# MODULE_PATCH for it, as in MODULE_PATCH=1 ./build-libmagic.sh. See D18.
 tagver="v$FILE_VER"
-case "$FILE_VER" in *.*.*) ;; *) tagver="$tagver.0" ;; esac
+case "$FILE_VER" in *.*.*) ;; *) tagver="$tagver.${MODULE_PATCH:-0}" ;; esac
 echo
 echo "After the commit is pushed, tag each module, push the tags, edit the"
 echo "require block of go.mod to name them, and then tag the root:"

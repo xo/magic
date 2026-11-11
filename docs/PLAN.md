@@ -17,7 +17,7 @@ The tags `v0.1.0` (`7b14d3f`), `v0.2.0` (`dedf132`) and `v0.2.1` (`a629036`)
 hold the archives in the root module. No document says what rule chose their
 numbers. Ken chose `v0.3.0` on 2026-10-14 for the first release with a module
 for each target (D17). It
-wraps libmagic 5.48 from file 5.48, and links it with zlib 1.3.2, bzip2 1.0.8,
+wraps libmagic 5.48 from file 5.48, and links it with zlib 1.4, bzip2 1.0.8,
 xz 5.8.4 and zstd 1.5.7. The Windows archives also hold libgnurx 2.5.1.
 
 The package is `magic.go`, with one generated file `link_<goos>_<goarch>.go`
@@ -289,6 +289,24 @@ archives were built from. The same commit rebuilt the archives, and every
 said 5.8.3. On 2026-10-14, Ken asked for a check of every dependency. Each
 was at its newest stable release, and `XZ_FALLBACK` was set to 5.8.4.
 
+On 2026-11-12, zlib 1.4 was out, with fixes for two CVEs from an audit. They
+are a buffer overflow in a non-blocking `gzwrite()` and an out-of-bounds
+pointer in `contrib/infback9`. Ken asked for a rebuild of all eight targets.
+The file version stays 5.48, so each target module takes the next patch
+number, `v5.48.1`, as D18 says, and the root takes `v0.3.1`. The script now
+prints the patch number from `MODULE_PATCH`. The rebuild used zig 0.17.1,
+where the archives of `v0.3.0` came from zig 0.16, so all five libraries
+differ in bytes.
+
+The clang of zig 0.17 stops with an error on a line of file 5.48 that zig 0.16
+only warned about. In `readcdf.c`, `&ts.tv_sec` is a `long *` where a
+`const time_t *` is expected, and the two differ in size on Windows. The
+Windows targets pass `-Wno-incompatible-pointer-types`, which gives the code
+that zig 0.16 built. It does not fix the mismatch. On the 21 sample files, the
+Windows build gave the same output as the `file` of the host. The samples
+cannot test the timestamp code, because `file` stops on them with "Cannot read
+short stream".
+
 ### D14. The module has no Go dependencies. Proposed.
 
 `go.mod` has no `require` line, and no commit since `7b14d3f` added one. The
@@ -470,6 +488,17 @@ was linked with the glibc gcc of the host and with `zig cc` for musl. On
 linux/arm and linux/arm64, they passed linked with `zig cc` for musl and run
 under qemu. A glibc link of arm and arm64 was not tried.
 
+On 2026-11-12, this turned out to be wrong for glibc. The same `linux_amd64`
+archive gives the output of `file` on all 21 sample files when a program links
+it with musl. When a program links it with glibc, the description of the three
+Netpbm files is wrong, for example `size = 6 10\012000010...` where `file`
+says `size = 6 x 10`. The archives are built against the headers of musl, and
+the text is wrong where libmagic uses a regular expression, so the call into
+the regex code of glibc is the suspect. No one confirmed that. The MIME types
+and the tests are not affected. `v0.2.1` and `v0.3.0` have the same fault. The
+reason for the decision, that one musl build serves both libcs, does not
+hold for descriptions. Open question 9 asks what to do.
+
 Archives for linux/riscv64, linux/ppc64le and linux/s390x were built on
 2026-10-14 and deleted, and none was committed.
 
@@ -512,3 +541,10 @@ magic does too.
    no rule requires CI to pass first. Do you want a rule that CI passes before
    any tag, for magic? CI cannot run freebsd/amd64, so that target would stay
    untested.
+9. The Linux archives are built for musl, and a program that links them with
+   glibc gets wrong descriptions for the Netpbm files (D19). resvg has a glibc
+   module and a musl module for linux/amd64 and linux/arm64, and a user picks
+   the musl one with `-tags musl`. Do you want magic to do the same? It means
+   a glibc build of linux/amd64, linux/arm64 and linux/arm, the musl modules
+   as new targets, and a new root minor version. Or do you want to document the
+   fault and leave it?

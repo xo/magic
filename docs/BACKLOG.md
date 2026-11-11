@@ -34,38 +34,57 @@ decision goes in `docs/PLAN.md`.
 
 6. A rule for CI before a tag is not decided. resvg tagged before CI finished.
    For `v0.3.0`, the tags waited for CI. Source: open question 8 in `docs/PLAN.md`.
-7. The script prints a tag with the patch number `.0` and does not know about
-   a rebuild at the same version of file. Source: D18.
+7. The script does not know that a rebuild needs a new patch number. A person
+   sets `MODULE_PATCH`, and without it the script prints tags that already
+   exist. Source: D18 and D13, 2026-11-12.
+
+## The archives
+
+8. A program that links the Linux archives with glibc gets a wrong description
+   for Netpbm files. On linux/amd64, a musl link matches `file` on all 21
+   sample files, and a glibc link differs on `pbm.pbm`, `pgm.pgm` and
+   `ppm.ppm`. arm and arm64 matched `file` when linked with musl, and no one
+   tried a glibc link of them. The darwin and freebsd archives were not run.
+   The cause is not confirmed. Source: found when the zlib 1.4 rebuild was
+   checked. Open question 9 in `docs/PLAN.md`.
+9. `TestOracle` compares MIME types only, so it did not see item 8. Compare
+    the full description with `file` as well. Source: the same check.
+10. On Windows, file 5.48 passes `&ts.tv_sec` where `readcdf.c` wants a
+    `const time_t *`, and the sizes differ. The build keeps the old behavior
+    with `-Wno-incompatible-pointer-types`. No sample file reaches the code, so
+    no one knows whether the timestamps in a Windows description are wrong.
+    Check a newer release of file, and a Compound File with a time property.
+    Source: D13, 2026-11-12.
 
 ## The build script
 
-8. The script downloads each tarball and does not compare it with a known
+11. The script downloads each tarball and does not compare it with a known
    checksum. The header says "verify tarball checksums yourself". Source:
    `build-libmagic.sh`, line 30.
 
 ## The package
 
-9. The errors of the package differ from `go-pedantry`. `errClosed` is not
+12. The errors of the package differ from `go-pedantry`. `errClosed` is not
    exported, so a caller cannot use `errors.Is` on it. `New` returns
    `magic_open failed` without the `magic: ` prefix that the other errors
    have. No error text is in the gerund form that `go-pedantry` asks for.
    Ken did not decide yet which one wins. Source: `magic.go`, found when the
    code was compared with `go-pedantry`.
-10. If Ken decides D14, add a test that reads `go.mod` and fails on a
+13. If Ken decides D14, add a test that reads `go.mod` and fails on a
    `require` line, as dburl does. Source: open question 1 in `docs/PLAN.md`.
 
 ## The tests
 
-11. The case names and 16 of the 21 files in `testdata/` came from the tests
+14. The case names and 16 of the 21 files in `testdata/` came from the tests
    of `github.com/gabriel-vasile/mimetype`, which is under the MIT license.
    The repository does not carry its copyright notice. Two case names, "json
    issue#239" and "jar in zip #639", cite issues of mimetype and do not name
    it. Source: `magic_test.go` and `testdata/`, compared with mimetype
    v1.4.15. Open question 5 in `docs/PLAN.md`.
-12. Some cases in `mimeTests` repeat. "kml 2.2" and "ogg" are each the
+15. Some cases in `mimeTests` repeat. "kml 2.2" and "ogg" are each the
     name of two cases, so `go test` reports the second one as `ogg#01`.
     "rpm" has the same input as "rpm 1". "svg with comment prefix" has the
     same input as "svg no xml header" and holds no comment. Source:
     `magic_test.go`.
-13. `TestVersion` logs the version and fails on nothing. Source:
+16. `TestVersion` logs the version and fails on nothing. Source:
     `magic_test.go`.

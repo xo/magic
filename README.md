@@ -64,9 +64,15 @@ A build for any other target fails.
 Each platform is a Go module of its own, such as
 `github.com/xo/magic/libmagic/linux_amd64/v5`. Go downloads the module of your
 platform and no other when it builds. `go get` and `go mod tidy` fetch every
-platform once, because they read the imports for all platforms. The Linux
-archives are built for musl and are static, so a program links them under glibc
-and under musl.
+platform once, because they read the imports for all platforms.
+
+The Linux archives are built for musl. A program that links them with musl,
+such as one built with `zig cc -target x86_64-linux-musl`, gives the same
+descriptions as `file`. A program that links them with glibc, which is the
+default on most Linux systems, builds and runs, and its MIME types are right.
+On linux/amd64, the description of the Netpbm files (`.pbm`, `.pgm` and `.ppm`)
+is wrong with glibc, and no other sample file differed. `docs/BACKLOG.md` has
+the item.
 
 The archives for freebsd/amd64 link into a program, and nothing has run them
 yet, because GitHub has no hosted FreeBSD runner. The tests run in CI on

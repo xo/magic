@@ -1,14 +1,14 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/efigpt.rs and src/structures/efigpt.rs
-// of binwalk.
+// This file translates the parser of src/formats/efigpt.rs of binwalk-ng.
 
 package disk
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/xo/magic/walk"
 	"github.com/xo/magic/walk/internal/binwalk"
@@ -29,8 +29,7 @@ func parseEFIGPT(data []byte, off int) (walk.Match, error) {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	start := off - magicOffset
-	// binwalk counts the available bytes from the magic, not from the start.
-	available := uint64(len(data) - off)
+	available := uint64(len(data) - start)
 	total, ok := efiGPTSize(data[start:])
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
@@ -76,10 +75,16 @@ var efiGPTEntry = binwalk.Struct{
 	{Name: "attributes", Type: "u64"},
 }
 
-// efiGPTSize is parse_efigpt_header: the end of the farthest partition. The
-// sums wrap as the usize of binwalk does.
+// efiGPTSize is parse_efigpt_header: the end of the farthest partition.
+// binwalk-ng rejects the header when an offset of the table overflows, and
+// leaves out a partition whose offsets overflow.
 func efiGPTSize(data []byte) (uint64, bool) {
-	const revision = 0x00010000
+	const (
+		revision = 0x00010000
+		// The field of the CRC of the header, which the CRC counts as 0.
+		crcOffset = 16
+		crcLen    = 4
+	)
 	gpt, ok := binwalk.From(data, efiBlockSize)
 	if !ok {
 		return 0, false
@@ -88,7 +93,26 @@ func efiGPTSize(data []byte) (uint64, bool) {
 	if !ok || h["reserved"] != 0 || h["revision"] != revision {
 		return 0, false
 	}
-	start := u64(h, "partition_entry_lba") * efiBlockSize
+	// The CRC of the header covers header_size bytes, which hold the fields
+	// and fit in one block.
+	n := h["header_size"]
+	if n < efiGPTHeader.Size() || n > efiBlockSize {
+		return 0, false
+	}
+	hdr, ok := binwalk.Range(gpt, 0, n)
+	if !ok {
+		return 0, false
+	}
+	c := make([]byte, n)
+	copy(c, hdr)
+	clear(c[crcOffset : crcOffset+crcLen])
+	if binwalk.CRC32(c) != uint32(h["header_crc"]) {
+		return 0, false
+	}
+	start, ok := efiLBAOffset(u64(h, "partition_entry_lba"))
+	if !ok {
+		return 0, false
+	}
 	end := start + u64(h, "partition_entry_count")*u64(h, "partition_entry_size")
 	if start > end || end > uint64(len(data)) {
 		return 0, false
@@ -103,9 +127,9 @@ func efiGPTSize(data []byte) (uint64, bool) {
 		// parse_gpt_partition_entry
 		e, ok := efiGPTEntry.Parse(entries[next:], false)
 		if ok && e["type_guid_p1"] != 0 && e["type_guid_p2"] != 0 {
-			first := u64(e, "starting_lba") * efiBlockSize
-			last := u64(e, "ending_lba") * efiBlockSize
-			if first < last && last > total {
+			first, ok1 := efiLBAOffset(u64(e, "starting_lba"))
+			last, ok2 := efiLBAOffset(u64(e, "ending_lba"))
+			if ok1 && ok2 && first < last && last > total {
 				total = last
 			}
 		}
@@ -113,4 +137,13 @@ func efiGPTSize(data []byte) (uint64, bool) {
 		next += h["partition_entry_size"]
 	}
 	return total, total > 0
+}
+
+// efiLBAOffset is lba_to_offset: the offset of a block, and false when it
+// overflows 64 bits.
+func efiLBAOffset(lba uint64) (uint64, bool) {
+	if lba > math.MaxUint64/efiBlockSize {
+		return 0, false
+	}
+	return lba * efiBlockSize, true
 }

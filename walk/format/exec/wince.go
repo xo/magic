@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/wince.rs, src/structures/wince.rs and
-// src/extractors/wince.rs of binwalk.
+// This file translates src/formats/wince.rs of binwalk-ng.
 
 package exec
 
@@ -14,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// WinCE is the signature "wince" of binwalk.
+// WinCE is the signature "wince" of binwalk-ng.
 var WinCE = &walk.Signature{
 	Name:        "wince",
 	Magic:       [][]byte{[]byte("B000FF\n")},
@@ -86,7 +85,13 @@ func extractWinCE(data []byte, off int, out *walk.Output) walk.Extraction {
 	if !ok || entries[0].address != h["image_start"] {
 		return walk.Extraction{}
 	}
-	r := walk.Extraction{OK: true, Size: winCEHeader.Size() + total, HasSize: true}
+	// The blocks fit in the data. A block that claims data after the end
+	// makes the image malformed, not cut.
+	size := winCEHeader.Size() + total
+	if off+size > len(data) {
+		return walk.Extraction{}
+	}
+	r := walk.Extraction{OK: true, Size: size, HasSize: true}
 	if out == nil {
 		return r
 	}

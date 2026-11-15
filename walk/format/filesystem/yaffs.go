@@ -1,11 +1,10 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/yaffs.rs and src/structures/yaffs.rs
-// of binwalk. binwalk extracts YAFFS2 with unyaffs, from
-// src/extractors/yaffs2.rs, and extractYAFFS writes the files that unyaffs
-// 0.9.7 writes.
+// This file translates the parser of src/formats/yaffs.rs of binwalk-ng.
+// binwalk-ng extracts YAFFS2 with unyaffs, and extractYAFFS writes the files
+// that unyaffs 0.9.7 writes.
 
 package filesystem
 
@@ -44,14 +43,12 @@ const yaffsMinObjects = 2
 func parseYAFFS(data []byte, off int) (walk.Match, error) {
 	// The largest page and the largest spare.
 	const maxObjSize = 16896
-	if !binwalk.OffsetSafe(len(data), off+maxObjSize*yaffsMinObjects, -1) {
+	// binwalk-ng accepts data that ends at the second object.
+	if off+maxObjSize*yaffsMinObjects > len(data) {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	img := data[off:]
-	big, endian := img[0] == 0, "little"
-	if big {
-		endian = "big"
-	}
+	big := img[0] == 0
 	page, ok := yaffsPageSize(img)
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
@@ -68,7 +65,7 @@ func parseYAFFS(data []byte, off int) (walk.Match, error) {
 		Offset:      off,
 		Size:        size,
 		Confidence:  walk.Medium,
-		Description: fmt.Sprintf("YAFFSv2 filesystem, %s endian, page size: %d, spare size: %d, image size: %d bytes", endian, page, spare, size),
+		Description: fmt.Sprintf("YAFFSv2 filesystem, %s, page size: %d, spare size: %d, image size: %d bytes", endianName(big), page, spare, size),
 	}, nil
 }
 
@@ -101,8 +98,8 @@ func yaffsSpareSize(img []byte, page int, big bool) (int, bool) {
 }
 
 // yaffsImageSize is get_image_size. It walks the object headers, and puts
-// the next one after the chunks of the data of a file. It needs more than
-// two chunks, all inside the data.
+// the next one after the chunks of the data of a file. It needs two chunks
+// or more, all inside the data.
 func yaffsImageSize(img []byte, page, spare int, big bool) (int, bool) {
 	const fileType = 1
 	size, next, prev := 0, 0, -1
@@ -126,7 +123,7 @@ func yaffsImageSize(img []byte, page, spare int, big bool) (int, bool) {
 		size += blocks * block
 		next = size
 	}
-	if size > block*yaffsMinObjects && size <= len(img) {
+	if block*yaffsMinObjects <= size && size <= len(img) {
 		return size, true
 	}
 	return 0, false

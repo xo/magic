@@ -1,9 +1,9 @@
 // Package walk finds the files that are embedded in a binary file, such as a
 // firmware image, as binwalk does (D31, D49, D50).
 //
-// The walker gives the matches of binwalk 3, at the commit that
-// docs/upstream/upstreams.tsv names, with the names and the descriptions of
-// binwalk. A program imports the formats that it needs, as it imports the
+// The walker gives the matches of binwalk-ng, the fork of binwalk that is
+// maintained, at the commit that docs/upstream/upstreams.tsv names, with the
+// names and the descriptions of binwalk-ng (D60). A program imports the formats that it needs, as it imports the
 // decoders of compress:
 //
 //	import _ "github.com/xo/magic/walk/format/image"

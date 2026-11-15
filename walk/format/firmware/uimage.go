@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/uimage.rs, src/structures/uimage.rs
-// and src/extractors/uimage.rs of binwalk.
+// This file translates src/formats/uimage.rs of binwalk-ng.
 
 package firmware
 
@@ -15,7 +14,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// UImage is the signature "uimage" of binwalk.
+// UImage is the signature "uimage" of binwalk-ng.
 var UImage = &walk.Signature{
 	Name: "uimage",
 	// The standard magic of uImage, and the magic of OpenWrt.

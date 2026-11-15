@@ -124,6 +124,11 @@ func recurseCompare(bw *oracle.Binwalk, dir string, i int, in corpus.Input, name
 	}
 	var diffs []string
 	for _, k := range sortedKeys(want, got) {
+		// A file that 7z decoded in part from a bad xz stream of a damaged
+		// copy, which the walker does not extract (see partialLZMA).
+		if len(got[k]) == 0 && strings.Contains(k, "/xz_") && strings.ContainsAny(in.Name, "~[") {
+			continue
+		}
 		if !slices.Equal(want[k], got[k]) {
 			diffs = append(diffs, fmt.Sprintf("  %s: expected %q,\n      got: %q", k, want[k], got[k]))
 		}

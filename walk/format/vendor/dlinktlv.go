@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/dlink_tlv.rs and
-// src/structures/dlink_tlv.rs of binwalk.
+// This file translates src/formats/dlink_tlv.rs of binwalk-ng.
 
 package vendor
 

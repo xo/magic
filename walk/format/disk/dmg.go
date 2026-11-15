@@ -1,15 +1,15 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/dmg.rs and src/structures/dmg.rs of
-// binwalk.
+// This file translates the parser of src/formats/dmg.rs of binwalk-ng.
 
 package disk
 
 import (
 	"bytes"
 	"fmt"
+	"math/bits"
 	"strconv"
 	"unicode/utf8"
 
@@ -30,24 +30,31 @@ var DMG = &walk.Signature{
 // parseDMG is dmg_parser. A DMG holds the image data, then the XML data,
 // then the footer. A signed DMG has more data of variable size before the
 // footer, so binwalk finds the start from the XML data, which it searches
-// for in all of the data. The sum of the lengths wraps as the usize of
-// binwalk does.
+// for in all of the data. binwalk-ng rejects a sum of the lengths that
+// overflows, and measures the size from the start that it finds to the end
+// of the footer.
 func parseDMG(data []byte, off int) (walk.Match, error) {
 	h, ok := dmgFooter.Parse(data[off:], true)
 	if !ok || h["header_size"] != dmgFooter.Size() {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	dataLen := u64(h, "data_fork_length")
-	if dataLen+u64(h, "xml_length") > uint64(off) {
+	sum, carry := bits.Add64(dataLen, u64(h, "xml_length"), 0)
+	if carry != 0 || sum > uint64(off) {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	xml, ok := findXMLPropertyList(data)
 	if !ok || uint64(xml) < dataLen {
 		return walk.Match{}, walk.ErrNoMatch
 	}
-	size := off + dmgFooter.Size()
+	start := xml - int(dataLen)
+	end := off + dmgFooter.Size()
+	if end < start {
+		return walk.Match{}, walk.ErrNoMatch
+	}
+	size := end - start
 	return walk.Match{
-		Offset: xml - int(dataLen),
+		Offset: start,
 		Size:   size,
 		// binwalk adds 1 to high, so that a DMG wins over the compressed
 		// data that it starts with.

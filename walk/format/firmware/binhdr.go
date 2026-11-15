@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/binhdr.rs and src/structures/binhdr.rs
-// of binwalk.
+// This file translates src/formats/binhdr.rs of binwalk-ng.
 
 package firmware
 
@@ -14,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// BINHdr is the signature "binhdr" of binwalk.
+// BINHdr is the signature "binhdr" of binwalk-ng.
 var BINHdr = &walk.Signature{
 	Name:        "binhdr",
 	Magic:       [][]byte{[]byte("U2ND")},

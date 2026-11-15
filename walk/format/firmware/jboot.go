@@ -1,10 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/jboot.rs, src/structures/jboot.rs and
-// src/extractors/jboot.rs of binwalk. The parser of the JBOOT ARM header is in
-// walk/format/internal/jbootsig, because the signature dlke uses it too.
+// This file translates src/formats/jboot.rs of binwalk-ng.
 
 package firmware
 
@@ -16,7 +14,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// JBOOTARM is the signature "jboot_arm" of binwalk.
+// JBOOTARM is the signature "jboot_arm" of binwalk-ng.
 var JBOOTARM = &walk.Signature{
 	Name:        "jboot_arm",
 	Magic:       [][]byte{[]byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x42\x48")},
@@ -24,7 +22,7 @@ var JBOOTARM = &walk.Signature{
 	Parse:       parseJBOOTARM,
 }
 
-// JBOOTSTAG is the signature "jboot_stag" of binwalk.
+// JBOOTSTAG is the signature "jboot_stag" of binwalk-ng.
 var JBOOTSTAG = &walk.Signature{
 	Name:        "jboot_stag",
 	Magic:       [][]byte{[]byte("\x04\x04\x24\x2B"), []byte("\xFF\x04\x24\x2B")},
@@ -32,7 +30,7 @@ var JBOOTSTAG = &walk.Signature{
 	Parse:       parseJBOOTSTAG,
 }
 
-// JBOOTSCH2 is the signature "jboot_sch2" of binwalk.
+// JBOOTSCH2 is the signature "jboot_sch2" of binwalk-ng.
 var JBOOTSCH2 = &walk.Signature{
 	Name: "jboot_sch2",
 	Magic: [][]byte{
@@ -71,9 +69,8 @@ func parseJBOOTARM(data []byte, off int) (walk.Match, error) {
 // parseJBOOTSTAG is jboot_stag_parser.
 func parseJBOOTSTAG(data []byte, off int) (walk.Match, error) {
 	h, ok := jbootSTAGHeader(data[off:])
-	// The header describes a kernel, which must not fill the rest of the
-	// data.
-	if !ok || off+h.headerSize+h.imageSize >= len(data) {
+	// The header describes a kernel, which must fit in the data.
+	if !ok || off+h.headerSize+h.imageSize > len(data) {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	kind := "factory image"

@@ -111,20 +111,27 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
 The maintainers want magic to do the work of binwalk too: walk a binary file,
 such as a firmware image, find the files that are embedded in it at any
 offset, and extract them. It comes after the port of libmagic is finished
-(D31). `docs/WALKER.md` is its design, with the formats of binwalk 3.
+(D31). `docs/WALKER.md` is its design, with the formats of binwalk-ng.
 
-Phases W1 to W5 of D52 ported the 111 signatures of binwalk, in the packages
-under `walk/format/`, and the extractors of 39 of them that binwalk runs with
-its own code. The walker also extracts most of the formats that binwalk
-extracts with programs, and writes what those programs write. The three
-gates in `test/diff` give the same matches, files and walks as binwalk on
-1881 inputs, and a test for each file system and archive compares its files
-with a tool or with the tree that made it. These are left:
+Phases W1 to W5 of D52 ported the 111 signatures of binwalk 3, in the
+packages under `walk/format/`. D60 moved the walker to binwalk-ng, the fork
+that is maintained, with its 114 signatures and its fixes, and with no new
+decoder. The walker extracts 48 of the 51 formats that binwalk-ng extracts
+with its own code, and 15 of the 24 formats that it extracts with
+programs. The three gates in `test/diff` give the same
+matches, files and walks as binwalk-ng on 2301 inputs, and a test for each
+file system and archive compares its files with a tool or with the tree
+that made it. These are left:
 
-1. Formats that the walker finds and does not extract, where binwalk runs a
-   program: `lzfse`, `arj`, `rar`, `ntfs`, `pchrom`, `qnx_ifs`,
-   `uefi_capsule` and `uefi_pi_volume`. binwalk extracts nothing from `arj`
-   either, because it carves only the first header.
+1. Formats that the walker finds and does not extract:
+   - `lzfse`, `rar` and `qnx_ifs`, which binwalk-ng extracts with crates of
+     its own. They need decoders, which D60 leaves out. A bare QNX imagefs,
+     and an image that is not compressed, need no decoder.
+   - `arj`, `apfs` and `efigpt`, which binwalk-ng extracts with 7z.
+     binwalk-ng runs 7z again on all the data to the end of the file when
+     the first run fails, so it extracts `arj` now.
+   - `ntfs`, `dmg`, `linux_kernel`, `pchrom`, `uefi_capsule` and
+     `uefi_pi_volume`, which binwalk-ng extracts with other programs.
 2. Parts of formats that the walker does not extract: 7-Zip with AES or
    the filter RISCV; cab with LZX or Quantum. The walker reads SquashFS 1.x,
    2.x and 3.x in both byte orders, with each decompressor that sasquatch
@@ -132,26 +139,40 @@ with a tool or with the tree that made it. These are left:
    vendors (adaptive, Broadcom and DD-WRT). sasquatch skips a file whose
    data it cannot decompress, or stops, as the timing of its threads
    decides. The walker skips the file once a decompressor other than gzip
-   worked, and stops otherwise. Thus the gate runs binwalk again when its
+   worked, and stops otherwise. Thus the gate runs binwalk-ng again when its
    SquashFS files differ. The walker decodes
    7-Zip with PPMd, and with the filters BCJ, BCJ2, ARM, ARMT, ARM64, PPC,
-   SPARC, IA64 and Delta. binwalk does not find lz4 in the legacy frame, because
-   its signature has only the magic of the frame format. Thus the walker
-   does not decode the legacy frame either.
-3. 7zz, lzop, jefferson, unyaffs, ubireader and tsk_recover are not
-   installed, so no test compares the walker with them. The tests compare
-   with the tree that made each image, and with mksquashfs, unsquashfs, 7z
-   (p7zip), cabextract and lz4 where they are installed. Where sasquatch is
-   installed, `TestWalkExtractsAsBinwalk` compares SquashFS with binwalk,
+   SPARC, IA64 and Delta. binwalk-ng does not find lz4 in the legacy frame,
+   because its signature has only the magic of the frame format. Thus the
+   walker does not decode the legacy frame either.
+3. On damaged LZMA data, 7z writes what it decoded before the error. The
+   walker writes nothing for a stream with an error, so the extraction gate
+   accepts fewer members on a damaged copy of `7zip` or `xz` data. To write
+   the same bytes, the walker needs a decoder that stops where 7z stops.
+4. Where binwalk-ng leaves a hole in a file, the walker writes zeros. The
+   bytes are the same, but the zeros count against `WithMaxOutput`, so a
+   large hole can stop an extraction that binwalk-ng completes. This holds
+   for the chunks of `android_sparse` that hold nothing or only zeros, and
+   for the gaps between the records of `srecord`. `Output` needs a write
+   at an offset, and a sink that keeps holes, to do better.
+5. binwalk-ng loops without end on a `dtb` whose node or property does not
+   fit in the data. The walker rejects the match. No input of the corpus
+   has such a node, so the oracle carries no patch for it (D59).
+6. lzop, jefferson, unyaffs, ubireader and tsk_recover are not installed,
+   so no test compares the walker with them. The tests compare with the
+   tree that made each image, and with mksquashfs, unsquashfs, 7z,
+   cabextract and lz4 where they are installed. Where sasquatch is
+   installed, `TestWalkExtractsAsBinwalk` compares SquashFS with binwalk-ng,
    which runs it.
-4. `FuzzWalk` in `walk/format/all` fuzzes every format with the walk of
+7. `FuzzWalk` in `walk/format/all` fuzzes every format with the walk of
    members. Runs of 3 and 4 minutes found no panic and no input over 5
    seconds, and a run of 2 minutes no input over 1 second. The rate drops at
    times while the fuzzer minimizes a new input. CI runs only its seeds.
-5. Under a heavy load, a gate has once in a while shown one difference that
-   the next run did not show. binwalk can exit before its worker starts,
-   and the clients retry, but not without limit.
-6. delink tries the keys of the format DLK in the order of a HashMap of
+   It did not run again after the move to binwalk-ng.
+8. Under a heavy load, sasquatch fails more often, and binwalk-ng can exit
+   before its worker starts. The clients retry, and the extraction gate
+   runs each input that differs once more, alone, but not without limit.
+9. delink tries the keys of the format DLK in the order of a HashMap of
    Rust, which is random, and the walker in the order of their names. No
    sample of `dlke`, `dkbs` or `encfw` decrypts yet.
 

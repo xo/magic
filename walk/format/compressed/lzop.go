@@ -1,10 +1,10 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/lzop.rs and src/structures/lzop.rs of
-// binwalk. binwalk extracts lzop files with the program lzop, from
-// src/extractors/lzop.rs, and extractLZOP writes what lzop -p -N -d writes.
+// This file translates src/formats/lzop.rs of binwalk-ng. binwalk-ng
+// extracts lzop files with the program lzop, and extractLZOP writes what
+// lzop -p -N -d writes.
 
 package compressed
 
@@ -20,7 +20,7 @@ import (
 	"github.com/xo/magic/walk/internal/lzo"
 )
 
-// LZOP is the signature "lzop" of binwalk: a file of the program lzop.
+// LZOP is the signature "lzop" of binwalk-ng: a file of the program lzop.
 var LZOP = &walk.Signature{
 	Name:        "lzop",
 	Magic:       [][]byte{[]byte("\x89LZO\x00\x0D\x0A\x1A\x0A")},
@@ -65,16 +65,14 @@ var (
 )
 
 // parseLZOPHeader is parse_lzop_file_header. It returns the size of the
-// header. binwalk tests the flag of the checksums of the compressed data
-// with "flags & ADLER32_C & CRC32_C", which is always 0, so it never counts
-// those checksums, and parseLZOPHeader does not either.
-func parseLZOPHeader(data []byte) (int, bool) {
+// header, and whether each block has a checksum of its compressed data.
+func parseLZOPHeader(data []byte) (int, bool, bool) {
 	h, ok := lzopStruct1.Parse(data, true)
 	if !ok || h["method"] < 1 || h["method"] > 3 {
-		return 0, false
+		return 0, false, false
 	}
 	if h["version"] > 0x1040 || h["version"] < h["version_needed"] {
-		return 0, false
+		return 0, false, false
 	}
 	start := 21
 	if h["flags"]&lzopFilter != 0 {
@@ -83,22 +81,22 @@ func parseLZOPHeader(data []byte) (int, bool) {
 	end := start + 13
 	b, ok := binwalk.Range(data, start, end)
 	if !ok {
-		return 0, false
+		return 0, false, false
 	}
 	h2, ok := lzopStruct2.Parse(b, true)
 	if !ok {
-		return 0, false
+		return 0, false, false
 	}
 	size := end + h2["file_name_length"] + 4
 	if size > len(data) {
-		return 0, false
+		return 0, false, false
 	}
-	return size, true
+	return size, h["flags"]&(lzopAdler32C|lzopCRC32C) != 0, true
 }
 
 // parseLZOP is lzop_parser.
 func parseLZOP(data []byte, off int) (walk.Match, error) {
-	hs, ok := parseLZOPHeader(data[off:])
+	hs, checksum, ok := parseLZOPHeader(data[off:])
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
 	}
@@ -106,7 +104,7 @@ func parseLZOP(data []byte, off int) (walk.Match, error) {
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
 	}
-	n, ok := lzoDataSize(blocks)
+	n, ok := lzoDataSize(blocks, checksum)
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
 	}
@@ -120,18 +118,22 @@ func parseLZOP(data []byte, off int) (walk.Match, error) {
 }
 
 // lzoDataSize is get_lzo_data_size, with parse_lzop_block_header and
-// parse_lzop_eof_marker. It needs two blocks, and then a word of zero.
-func lzoDataSize(data []byte) (int, bool) {
+// parse_lzop_eof_marker. It needs two blocks, and then a word of zero. A
+// block has a checksum of 4 bytes after its header when checksum is set.
+func lzoDataSize(data []byte, checksum bool) (int, bool) {
+	sum := 0
+	if checksum {
+		sum = 4
+	}
 	size, last, blocks := 0, -1, 0
 	for binwalk.OffsetSafe(len(data), size, last) {
 		b, ok := lzopBlock.Parse(data[size:], true)
-		if !ok || b["compressed_size"] == 0 || b["uncompressed_size"] == 0 ||
-			b["uncompressed_checksum"] == 0 || b["uncompressed_size"] > 64<<20 {
+		if !ok || b["compressed_size"] == 0 || b["uncompressed_size"] == 0 || b["uncompressed_size"] > 64<<20 {
 			break
 		}
 		blocks++
 		last = size
-		size += lzopBlock.Size() + b["compressed_size"]
+		size += lzopBlock.Size() + b["compressed_size"] + sum
 	}
 	if blocks < 2 || size > len(data)-4 || binary.BigEndian.Uint32(data[size:]) != 0 {
 		return 0, false

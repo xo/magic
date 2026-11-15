@@ -39,9 +39,9 @@ func TestWalkYAFFS(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			var order byteOrder = binary.LittleEndian
-			endian := "little"
+			endian := "Little Endian"
 			if tc.big {
-				order, endian = binary.BigEndian, "big"
+				order, endian = binary.BigEndian, "Big Endian"
 			}
 			img, exp := yaffsSample(order, tc.page, tc.spare, tc.bad)
 			rng := rand.New(rand.NewPCG(7, 8))
@@ -60,7 +60,7 @@ func TestWalkYAFFS(t *testing.T) {
 					t.Fatalf("expected no error, got: %v", err)
 				}
 				n++
-				desc := fmt.Sprintf("YAFFSv2 filesystem, %s endian, page size: %d, spare size: %d, image size: %d bytes", endian, tc.page, tc.spare, len(img))
+				desc := fmt.Sprintf("YAFFSv2 filesystem, %s, page size: %d, spare size: %d, image size: %d bytes", endian, tc.page, tc.spare, len(img))
 				if e.Offset != off || e.Size != int64(len(img)) || e.Description != desc {
 					t.Errorf("expected %q at %#x, got: %q at %#x", desc, off, e.Description, e.Offset)
 				}

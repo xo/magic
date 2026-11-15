@@ -1,11 +1,11 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/squashfs.rs and
-// src/structures/squashfs.rs of binwalk. binwalk extracts SquashFS with
-// sasquatch, a version of unsquashfs, from src/extractors/squashfs.rs, and
-// extractSquashFS in squashfs4.go writes the files that it writes.
+// This file translates the parser of src/formats/squashfs.rs of
+// binwalk-ng. binwalk-ng extracts SquashFS with sasquatch, a version of
+// unsquashfs, and extractSquashFS in squashfs4.go writes the files that it
+// writes.
 
 package filesystem
 
@@ -60,16 +60,12 @@ func parseSquashFS(data []byte, off int) (walk.Match, error) {
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
 	}
-	endian := "little"
-	if h.big {
-		endian = "big"
-	}
 	return walk.Match{
 		Offset:     off,
 		Size:       h.imageSize,
 		Confidence: walk.High,
-		Description: fmt.Sprintf("SquashFS file system, %s endian, version: %d.%d, compression: %s, inode count: %d, block size: %d, image size: %d bytes, created: %s",
-			endian, h.major, h.minor, comp, h.inodeCount, h.blockSize, h.imageSize, binwalk.EpochString(uint32(h.timestamp))),
+		Description: fmt.Sprintf("SquashFS file system, %s, version: %d.%d, compression: %s, inode count: %d, block size: %d, image size: %d bytes, created: %s",
+			endianName(h.big), h.major, h.minor, comp, h.inodeCount, h.blockSize, h.imageSize, binwalk.EpochString(uint32(h.timestamp))),
 	}, nil
 }
 

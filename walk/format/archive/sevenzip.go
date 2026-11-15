@@ -1,11 +1,10 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/sevenzip.rs and
-// src/structures/sevenzip.rs of binwalk. binwalk extracts a 7-Zip archive
-// with 7zz, from src/extractors/sevenzip.rs, and extractSevenZip writes the
-// files that 7zz writes, for the folders that the walker can decode.
+// This file translates src/formats/sevenzip.rs of binwalk-ng. binwalk-ng
+// extracts a 7-Zip archive with 7z, and extractSevenZip writes the files
+// that 7z writes, for the folders that the walker can decode.
 
 package archive
 
@@ -24,13 +23,14 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// SevenZip is the signature "7zip" of binwalk.
+// SevenZip is the signature "7zip" of binwalk-ng.
 var SevenZip = &walk.Signature{
 	Name:        "7zip",
 	Magic:       [][]byte{[]byte("7z\xbc\xaf\x27\x1c")},
 	Description: "7-zip archive data",
 	Parse:       parseSevenZip,
 	Extract:     extractSevenZip,
+	Carve:       true,
 }
 
 var sevenZipStruct = binwalk.Struct{

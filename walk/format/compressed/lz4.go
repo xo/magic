@@ -1,10 +1,10 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/lz4.rs and src/structures/lz4.rs of
-// binwalk. binwalk extracts LZ4 with the program lz4, from
-// src/extractors/lz4.rs, and extractLZ4 writes what lz4 -d writes.
+// This file translates src/formats/lz4.rs of binwalk-ng. binwalk-ng
+// extracts LZ4 with its own code, through the FrameDecoder of the crate
+// lz4_flex, and extractLZ4 writes what it writes.
 
 package compressed
 
@@ -18,7 +18,7 @@ import (
 	"github.com/xo/magic/walk/internal/lz4"
 )
 
-// LZ4 is the signature "lz4" of binwalk: a frame of LZ4.
+// LZ4 is the signature "lz4" of binwalk-ng: a frame of LZ4.
 var LZ4 = &walk.Signature{
 	Name:        "lz4",
 	Magic:       [][]byte{[]byte("\x04\x22\x4D\x18")},
@@ -117,55 +117,40 @@ func lz4DataSize(data []byte, checksum bool) (int, bool) {
 	return 0, false
 }
 
-// extractLZ4 writes what lz4 -d writes for the carved match: the data of
-// its frames in decompressed.bin. lz4 checks the checksums of the header,
-// of each block and of the content, and the size of the content. A frame
-// can be followed by more frames, by skippable frames, or by bytes that
-// lz4 ignores, as the 4 bytes that binwalk adds to a frame with checksums
-// of blocks.
+// extractLZ4 is lz4_decompress: it decodes the frame of the match, which
+// the parser finds, and writes its data to decompressed.bin. The
+// FrameDecoder of lz4_flex checks the checksums of the header, of each
+// block and of the content, and the size of the content. It stops at the
+// end of the first frame, so the bytes after it do not count, as the 4
+// bytes that binwalk-ng adds to a frame with checksums of blocks. It fails
+// when the frame gives no data. The size is the bytes of the frame.
 func extractLZ4(data []byte, off int, out *walk.Output) walk.Extraction {
 	m, err := parseLZ4(data, off)
 	if err != nil {
 		return walk.Extraction{}
 	}
-	in := data[off : off+m.Size]
-	w := &appender{out: out, name: "decompressed.bin"}
-	for frames := 0; len(in) > 0; frames++ {
-		if len(in) < 4 {
-			return walk.Extraction{} // lz4 cannot read the magic.
-		}
-		switch magic := binary.LittleEndian.Uint32(in); {
-		case magic == 0x184D2204:
-			n, ok := lz4Frame(in, w)
-			if !ok {
-				return walk.Extraction{}
-			}
-			in = in[n:]
-		case magic&0xFFFFFFF0 == 0x184D2A50:
-			if len(in) < 8 {
-				return walk.Extraction{}
-			}
-			n := 8 + int(binary.LittleEndian.Uint32(in[4:]))
-			in = in[min(n, len(in)):]
-		case frames == 0:
-			return walk.Extraction{}
-		default:
-			// lz4 warns of the bytes after the frames, and succeeds.
-			in = nil
-		}
+	in, ok := binwalk.Range(data, off, off+m.Size)
+	if !ok {
+		return walk.Extraction{}
 	}
-	return walk.Extraction{OK: true, Size: m.Size, HasSize: true}
+	w := &appender{out: out, name: "decompressed.bin"}
+	n, ok := lz4Frame(in, w)
+	if !ok || w.n == 0 {
+		return walk.Extraction{}
+	}
+	return walk.Extraction{OK: true, Size: n, HasSize: true}
 }
 
-// lz4Frame decodes the frame at the start of in to w, as LZ4F_decompress
-// of the library of LZ4 decodes it, and returns its size.
+// lz4Frame decodes the frame at the start of in to w, as the FrameDecoder
+// of lz4_flex decodes it, and returns its size. lz4_flex does not support
+// a dictionary.
 func lz4Frame(in []byte, w *appender) (int, bool) {
 	h, ok := parseLZ4Header(in)
 	if !ok {
 		return 0, false
 	}
 	flags, bd := in[4], in[5]
-	if flags>>6 != 1 || bd>>4 < 4 {
+	if flags>>6 != 1 || bd>>4 < 4 || flags&lz4FlagDictionary != 0 {
 		return 0, false // a version or a size of block that LZ4 does not know
 	}
 	maxBlock := 1 << (8 + 2*int(bd>>4))

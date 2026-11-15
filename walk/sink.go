@@ -118,6 +118,28 @@ func (s *memSink) chmod(name string, add fs.FileMode) error {
 	return nil
 }
 
+func (s *memSink) readlink(name string) (string, bool) {
+	m, ok := s.members[name]
+	if !ok || m.Mode&fs.ModeSymlink == 0 {
+		return "", false
+	}
+	return m.Link, true
+}
+
+func (s *memSink) setMode(name string, perm fs.FileMode) error {
+	m, ok := s.members[name]
+	if !ok {
+		return errNotFound
+	}
+	m.Mode = m.Mode&^fs.ModePerm | perm
+	return nil
+}
+
+func (s *memSink) reset() {
+	clear(s.members)
+	s.order = s.order[:0]
+}
+
 func (s *memSink) extracted() bool {
 	for _, m := range s.members {
 		if !m.Mode.IsRegular() || len(m.data) > 0 {
@@ -203,6 +225,18 @@ func (s *rootSink) chmod(name string, add fs.FileMode) error {
 	return s.root.Chmod(name, fi.Mode().Perm()|add) //nolint:wrapcheck // Output reports only false
 }
 
+func (s *rootSink) readlink(name string) (string, bool) {
+	t, err := s.root.Readlink(name)
+	if err != nil {
+		return "", false
+	}
+	return t, true
+}
+
+func (s *rootSink) setMode(name string, perm fs.FileMode) error {
+	return s.root.Chmod(name, perm) //nolint:wrapcheck // Output reports only false
+}
+
 func (s *rootSink) extracted() bool {
 	for _, top := range s.top {
 		fi, err := s.root.Lstat(top)
@@ -218,4 +252,9 @@ func (s *rootSink) remove() {
 	for _, top := range s.top {
 		_ = s.root.RemoveAll(top)
 	}
+}
+
+func (s *rootSink) reset() {
+	s.remove()
+	s.top = s.top[:0]
 }

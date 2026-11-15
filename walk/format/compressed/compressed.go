@@ -1,6 +1,6 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Package compressed registers the compressed data that binwalk finds:
+// Package compressed registers the compressed data that binwalk-ng finds:
 // gzip, zlib, bzip2, xz, lzma, zstd, the zlib data of a GPG signed file,
 // LZ4, lzop, the LZW data of compress, and LZFSE. The walker extracts each
 // of them except LZFSE.
@@ -13,7 +13,7 @@
 //	import _ "github.com/xo/magic/compress/xz"
 //
 // Without the decoder of xz, the walker rejects each candidate of xz and
-// lzma, because binwalk decodes the data to find its size. Without the
+// lzma, because binwalk-ng decodes the data to find its size. Without the
 // decoder of zstd, it finds zstd data and cannot extract it.
 package compressed
 

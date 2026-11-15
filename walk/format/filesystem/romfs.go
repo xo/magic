@@ -1,15 +1,15 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/romfs.rs, src/structures/romfs.rs and
-// src/extractors/romfs.rs of binwalk.
+// This file translates src/formats/romfs.rs of binwalk-ng.
 
 package filesystem
 
 import (
 	"encoding/binary"
 	"fmt"
+	"path"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -84,7 +84,7 @@ func extractRomFS(data []byte, off int, out *walk.Output) walk.Extraction {
 	}
 	// binwalk has no such limit. See processRomFSEntries.
 	visits := len(romfs)/16 + 1
-	root, ok := processRomFSEntries(romfs, h.headerSize, &visits)
+	root, ok := processRomFSEntries(romfs, h.headerSize, 0, &visits)
 	// binwalk expects at least one file in the root of the image.
 	if !ok || len(root) == 0 {
 		return walk.Extraction{}
@@ -110,9 +110,15 @@ func extractRomFS(data []byte, off int, out *walk.Output) walk.Extraction {
 // A folder whose files start at a header that the walk of a parent folder
 // already read makes binwalk recurse until its stack overflows, and folders
 // that share their files make it take a time that grows exponentially with
-// the depth. The walker stops both: it reads at most visits headers in all,
-// which is more than a real image has, and rejects the image past that.
-func processRomFSEntries(data []byte, off int, visits *int) ([]romfsEntry, bool) {
+// the depth. binwalk-ng rejects the image when a folder is more than 64
+// folders deep, and so does the walker. It also reads at most visits headers
+// in all, which is more than a real image has, and rejects the image past
+// that, as binwalk-ng does not.
+func processRomFSEntries(data []byte, off, depth int, visits *int) ([]romfsEntry, bool) {
+	const maxDepth = 64
+	if depth > maxDepth {
+		return nil, false
+	}
 	var entries []romfsEntry
 	var processed []int
 	next, previous := off, -1
@@ -158,7 +164,7 @@ func processRomFSEntries(data []byte, off int, visits *int) ([]romfsEntry, bool)
 			if e.typ == romfsDirectory {
 				// The info field of a folder is the offset of its first
 				// header.
-				children, ok := processRomFSEntries(data, e.info, visits)
+				children, ok := processRomFSEntries(data, e.info, depth+1, visits)
 				if !ok {
 					return nil, false
 				}
@@ -179,14 +185,16 @@ func processRomFSEntries(data []byte, off int, visits *int) ([]romfsEntry, bool)
 // folder parent of out, the output of the volume, and returns the number of
 // files and folders that it wrote.
 //
-// binwalk joins the absolute path of the parent with the name of the entry,
-// so a name with ".." that goes above the folder of the volume gives a path
-// that depends on the folder of the output. The walker cleans the path inside
-// the folder of the volume.
+// binwalk-ng joins the absolute path of the parent with the name of the
+// entry, so a name with ".." that goes above the folder of the volume gives
+// a path that depends on the folder of the output. The walker cleans the
+// path inside the folder of the volume.
 func extractRomFSEntries(data []byte, entries []romfsEntry, parent string, out *walk.Output) int {
 	count := 0
 	for _, e := range entries {
-		p := strings.TrimPrefix(sanitizePath(parent+"/"+e.name, true), "/")
+		// sanitize_path of binwalk-ng drops a ".." part with the part
+		// before it, and stops at the root.
+		p := strings.TrimPrefix(path.Clean("/"+parent+"/"+e.name), "/")
 		var ok bool
 		switch e.typ {
 		case romfsDirectory:
@@ -321,43 +329,4 @@ func romfsCRCValid(data []byte) bool {
 		sum += binary.BigEndian.Uint32(data[i:])
 	}
 	return sum == 0
-}
-
-// sanitizePath is sanitize_path of the Chroot of binwalk. A ".." part goes,
-// with the part before it that has not gone yet, and so does an empty part.
-// The search for the part before stops at the first part, even when the
-// first part has gone, as in binwalk.
-func sanitizePath(p string, keepRoot bool) string {
-	parts := strings.Split(p, "/")
-	var exclude []int
-	for i, part := range parts {
-		switch part {
-		case "..":
-			exclude = append(exclude, i)
-			if i > 0 {
-				j := i - 1
-				for j > 0 && slices.Contains(exclude, j) {
-					j--
-				}
-				exclude = append(exclude, j)
-			}
-		case "":
-			exclude = append(exclude, i)
-		}
-	}
-	var sb strings.Builder
-	if keepRoot && strings.HasPrefix(p, "/") {
-		sb.WriteString("/")
-	}
-	for i, part := range parts {
-		if !slices.Contains(exclude, i) {
-			sb.WriteString("/")
-			sb.WriteString(part)
-		}
-	}
-	s := sb.String()
-	for strings.Contains(s, "//") {
-		s = strings.ReplaceAll(s, "//", "/")
-	}
-	return s
 }

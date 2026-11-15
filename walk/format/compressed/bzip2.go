@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/bzip2.rs and src/extractors/bzip2.rs
-// of binwalk.
+// This file translates src/formats/bzip2.rs of binwalk-ng.
 
 package compressed
 
@@ -14,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/bzip2"
 )
 
-// Bzip2 is the signature "bzip2" of binwalk.
+// Bzip2 is the signature "bzip2" of binwalk-ng.
 var Bzip2 = &walk.Signature{
 	Name: "bzip2",
 	Magic: [][]byte{

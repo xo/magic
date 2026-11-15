@@ -1,11 +1,11 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/lzfse.rs and src/structures/lzfse.rs
-// of binwalk. binwalk extracts LZFSE with the program lzfse, from
-// src/extractors/lzfse.rs. The walker has no decoder of LZFSE, so it finds
-// the data and does not extract it.
+// This file translates src/formats/lzfse.rs of binwalk-ng. binwalk-ng
+// extracts LZFSE with its own code, through the crate lzfse. The walker
+// writes no new decoder of compressed data (D60), so it finds the data and
+// does not extract it.
 
 package compressed
 
@@ -16,7 +16,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// LZFSE is the signature "lzfse" of binwalk.
+// LZFSE is the signature "lzfse" of binwalk-ng.
 var LZFSE = &walk.Signature{
 	Name:        "lzfse",
 	Magic:       [][]byte{[]byte("bvx-"), []byte("bvx1"), []byte("bvx2"), []byte("bvxn")},

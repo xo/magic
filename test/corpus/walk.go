@@ -10,8 +10,7 @@ import (
 )
 
 // Walk returns the inputs of the walker (D49): the originals of the corpus,
-// the test inputs of binwalk from the tree that test/oracle/build-binwalk.sh
-// exported, the samples in test/corpus/testdata/walk, copies of them with
+// the samples of binwalk-ng in the submodule of its checkout, the samples in test/corpus/testdata/walk, copies of them with
 // bytes changed, and images that hold several originals at random offsets
 // between random bytes, as a firmware image holds its files.
 func Walk() ([]Input, error) {
@@ -22,7 +21,7 @@ func Walk() ([]Input, error) {
 	// The samples of binwalk, and the samples made for the walker. Each
 	// gets copies with bytes changed, below.
 	for prefix, pattern := range map[string]string{
-		"binwalk/": filepath.Join(root(), "test", ".binwalk", "src", "tests", "inputs", "*"),
+		"binwalk/": filepath.Join(root(), "upstream", "binwalk-ng", "tests", "testdata", "samples", "*"),
 		"sample/":  filepath.Join(root(), "test", "corpus", "testdata", "walk", "*"),
 	} {
 		paths, err := filepath.Glob(pattern)

@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/luks.rs and src/structures/luks.rs of
-// binwalk.
+// This file translates src/formats/luks.rs of binwalk-ng.
 
 package crypto
 
@@ -78,9 +77,10 @@ func luksHeader(data []byte) (luksInfo, bool) {
 		}
 	case 2:
 		// A u64 above the largest int is negative here. It is larger than
-		// the data in binwalk too, so both reject it.
+		// the data in binwalk-ng too, so both reject it. The header can
+		// fill the data to its end.
 		h.headerSize = base["header_size"]
-		if h.headerSize > luks2MinHeaderSize && h.headerSize < len(data) {
+		if h.headerSize > luks2MinHeaderSize && h.headerSize <= len(data) {
 			return h, true
 		}
 	}

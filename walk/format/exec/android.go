@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/android_bootimg.rs and
-// src/structures/android_bootimg.rs of binwalk.
+// This file translates src/formats/android_bootimg.rs of binwalk-ng.
 
 package exec
 
@@ -14,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// AndroidBootImg is the signature "android_bootimg" of binwalk.
+// AndroidBootImg is the signature "android_bootimg" of binwalk-ng.
 var AndroidBootImg = &walk.Signature{
 	Name:        "android_bootimg",
 	Magic:       [][]byte{[]byte("ANDROID!")},

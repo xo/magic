@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/csman.rs, src/structures/csman.rs and
-// src/extractors/csman.rs of binwalk.
+// This file translates src/formats/csman.rs of binwalk-ng.
 
 package vendor
 
@@ -61,10 +60,12 @@ func extractCSman(data []byte, off int, out *walk.Output) walk.Extraction {
 	}
 	entries := raw
 	if h.compressed {
-		if b, ok := binwalk.From(raw, compressedHeaderSize); ok {
-			if entries, ok = inflateLimit(b, csmanMaxSize); !ok {
-				return walk.Extraction{}
-			}
+		b, ok := binwalk.From(raw, compressedHeaderSize)
+		if !ok {
+			return walk.Extraction{}
+		}
+		if entries, ok = inflateLimit(b, csmanMaxSize); !ok {
+			return walk.Extraction{}
 		}
 	}
 	var list []csmanEntry
@@ -139,7 +140,9 @@ var csmanStruct = binwalk.Struct{
 }
 
 // csmanHeader is parse_csman_header. The magic "CS" is a header in little
-// endian order, and any other is in big endian order.
+// endian order, and "SC" is in big endian order. The payload must end in
+// the data, and a compressed payload must start with the first byte of
+// zlib.
 func csmanHeader(data []byte) (csmanInfo, bool) {
 	const (
 		compressedMagic = 0x78
@@ -158,8 +161,11 @@ func csmanHeader(data []byte) (csmanInfo, bool) {
 	r.dataSize = h["compressed_size"]
 	r.headerSize = csmanStruct.Size()
 	r.compressed = h["compressed_size"] != h["decompressed_size"]
-	// binwalk checks the first byte of zlib only when the data holds it.
-	if r.compressed && len(data) > r.headerSize && data[r.headerSize] != compressedMagic {
+	payload, ok := binwalk.Range(data, r.headerSize, r.headerSize+r.dataSize)
+	if !ok {
+		return csmanInfo{}, false
+	}
+	if r.compressed && (len(payload) == 0 || payload[0] != compressedMagic) {
 		return csmanInfo{}, false
 	}
 	return r, true

@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/vxworks.rs, src/structures/vxworks.rs
-// and src/extractors/vxworks.rs of binwalk.
+// This file translates src/formats/vxworks.rs of binwalk-ng.
 
 package exec
 
@@ -15,7 +14,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// WindKernel is the signature "wind_kernel" of binwalk: the version string
+// WindKernel is the signature "wind_kernel" of binwalk-ng: the version string
 // of a VxWorks WIND kernel.
 var WindKernel = &walk.Signature{
 	Name:        "wind_kernel",
@@ -24,7 +23,7 @@ var WindKernel = &walk.Signature{
 	Parse:       parseWindKernel,
 }
 
-// VxWorksSymtab is the signature "vxworks_symtab" of binwalk.
+// VxWorksSymtab is the signature "vxworks_symtab" of binwalk-ng.
 var VxWorksSymtab = &walk.Signature{
 	Name: "vxworks_symtab",
 	// The type and the group of an entry of the symbol table, in both

@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/pcap.rs, src/structures/pcap.rs and
-// src/extractors/pcap.rs of binwalk.
+// This file translates src/formats/pcap.rs of binwalk-ng.
 
 package doc
 
@@ -14,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// PcapNG is the signature "pcapng" of binwalk.
+// PcapNG is the signature "pcapng" of binwalk-ng.
 var PcapNG = &walk.Signature{
 	Name:        "pcapng",
 	Magic:       [][]byte{[]byte("\x0A\x0D\x0D\x0A")},
@@ -58,10 +57,10 @@ func pcapNGSize(data []byte, off int) (int, bool) {
 	if !ok {
 		return 0, false
 	}
-	// binwalk compares the absolute offset of the next block with the bytes
-	// from the start of the capture, so a capture that does not start at 0
-	// can lose its last blocks.
-	available := len(data) - off
+	// binwalk-ng compares the offset of the next block with the size of
+	// all of the data, where binwalk compared it with the bytes from the
+	// start of the capture.
+	available := len(data)
 	count := 1
 	next, previous := off+blockSize, -1
 	for binwalk.OffsetSafe(available, next, previous) {
@@ -101,8 +100,8 @@ func parsePcapNGBlock(data []byte, big bool) (int, int, bool) {
 		return 0, 0, false
 	}
 	size := h["block_size"]
-	// A size below the size of the footer wraps in binwalk, and the slice
-	// fails. Range fails on the negative start in the same way.
+	// binwalk-ng rejects a size below the size of the footer. Range
+	// rejects the negative start in the same way.
 	start := size - pcapNGBlockFooter.Size()
 	b, ok := binwalk.Range(data, start, start+pcapNGBlockFooter.Size())
 	if !ok {

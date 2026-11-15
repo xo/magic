@@ -31,7 +31,7 @@ func TestOutputPath(t *testing.T) {
 	}
 }
 
-// TestOutputSymlink holds the links of binwalk: relative, and inside the
+// TestOutputSymlink holds the links of binwalk-ng: relative, and inside the
 // output.
 func TestOutputSymlink(t *testing.T) {
 	t.Parallel()
@@ -42,7 +42,7 @@ func TestOutputSymlink(t *testing.T) {
 	}
 	for _, l := range [][3]string{
 		{"usr/sbin/ls", "/bin/busybox", "../../bin/busybox"},
-		{"link", "x", "./x"},
+		{"link", "x", "x"},
 		{"usr/up", "../../../../etc/passwd", "../etc/passwd"},
 	} {
 		if !o.CreateSymlink(l[0], l[1]) {
@@ -51,6 +51,34 @@ func TestOutputSymlink(t *testing.T) {
 		if got := s.members[l[0]].Link; got != l[2] {
 			t.Errorf("%s -> %s: expected %q, got: %q", l[0], l[1], l[2], got)
 		}
+	}
+}
+
+// TestOutputFollowsLinks holds that a path follows the links that the
+// output holds, as resolve_in_chroot of binwalk-ng, and stays inside it.
+func TestOutputFollowsLinks(t *testing.T) {
+	t.Parallel()
+	s := newMemSink()
+	o := newOutput(s, 1<<20)
+	if !o.CreateDirectory("real") || !o.CreateSymlink("dir", "real") || !o.CreateSymlink("file", "real/f") {
+		t.Fatalf("expected the folder and the links to be made")
+	}
+	if !o.CreateFile("dir/a", []byte("a")) || s.members["real/a"] == nil {
+		t.Errorf("expected dir/a to be written as real/a")
+	}
+	if !o.AppendFile("file", []byte("f")) || s.members["real/f"] == nil {
+		t.Errorf("expected file to be written as real/f")
+	}
+	s.add(&Member{Name: "out", Mode: fs.ModeSymlink | 0o777, Link: "../x"})
+	s.add(&Member{Name: "abs", Mode: fs.ModeSymlink | 0o777, Link: "/etc"})
+	s.add(&Member{Name: "loop", Mode: fs.ModeSymlink | 0o777, Link: "loop"})
+	for _, name := range []string{"out/a", "abs/a", "loop/a"} {
+		if o.CreateFile(name, nil) {
+			t.Errorf("%s: expected the write to fail", name)
+		}
+	}
+	if !o.SetOwnership("out", 0, 0) || !o.SetMode("real/a", 0o600) || s.members["real/a"].Mode.Perm() != 0o600 {
+		t.Errorf("expected the owner and the mode to be set")
 	}
 }
 
@@ -236,6 +264,45 @@ func TestCarve(t *testing.T) {
 			b, _ := io.ReadAll(r)
 			if string(b) != "CRV....." {
 				t.Errorf("expected %q, got: %q", "CRV.....", b)
+			}
+		}
+	}
+}
+
+// TestCarveRetry holds that a carved extraction that fails runs again on
+// the data to the end of the input, as extract of binwalk-ng, and that the
+// second run starts with an empty output.
+func TestCarveRetry(t *testing.T) {
+	t.Parallel()
+	s := &Signature{
+		Name:  "carve_retry",
+		Carve: true,
+		Magic: [][]byte{[]byte("RTY")},
+		Parse: func(_ []byte, off int) (Match, error) {
+			return Match{Offset: off, Size: 4, Confidence: Low}, nil
+		},
+		Extract: func(data []byte, off int, out *Output) Extraction {
+			if out == nil {
+				return Extraction{OK: true}
+			}
+			ok := out.CreateFile("rest", data[off:])
+			return Extraction{OK: ok && len(data)-off > 4}
+		},
+	}
+	Register(s)
+	data := []byte("..RTY.....")
+	for e, err := range WalkBytes(context.Background(), data, WithFormats("carve_retry")) {
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		for m, err := range e.Members(context.Background()) {
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			r, _ := m.Open()
+			b, _ := io.ReadAll(r)
+			if string(b) != "RTY....." {
+				t.Errorf("expected %q, got: %q", "RTY.....", b)
 			}
 		}
 	}

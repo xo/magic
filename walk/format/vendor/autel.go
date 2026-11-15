@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/autel.rs, src/structures/autel.rs and
-// src/extractors/autel.rs of binwalk.
+// This file translates src/formats/autel.rs of binwalk-ng.
 
 package vendor
 
@@ -30,6 +29,10 @@ func parseAutel(data []byte, off int) (walk.Match, error) {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	size := headerSize + dataSize
+	// The header and the data must end in the data.
+	if off+size > len(data) {
+		return walk.Match{}, walk.ErrNoMatch
+	}
 	return walk.Match{
 		Offset:     off,
 		Size:       size,

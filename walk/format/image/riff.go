@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/riff.rs and src/structures/riff.rs of
-// binwalk.
+// This file translates src/formats/riff.rs of binwalk-ng.
 
 package image
 
@@ -30,7 +29,7 @@ var RIFF = &walk.Signature{
 // other RIFF to image.riff.
 func extractRIFF(data []byte, off int, out *walk.Output) walk.Extraction {
 	size, typ, ok := riffHeaderInfo(data[off:])
-	if !ok {
+	if !ok || off+size > len(data) {
 		return walk.Extraction{}
 	}
 	name := "image.riff"
@@ -58,7 +57,8 @@ var riffHeader = binwalk.Struct{
 // parseRIFF is riff_parser, with parse_riff_header.
 func parseRIFF(data []byte, off int) (walk.Match, error) {
 	size, typ, ok := riffHeaderInfo(data[off:])
-	if !ok {
+	// The RIFF must end in the data.
+	if !ok || off+size > len(data) {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	return walk.Match{

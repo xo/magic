@@ -1,11 +1,11 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/cramfs.rs and src/structures/cramfs.rs
-// of binwalk. binwalk extracts CramFS with 7zz, from
-// src/extractors/sevenzip.rs, and extractCramFS writes the files that 7zz
-// writes. It copies the behavior of CramfsHandler.cpp of 7-Zip, not its code.
+// This file translates the parser of src/formats/cramfs.rs of binwalk-ng.
+// binwalk-ng extracts CramFS with 7z, from src/formats/sevenzip.rs, and
+// extractCramFS writes the files that 7z writes. It copies the behavior of
+// CramfsHandler.cpp of 7-Zip, not its code.
 
 package filesystem
 
@@ -42,8 +42,7 @@ const (
 
 // parseCramFS is cramfs_parser.
 func parseCramFS(data []byte, off int) (walk.Match, error) {
-	// binwalk subtracts from an unsigned offset, which wraps below 0, and
-	// then finds no data there.
+	// binwalk-ng rejects a signature that starts before the image could.
 	start := off - cramfsSignatureOffset
 	if start < 0 {
 		return walk.Match{}, walk.ErrNoMatch
@@ -71,7 +70,7 @@ func parseCramFS(data []byte, off int) (walk.Match, error) {
 		errText = " (checksum error)"
 		m.Confidence = walk.Medium
 	}
-	m.Description = fmt.Sprintf("CramFS filesystem, %s endian, %d files, total size: %d bytes%s",
+	m.Description = fmt.Sprintf("CramFS filesystem, %s, %d files, total size: %d bytes%s",
 		h.endianness, h.fileCount, h.size, errText)
 	return m, nil
 }
@@ -108,9 +107,9 @@ func parseCramFSHeader(data []byte) (cramfsHeaderInfo, bool) {
 	if !ok || (h["magic"] != bigMagic && h["magic"] != littleMagic) {
 		return cramfsHeaderInfo{}, false
 	}
-	endianness := "little"
+	endianness := endianName(false)
 	if h["magic"] == bigMagic {
-		endianness = "big"
+		endianness = endianName(true)
 		if h, ok = cramfsHeader.Parse(data, true); !ok {
 			return cramfsHeaderInfo{}, false
 		}
@@ -127,8 +126,8 @@ func parseCramFSHeader(data []byte) (cramfsHeaderInfo, bool) {
 	}, true
 }
 
-// extractCramFS writes the files of the image as 7zz writes them. binwalk
-// gives 7zz the bytes of the match, so the image is the size of its header.
+// extractCramFS writes the files of the image as 7z writes them. binwalk
+// gives 7z the bytes of the match, so the image is the size of its header.
 func extractCramFS(data []byte, off int, out *walk.Output) walk.Extraction {
 	m, err := parseCramFS(data, off+cramfsSignatureOffset)
 	if err != nil {
@@ -155,7 +154,7 @@ const (
 
 	// cramfsLinkMax is the largest target of a link that the walker reads.
 	// A target is at most PATH_MAX bytes on Linux. The walker writes a
-	// larger link as a file, which is not checked against 7zz.
+	// larger link as a file, which is not checked against 7z.
 	cramfsLinkMax = 4096
 
 	cramfsFlagVer2   = 1
@@ -170,6 +169,11 @@ type cramfs struct {
 	method   int
 	blockLog int
 	nodes    []cramfsNode
+
+	// fatal is set when a block decodes to more bytes than the buffer of
+	// 7-Zip for a block holds. The buffer then fails with E_FAIL, which
+	// stops 7z.
+	fatal bool
 }
 
 // cramfsNode is CItem: the offset of the node of an item, and the index of
@@ -180,7 +184,7 @@ type cramfsNode struct {
 }
 
 // openCramfs is Open2 of CramfsHandler.cpp. 7-Zip fails to open an image
-// whose tree it cannot read, and then 7zz writes nothing.
+// whose tree it cannot read, and then 7z writes nothing.
 func openCramfs(img []byte) (*cramfs, bool) {
 	if len(img) < cramfsHeaderSize || !bytes.Equal(img[16:32], []byte("Compressed ROMFS")) {
 		return nil, false
@@ -317,24 +321,24 @@ func (c *cramfs) path(i int) string {
 	return b.String()
 }
 
-// items lists the items in the order that 7zz extracts them. 7zz reads a
-// link from the data of the file, as the posix mode of the item says.
+// items lists the items in the order that 7z extracts them. 7z reads a
+// link from the data of the file, as the posix mode of the item says, and
+// sets no mode on a link.
 func (c *cramfs) items() []szItem {
 	items := make([]szItem, 0, len(c.nodes))
+	fatal := func() bool { return c.fatal }
 	for i, n := range c.nodes {
 		mode := c.mode(n.offset)
-		it := szItem{path: c.path(i), mode: mode, hasMode: true}
+		it := szItem{path: c.path(i), mode: mode, hasMode: true, fatal: fatal}
+		isLink := mode&0xF000 == 0xA000
 		switch {
 		case c.isDir(n.offset):
 			it.dir = true
-		case mode&0xF000 == 0xA000 && c.size(n.offset) <= cramfsLinkMax:
-			var b bytes.Buffer
-			for p := range c.data(n.offset) {
-				b.Write(p)
-			}
-			it.link, it.target = true, b.String()
+		case isLink && c.size(n.offset) <= cramfsLinkMax:
+			it.linkData, it.linkSize = c.data(n.offset), c.size(n.offset)
 		default:
 			it.data = c.data(n.offset)
+			it.hasMode = !isLink
 		}
 		items = append(items, it)
 	}
@@ -371,7 +375,7 @@ func (c *cramfs) data(node int) iter.Seq[[]byte] {
 				return
 			}
 			want := min(bs, size-i*bs)
-			b, ok := c.block(c.img[start:end], want)
+			b, ok := c.block(c.img[start:end], want, bs)
 			if !ok || !yield(b) {
 				return
 			}
@@ -380,8 +384,9 @@ func (c *cramfs) data(node int) iter.Seq[[]byte] {
 	}
 }
 
-// block is ReadBlock: it decodes one block of want bytes.
-func (c *cramfs) block(src []byte, want int) ([]byte, bool) {
+// block is ReadBlock: it decodes one block of want bytes into a buffer of
+// bs bytes.
+func (c *cramfs) block(src []byte, want, bs int) ([]byte, bool) {
 	switch c.method {
 	case cramfsMethodZlib:
 		// 7-Zip wants a zlib stream that takes all of src and gives want
@@ -391,7 +396,11 @@ func (c *cramfs) block(src []byte, want int) ([]byte, bool) {
 		if err != nil {
 			return nil, false
 		}
-		b, err := io.ReadAll(io.LimitReader(z, int64(want)+1))
+		b, err := io.ReadAll(io.LimitReader(z, int64(bs)+1))
+		if len(b) > bs {
+			c.fatal = true
+			return nil, false
+		}
 		if err != nil || len(b) != want || r.Len() != 0 {
 			return nil, false
 		}

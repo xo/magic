@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/jpeg.rs and src/extractors/jpeg.rs of
-// binwalk.
+// This file translates src/formats/jpeg.rs of binwalk-ng.
 
 package image
 
@@ -20,7 +19,10 @@ var JPEG = &walk.Signature{
 	Magic: [][]byte{
 		[]byte("\xFF\xD8\xFF\xE0\x00\x10JFIF\x00"),
 		[]byte("\xFF\xD8\xFF\xE1"),
+		[]byte("\xFF\xD8\xFF\xE2"),
 		[]byte("\xFF\xD8\xFF\xDB"),
+		[]byte("\xFF\xD8\xFF\xC0"),
+		[]byte("\xFF\xD8\xFF\xFE"),
 	},
 	Description: "JPEG image",
 	Parse:       parseJPEG,

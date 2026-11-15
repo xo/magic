@@ -1,14 +1,14 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/apfs.rs and src/structures/apfs.rs of
-// binwalk.
+// This file translates the parser of src/formats/apfs.rs of binwalk-ng.
 
 package disk
 
 import (
 	"fmt"
+	"math/bits"
 	"slices"
 
 	"github.com/xo/magic/walk"
@@ -38,7 +38,11 @@ func parseAPFS(data []byte, off int) (walk.Match, error) {
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
 	}
-	size := blockCount * blockSize
+	// binwalk-ng rejects a size that overflows.
+	hi, size := bits.Mul64(blockCount, blockSize)
+	if hi != 0 {
+		return walk.Match{}, walk.ErrNoMatch
+	}
 	truncated := ""
 	// An APFS in an EFI GPT with a protective MBR counts the block of the
 	// MBR in its size. Out of the GPT, the size is 512 bytes too long.

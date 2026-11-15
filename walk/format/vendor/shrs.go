@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/shrs.rs and src/structures/shrs.rs of
-// binwalk.
+// This file translates src/formats/shrs.rs of binwalk-ng.
 
 package vendor
 
@@ -30,7 +29,8 @@ var shrsStruct = binwalk.Struct{
 }
 
 // parseSHRS is shrs_parser, with parse_shrs_header. An IV of 16 bytes
-// follows the structure, and the header is 0x6DC bytes.
+// follows the structure, and the header is 0x6DC bytes. The magic of the
+// structure is the magic of the signature, so it needs no check.
 func parseSHRS(data []byte, off int) (walk.Match, error) {
 	const (
 		ivStart    = 12
@@ -45,11 +45,15 @@ func parseSHRS(data []byte, off int) (walk.Match, error) {
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
 	}
+	size := h["encrypted_data_size"]
+	// The header and the data must end in the data.
+	if off+headerSize+size > len(data) {
+		return walk.Match{}, walk.ErrNoMatch
+	}
 	conf := walk.Low
 	if off == 0 {
 		conf = walk.Medium
 	}
-	size := h["encrypted_data_size"]
 	return walk.Match{
 		Offset:     off,
 		Size:       headerSize + size,

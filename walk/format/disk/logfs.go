@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/logfs.rs and src/structures/logfs.rs
-// of binwalk.
+// This file translates src/formats/logfs.rs of binwalk-ng.
 
 package disk
 
@@ -58,7 +57,11 @@ func parseLogFS(data []byte, off int) (walk.Match, error) {
 	if !ok || h["pad0"] != 0 || h["pad1"] != 0 {
 		return walk.Match{}, walk.ErrNoMatch
 	}
+	// binwalk-ng needs a size that is not 0 and ends inside the data.
 	size := u64(h, "filesystem_size")
+	if size == 0 || size > uint64(len(data)-start) {
+		return walk.Match{}, walk.ErrNoMatch
+	}
 	return walk.Match{
 		Offset:      start,
 		Size:        int(size),

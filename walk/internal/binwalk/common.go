@@ -11,6 +11,7 @@ package binwalk
 import (
 	"encoding/binary"
 	"hash/crc32"
+	"strings"
 	"time"
 	"unicode/utf8"
 )
@@ -143,13 +144,65 @@ func CStringBytes(data []byte) []byte {
 }
 
 // CString is get_cstring of common.rs: the bytes up to the first NUL as a
-// string, or "" when they are not valid UTF-8.
+// string, as String::from_utf8_lossy of Rust gives it.
 func CString(data []byte) string {
-	b := CStringBytes(data)
-	if !utf8.Valid(b) {
-		return ""
+	return Lossy(CStringBytes(data))
+}
+
+// Lossy is String::from_utf8_lossy of Rust. Each maximal part of b that is
+// not valid UTF-8, but starts a valid sequence, becomes one U+FFFD. So
+// "\xe2\x82" gives one U+FFFD, and "\xff\xff" gives two. Go's
+// strings.ToValidUTF8 gives one for any run of bad bytes.
+func Lossy(b []byte) string {
+	if utf8.Valid(b) {
+		return string(b)
 	}
-	return string(b)
+	var sb strings.Builder
+	for len(b) > 0 {
+		r, n := utf8.DecodeRune(b)
+		if r != utf8.RuneError || n > 1 {
+			sb.Write(b[:n])
+			b = b[n:]
+			continue
+		}
+		sb.WriteRune(utf8.RuneError)
+		b = b[maximalSubpart(b):]
+	}
+	return sb.String()
+}
+
+// maximalSubpart is the length of the maximal ill-formed subpart at the
+// start of b, which does not hold a valid sequence: the lead byte, and the
+// continuation bytes that a valid sequence could have after it.
+func maximalSubpart(b []byte) int {
+	var need int
+	lo, hi := byte(0x80), byte(0xbf)
+	switch c := b[0]; {
+	case c >= 0xc2 && c <= 0xdf:
+		need = 1
+	case c == 0xe0:
+		need, lo = 2, 0xa0
+	case c == 0xed:
+		need, hi = 2, 0x9f
+	case c >= 0xe1 && c <= 0xef:
+		need = 2
+	case c == 0xf0:
+		need, lo = 3, 0x90
+	case c == 0xf4:
+		need, hi = 3, 0x8f
+	case c >= 0xf1 && c <= 0xf3:
+		need = 3
+	default:
+		return 1
+	}
+	n := 1
+	for ; n <= need && n < len(b); n++ {
+		if b[n] < lo || b[n] > hi {
+			break
+		}
+		lo, hi = 0x80, 0xbf
+	}
+	return n
 }
 
 // IsASCIINumber is is_ascii_number of common.rs.

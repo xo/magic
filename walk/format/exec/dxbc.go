@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/dxbc.rs, src/structures/dxbc.rs and
-// src/extractors/dxbc.rs of binwalk.
+// This file translates src/formats/dxbc.rs of binwalk-ng.
 
 package exec
 
@@ -15,7 +14,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// DXBC is the signature "dxbc" of binwalk.
+// DXBC is the signature "dxbc" of binwalk-ng.
 var DXBC = &walk.Signature{
 	Name:        "dxbc",
 	Magic:       [][]byte{[]byte("DXBC")},
@@ -78,24 +77,29 @@ var dxbcHeader = binwalk.Struct{
 // identifier of each chunk.
 func parseDXBCHeader(data []byte) (int, [][]byte, bool) {
 	h, ok := dxbcHeader.Parse(data, false)
-	// binwalk allows no more than 32 chunks, so that garbage does not
-	// make a long loop.
-	if !ok || h["one"] != 1 || h["chunk_count"] > 32 {
+	// binwalk-ng allows 1 to 32 chunks, so that garbage does not make a
+	// long loop.
+	if !ok || h["one"] != 1 || h["chunk_count"] == 0 || h["chunk_count"] > 32 {
 		return 0, nil, false
 	}
+	total := h["total_size"]
+	if total == 0 || total > len(data) {
+		return 0, nil, false
+	}
+	// The table and each chunk are in the container, so that a small
+	// total size does not take bytes from the data after it.
 	end := dxbcHeader.Size()
+	if end+h["chunk_count"]*4 > total {
+		return 0, nil, false
+	}
 	var chunks [][]byte
 	for i := range h["chunk_count"] {
-		p, ok := binwalk.Range(data, end+i*4, end+i*4+4)
-		if !ok {
-			return 0, nil, false
-		}
+		p := data[end+i*4 : end+i*4+4]
 		off := int(binary.LittleEndian.Uint32(p))
-		id, ok := binwalk.Range(data, off, off+4)
-		if !ok {
+		if off+4 > total {
 			return 0, nil, false
 		}
-		chunks = append(chunks, id)
+		chunks = append(chunks, data[off:off+4])
 	}
-	return h["total_size"], chunks, true
+	return total, chunks, true
 }

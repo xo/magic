@@ -1,9 +1,9 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates the extractor of src/signatures/fat.rs of binwalk,
-// src/extractors/tsk.rs. binwalk extracts FAT with tsk_recover of The
+// This file translates the extractor of src/formats/fat.rs of binwalk-ng,
+// src/extractors/tsk.rs. binwalk-ng extracts FAT with tsk_recover of The
 // Sleuth Kit, and extractFAT writes the files that tsk_recover writes. The
 // reader copies the behavior of fatfs.cpp, fatxxfs.cpp, fatxxfs_dent.c,
 // fatxxfs_meta.cpp and fatfs_meta.cpp of The Sleuth Kit, not their code.

@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/svg.rs, src/structures/svg.rs and
-// src/extractors/svg.rs of binwalk.
+// This file translates src/formats/svg.rs of binwalk-ng.
 
 package image
 
@@ -19,7 +18,7 @@ import (
 // SVG is the signature "svg" of binwalk.
 var SVG = &walk.Signature{
 	Name:        "svg",
-	Magic:       [][]byte{[]byte("<svg ")},
+	Magic:       [][]byte{[]byte(svgOpen)},
 	Description: "SVG image",
 	Parse:       parseSVG,
 	Extract:     extractSVG,
@@ -51,53 +50,76 @@ func parseSVG(data []byte, off int) (walk.Match, error) {
 }
 
 const (
-	svgOpen  = "<svg "
+	svgOpen  = "<svg"
 	svgClose = "</svg>"
-	svgHead  = `xmlns="http://www.w3.org/2000/svg"`
 )
 
 // svgSize is parse_svg_image: the size of the SVG up to the close tag that
-// closes every tag, after exactly one tag that names the namespace of SVG.
+// closes the first open tag. Each open tag adds one to the depth, and each
+// close tag takes one away. The bytes before each tag must be valid UTF-8.
 func svgSize(data []byte) (int, bool) {
-	heads, unclosed := 0, 0
-	for i := 0; i < len(data); i++ {
-		// The open and the close tag cannot overlap, so a match of either
-		// at each offset gives the order of the matcher of binwalk.
-		if !bytes.HasPrefix(data[i:], []byte(svgOpen)) && !bytes.HasPrefix(data[i:], []byte(svgClose)) {
-			continue
+	var next svgTags
+	off, depth := 0, 0
+	for {
+		start, isOpen := next.find(data, off)
+		if start < 0 || !utf8.Valid(data[off:start]) {
+			return 0, false
 		}
-		head, open, closed, ok := svgTag(data[i:])
-		if !ok {
-			break
+		if isOpen {
+			end := start + len(svgOpen)
+			// The name of the tag must end with a space, a '>' or a '/'.
+			if end >= len(data) || !strings.ContainsRune(" >/\t\r\n", rune(data[end])) {
+				return 0, false
+			}
+			n := bytes.IndexByte(data[end:], '>')
+			if n < 0 || !utf8.Valid(data[end:end+n]) {
+				return 0, false
+			}
+			depth++
+			off = end + n + 1
+		} else {
+			if depth == 0 {
+				return 0, false
+			}
+			depth--
+			off = start + len(svgClose)
 		}
-		if head {
-			heads++
-		}
-		if open {
-			unclosed++
-		}
-		if closed {
-			unclosed--
-		}
-		if heads > 1 {
-			break
-		}
-		if heads == 1 && unclosed == 0 {
-			return i + len(svgClose), true
+		if depth == 0 {
+			return off, true
 		}
 	}
-	return 0, false
 }
 
-// svgTag is parse_svg_tag. A tag ends at the first '>' after which the bytes
-// of the tag are valid UTF-8.
-func svgTag(data []byte) (head, open, closed, ok bool) {
-	for i, c := range data {
-		if c != '>' || !utf8.Valid(data[:i+1]) {
-			continue
+// svgTags finds the open and close tags of SVG, as the matcher of
+// binwalk-ng finds them. It keeps the offset of the next tag of each kind,
+// so that each search reads the data once.
+type svgTags struct {
+	open, close int  // the offset of the next tag of each kind, or -1
+	ready       bool // true when open and close hold a search
+}
+
+// find returns the offset of the first tag at off or after it, or -1, and
+// true when it is an open tag. The two tags cannot overlap, so the first of
+// the two is the one that the matcher finds.
+func (t *svgTags) find(data []byte, off int) (int, bool) {
+	search := func(at int, tag string) int {
+		if t.ready && (at < 0 || at >= off) {
+			return at
 		}
-		tag := string(data[:i+1])
-		return strings.Contains(tag, svgHead), strings.HasPrefix(tag, svgOpen), strings.HasPrefix(tag, svgClose), true
+		i := bytes.Index(data[off:], []byte(tag))
+		if i < 0 {
+			return -1
+		}
+		return off + i
 	}
-	return false, false, false, false
+	t.open, t.close = search(t.open, svgOpen), search(t.close, svgClose)
+	t.ready = true
+	switch {
+	case t.open < 0 && t.close < 0:
+		return -1, false
+	case t.close < 0 || t.open >= 0 && t.open < t.close:
+		return t.open, true
+	default:
+		return t.close, false
+	}
 }

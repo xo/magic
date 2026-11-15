@@ -1,9 +1,9 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/arcadyan.rs, src/extractors/arcadyan.rs
-// and lzma_decompress of src/extractors/lzma.rs of binwalk.
+// This file translates src/formats/arcadyan.rs and lzma_decompress of
+// src/formats/lzma.rs of binwalk-ng.
 
 package vendor
 
@@ -89,7 +89,8 @@ func arcadyanDeobfuscate(data []byte) []byte {
 
 // lzmaDecompress is lzma_decompress of lzma.rs: it decodes the LZMA stream
 // at off in data to decompressed.bin, and reports the bytes of the stream.
-// The stream must give one byte or more.
+// binwalk-ng copies the decoder to the file until the stream ends, so a
+// stream that gives no byte is a success.
 //
 // binwalk asks liblzma for an auto decoder, which also reads xz. The data
 // of arcadyan always starts with the properties of LZMA, so this reads only
@@ -99,19 +100,23 @@ func lzmaDecompress(data []byte, off int, out *walk.Output) walk.Extraction {
 	if !ok {
 		return walk.Extraction{}
 	}
+	// binwalk-ng makes the file before it decodes, so a stream that gives
+	// no byte leaves an empty file.
+	if out != nil && !out.CreateFile("decompressed.bin", nil) {
+		return walk.Extraction{}
+	}
 	w := &lzmaWriter{out: out}
 	n, err := decode(data[off:], w)
-	if err != nil || w.failed || w.n == 0 {
+	if err != nil || w.failed {
 		return walk.Extraction{}
 	}
 	return walk.Extraction{OK: true, Size: n, HasSize: true}
 }
 
-// lzmaWriter counts the bytes that the decoder gives, and adds them to
-// decompressed.bin when it has an output.
+// lzmaWriter adds the bytes that the decoder gives to decompressed.bin when
+// it has an output.
 type lzmaWriter struct {
 	out    *walk.Output
-	n      int
 	failed bool
 }
 
@@ -121,6 +126,5 @@ func (w *lzmaWriter) Write(p []byte) (int, error) {
 		w.failed = true
 		return 0, io.ErrShortWrite
 	}
-	w.n += len(p)
 	return len(p), nil
 }

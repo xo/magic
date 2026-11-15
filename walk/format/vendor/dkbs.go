@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/dkbs.rs and src/structures/dkbs.rs of
-// binwalk.
+// This file translates src/formats/dkbs.rs of binwalk-ng.
 
 package vendor
 
@@ -71,10 +70,10 @@ func dkbsHeader(data []byte) (dkbsInfo, bool) {
 	}
 	b := data[0x68:0x6C]
 	if f, _ := dkbsSizeStruct.Parse(b, true); f["size"]&0xFF000000 == 0 {
-		r.dataSize, r.endianness = f["size"], "big"
+		r.dataSize, r.endianness = f["size"], "Big Endian"
 	} else {
 		f, _ = dkbsSizeStruct.Parse(b, false)
-		r.dataSize, r.endianness = f["size"], "little"
+		r.dataSize, r.endianness = f["size"], "Little Endian"
 	}
 	if r.dataSize == 0 {
 		return dkbsInfo{}, false

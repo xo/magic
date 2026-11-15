@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/png.rs, src/structures/png.rs and
-// src/extractors/png.rs of binwalk.
+// This file translates src/formats/png.rs of binwalk-ng.
 
 package image
 
@@ -57,7 +56,11 @@ func pngSize(data []byte, off int) (int, bool) {
 		return 0, false
 	}
 	n, ok := pngDataSize(chunks)
-	return n + headerLen, ok
+	// The PNG must end in the data.
+	if !ok || off+headerLen+n > len(data) {
+		return 0, false
+	}
+	return n + headerLen, true
 }
 
 var pngChunk = binwalk.Struct{{Name: "length", Type: "u32"}, {Name: "type", Type: "u32"}}

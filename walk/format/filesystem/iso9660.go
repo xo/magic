@@ -1,12 +1,12 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/iso9660.rs and
-// src/structures/iso9660.rs of binwalk. binwalk extracts ISO 9660 with 7zz,
-// from src/extractors/iso9660.rs, and extractISO9660 writes the files that
-// 7zz writes. It copies the behavior of the handler of ISO in 7-Zip, in
-// IsoIn.cpp, IsoItem.h and IsoHandler.cpp, not its code.
+// This file translates the parser of src/formats/iso9660.rs of binwalk-ng.
+// binwalk-ng extracts ISO 9660 with 7z, from src/formats/sevenzip.rs, and
+// extractISO9660 writes the files that 7z writes. It copies the behavior of
+// the handler of ISO in 7-Zip, in IsoIn.cpp, IsoItem.h and IsoHandler.cpp,
+// not its code.
 
 package filesystem
 
@@ -106,8 +106,8 @@ func parseISOHeader(data []byte) (int, bool) {
 	return h["volume_size_lsb"] * h["block_size_lsb"], true
 }
 
-// extractISO9660 writes the files of the image as 7zz writes them. binwalk
-// gives 7zz the bytes of the match.
+// extractISO9660 writes the files of the image as 7z writes them. binwalk
+// gives 7z the bytes of the match.
 func extractISO9660(data []byte, off int, out *walk.Output) walk.Extraction {
 	m, err := parseISO9660(data, off+isoMagicOffset)
 	if err != nil || m.Size > len(data)-off {
@@ -183,7 +183,7 @@ type isoBootEntry struct {
 type isoError struct{}
 
 // openISO is Open2 of IsoIn.cpp. 7-Zip fails to open an image whose
-// descriptors or folders it cannot read, and then 7zz writes nothing.
+// descriptors or folders it cannot read, and then 7z writes nothing.
 func openISO(img []byte) (a *isoArchive, ok bool) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -643,7 +643,7 @@ func (a *isoArchive) symlink(r *isoRecord) (string, bool) {
 	return b.String(), true
 }
 
-// items lists the items in the order that 7zz extracts them: the tree,
+// items lists the items in the order that 7z extracts them: the tree,
 // then the boot images in the folder "[BOOT]".
 func (a *isoArchive) items() []szItem {
 	items := make([]szItem, 0, len(a.refs)+len(a.boot))

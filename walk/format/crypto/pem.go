@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/pem.rs and src/extractors/pem.rs of
-// binwalk.
+// This file translates src/formats/pem.rs of binwalk-ng.
 
 package crypto
 
@@ -132,30 +131,36 @@ func parsePEM(data []byte, off int) (walk.Match, error) {
 	return m, nil
 }
 
-// pemEnds are the end markers that get_pem_size looks for.
+// pemEnds are PEM_EOF_MARKERS, the end markers that get_pem_size looks for.
 var pemEnds = [][]byte{
 	[]byte("-----END PUBLIC KEY-----"),
+	[]byte("-----END RSA PUBLIC KEY-----"),
+	[]byte("-----END DSA PUBLIC KEY-----"),
+	[]byte("-----END ECDSA PUBLIC KEY-----"),
 	[]byte("-----END CERTIFICATE-----"),
 	[]byte("-----END PRIVATE KEY-----"),
 	[]byte("-----END EC PRIVATE KEY-----"),
 	[]byte("-----END RSA PRIVATE KEY-----"),
 	[]byte("-----END DSA PRIVATE KEY-----"),
 	[]byte("-----END OPENSSH PRIVATE KEY-----"),
+	[]byte("-----END ANY PRIVATE KEY-----"),
+	[]byte("-----END ENCRYPTED PRIVATE KEY-----"),
+	[]byte("-----END TSS2 PRIVATE KEY-----"),
 }
 
-// pemSize is get_pem_size of extractors/pem.rs: the bytes from off to the end
-// of the first end marker, with the CR and LF bytes that follow it. binwalk
-// takes the first marker that ends. No marker can start inside another, so
-// the first that ends is also the first that starts.
+// pemSize is get_pem_size: the bytes from off to the end of the first end
+// marker, with the CR and LF bytes that follow it. binwalk-ng takes the
+// marker that ends first, as the overlapping search of AhoCorasick gives it.
+// No marker ends inside another, so two markers never end at the same byte.
 func pemSize(data []byte, off int) (int, bool) {
 	rest := data[off:]
-	first, end := -1, 0
+	end := -1
 	for _, e := range pemEnds {
-		if i := bytes.Index(rest, e); i >= 0 && (first < 0 || i < first) {
-			first, end = i, i+len(e)
+		if i := bytes.Index(rest, e); i >= 0 && (end < 0 || i+len(e) < end) {
+			end = i + len(e)
 		}
 	}
-	if first < 0 {
+	if end < 0 {
 		return 0, false
 	}
 	for end < len(rest) && (rest[end] == '\r' || rest[end] == '\n') {

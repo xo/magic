@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/bmp.rs, src/structures/bmp.rs and
-// src/extractors/bmp.rs of binwalk.
+// This file translates src/formats/bmp.rs of binwalk-ng.
 
 package image
 
@@ -65,17 +64,25 @@ func bmpSize(data []byte, off int) (int, bool) {
 	if !ok || len(bmp) < h["bfSize"] || h["bfSize"] == 0 || h["bfOffBits"] == 0 || h["bfOffBits"] > len(bmp) {
 		return 0, false
 	}
-	// get_dib_header_size. binwalk panics when fewer than 4 bytes follow
-	// the file header, and the walker rejects the candidate.
+	// The DIB header follows the file header, and starts with its size.
 	dib, ok := binwalk.Range(data, off+fileHeaderSize, off+fileHeaderSize+4)
 	if !ok {
 		return 0, false
 	}
-	switch n := int(binary.LittleEndian.Uint32(dib)); n {
+	n := int(binary.LittleEndian.Uint32(dib))
+	switch n {
 	case 12, 40, 108, 124:
-		if h["bfOffBits"] >= fileHeaderSize+n {
-			return h["bfSize"], true
-		}
+	default:
+		return 0, false
 	}
-	return 0, false
+	// The size of the file must hold both headers.
+	if h["bfSize"] < fileHeaderSize+n {
+		return 0, false
+	}
+	// extract_bmp_image: the image data starts after both headers, and
+	// before the end of the file.
+	if h["bfOffBits"] < fileHeaderSize+n || h["bfOffBits"] >= h["bfSize"] {
+		return 0, false
+	}
+	return h["bfSize"], true
 }

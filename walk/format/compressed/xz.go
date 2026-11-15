@@ -1,10 +1,9 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/xz.rs, src/structures/xz.rs,
-// src/signatures/lzma.rs, src/structures/lzma.rs and src/extractors/lzma.rs
-// of binwalk.
+// This file translates src/formats/xz.rs and src/formats/lzma.rs of
+// binwalk-ng.
 
 package compressed
 
@@ -21,8 +20,9 @@ var errWrite = errors.New("compressed: the output refused the data")
 
 // lzmaDecompress is lzma_decompress: it decodes the stream at off with the
 // auto decoder of liblzma, which takes xz or lzma, and writes what comes out
-// to decompressed.bin when out is set. It fails when the stream gave no
-// data, and when no decoder is registered.
+// to decompressed.bin when out is set. It fails when the stream is not
+// valid or is cut short, and when no decoder is registered. A stream that
+// gives no data is valid, but the extraction then wrote nothing, and fails.
 func lzmaDecompress(data []byte, off int, out *walk.Output) walk.Extraction {
 	m := compress.LZMA
 	if len(data)-off >= 6 && string(data[off:off+6]) == "\xFD7zXZ\x00" {
@@ -34,13 +34,13 @@ func lzmaDecompress(data []byte, off int, out *walk.Output) walk.Extraction {
 	}
 	w := &appender{out: out, name: "decompressed.bin"}
 	n, err := s(data[off:], w)
-	if err != nil || w.failed || w.n == 0 {
+	if err != nil || w.failed {
 		return walk.Extraction{}
 	}
 	return walk.Extraction{OK: true, Size: n, HasSize: true}
 }
 
-// XZ is the signature "xz" of binwalk.
+// XZ is the signature "xz" of binwalk-ng.
 var XZ = &walk.Signature{
 	Name:        "xz",
 	Magic:       [][]byte{[]byte("\xFD\x37\x7a\x58\x5a\x00")},
@@ -62,17 +62,40 @@ func xzHeader(data []byte) bool {
 	return ok && binwalk.CRC32(data[6:8]) == uint32(h["header_crc"])
 }
 
-// failed is the extractor of a match that binwalk extracts with 7-Zip, which
-// the walker does not run (D36).
-func failed([]byte, int, *walk.Output) walk.Extraction {
-	return walk.Extraction{}
+// extractXZ7z writes what 7z writes for the xz data that binwalk-ng carves
+// at off, when a stream of it is not valid. 7z names the file after the
+// carved file, xz_<offset in hexadecimal>, and writes the data of each
+// valid stream. Of the stream that is not valid, the walker writes what
+// liblzma decodes of a stream that is cut short. 7z also writes a part of a
+// stream with bad data, which the walker does not.
+func extractXZ7z(data []byte, off int, out *walk.Output) walk.Extraction {
+	s, ok := compress.LookupStream(compress.XZ)
+	if !ok {
+		return walk.Extraction{}
+	}
+	w := &appender{out: out, name: fmt.Sprintf("xz_%X", off)}
+	for next := off; next < len(data) && !w.failed; {
+		n, err := s(data[next:], w)
+		if err == nil {
+			next += n
+			continue
+		}
+		if _, decode, ok := compress.Lookup(compress.XZ); ok {
+			if part, err := decode(data[next:], 1<<62); err == nil {
+				_, _ = w.Write(part)
+			}
+		}
+		break
+	}
+	if w.failed || w.n == 0 {
+		return walk.Extraction{}
+	}
+	return walk.Extraction{OK: true}
 }
 
 // parseXZ is xz_parser. It adds the size of each stream that follows the
-// last one. binwalk compares the absolute offset of the next stream with the
-// bytes that follow the match, so it misses a stream that starts further into
-// the data than its own length. The walker compares it with the bytes of the
-// data, as binwalk 3.1.0 did, and the oracle carries the same fix (D59).
+// last one. When a stream is not valid, binwalk-ng extracts the match with
+// 7z, from the bytes of the match.
 func parseXZ(data []byte, off int) (walk.Match, error) {
 	m := walk.Match{Offset: off, Confidence: walk.High, Description: "XZ compressed data"}
 	next, previous := off, -1
@@ -85,8 +108,8 @@ func parseXZ(data []byte, off int) (walk.Match, error) {
 		headers++
 		r := lzmaDecompress(data, next, nil)
 		if !r.OK {
-			// binwalk extracts it with 7-Zip.
-			m.Extract = failed
+			// binwalk-ng extracts it with 7z.
+			m.Extract, m.Carve = extractXZ7z, true
 			m.Description += ", valid header with malformed data stream"
 			break
 		}
@@ -103,15 +126,14 @@ func parseXZ(data []byte, off int) (walk.Match, error) {
 	return m, nil
 }
 
-// LZMA is the signature "lzma" of binwalk. binwalk extracts it with 7-Zip,
-// which writes the data to lzma_<offset in hexadecimal>. The walker writes
-// the same file.
+// LZMA is the signature "lzma" of binwalk-ng. binwalk-ng extracts it with
+// lzma_decompress, which writes the data to decompressed.bin.
 var LZMA = &walk.Signature{
 	Name:        "lzma",
 	Magic:       lzmaMagic(),
 	Description: "LZMA compressed data",
 	Parse:       parseLZMA,
-	Extract:     extractLZMA,
+	Extract:     lzmaDecompress,
 }
 
 // lzmaMagic is lzma_magic: each supported property byte with each
@@ -136,10 +158,14 @@ var lzmaStruct = binwalk.Struct{
 	{Name: "null_byte", Type: "u8"},
 }
 
-// parseLZMA is lzma_parser, with parse_lzma_header.
+// parseLZMA is lzma_parser, with parse_lzma_header. The properties hold
+// lc, lp and pb, and lc+lp is at most 4, as is pb.
 func parseLZMA(data []byte, off int) (walk.Match, error) {
 	h, ok := lzmaStruct.Parse(data[off:], false)
 	if !ok || h["null_byte"] != 0 {
+		return walk.Match{}, walk.ErrNoMatch
+	}
+	if p := h["properties"]; p%9+p/9%5 > 4 || p/45 > 4 {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	// The size is a u64 in binwalk; -1 here is 0xFFFFFFFFFFFFFFFF, a stream
@@ -159,22 +185,4 @@ func parseLZMA(data []byte, off int) (walk.Match, error) {
 		Description: fmt.Sprintf("LZMA compressed data, properties: 0x%02X, dictionary size: %d bytes, compressed size: %d bytes, uncompressed size: %d bytes",
 			h["properties"], h["dictionary_size"], r.Size, int64(size)),
 	}, nil
-}
-
-// extractLZMA writes what 7-Zip writes for a stream of lzma: its data, in a
-// file named after the signature and the offset.
-func extractLZMA(data []byte, off int, out *walk.Output) walk.Extraction {
-	if out == nil {
-		return lzmaDecompress(data, off, nil)
-	}
-	s, ok := compress.LookupStream(compress.LZMA)
-	if !ok {
-		return walk.Extraction{}
-	}
-	w := &appender{out: out, name: fmt.Sprintf("lzma_%X", off)}
-	n, err := s(data[off:], w)
-	if err != nil || w.failed || w.n == 0 {
-		return walk.Extraction{}
-	}
-	return walk.Extraction{OK: true, Size: n, HasSize: true}
 }

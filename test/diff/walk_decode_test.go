@@ -3,7 +3,6 @@ package diff
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,10 +12,8 @@ import (
 	"github.com/xo/magic/walk"
 )
 
-// TestWalkDecodes extracts zstd and lzma, which binwalk extracts with
-// programs, so binwalk cannot be the oracle of their files. The walker
-// writes what those programs write: the data, in a file named after the
-// signature and the offset.
+// TestWalkDecodes extracts zstd, lzma and xz, which binwalk-ng extracts with
+// its own code to decompressed.bin.
 func TestWalkDecodes(t *testing.T) {
 	t.Parallel()
 	exp, err := os.ReadFile(filepath.Join("..", "..", "testdata", "utf8.txt"))
@@ -67,10 +64,7 @@ func TestWalkDecodes(t *testing.T) {
 				got = append(got, m.Name)
 			}
 		}
-		want := fmt.Sprintf("%s_%X", tt.format, off)
-		if tt.format == "xz" {
-			want = "decompressed.bin"
-		}
+		const want = "decompressed.bin"
 		if len(got) != 1 || got[0] != want {
 			t.Errorf("%s: expected [%q], got: %q", tt.format, want, got)
 		}

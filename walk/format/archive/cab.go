@@ -1,11 +1,11 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/cab.rs and src/structures/cab.rs of
-// binwalk. binwalk extracts a cabinet with cabextract, from
-// src/extractors/cab.rs, and extractCAB writes the files that cabextract
-// writes, for the folders that are stored or compressed with MSZIP.
+// This file translates src/formats/cab.rs of binwalk-ng. binwalk-ng
+// extracts a cabinet with cabextract, and extractCAB writes the files that
+// cabextract writes, for the folders that are stored or compressed with
+// MSZIP.
 
 package archive
 
@@ -22,7 +22,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// CAB is the signature "cab" of binwalk. The magic holds the field
+// CAB is the signature "cab" of binwalk-ng. The magic holds the field
 // reserved1 after "MSCF", which must be 0.
 var CAB = &walk.Signature{
 	Name:        "cab",
@@ -30,6 +30,7 @@ var CAB = &walk.Signature{
 	Description: "Microsoft Cabinet archive",
 	Parse:       parseCAB,
 	Extract:     extractCAB,
+	Carve:       true,
 }
 
 var cabStruct = binwalk.Struct{

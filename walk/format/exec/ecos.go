@@ -1,14 +1,14 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/ecos.rs of binwalk.
+// This file translates src/formats/ecos.rs of binwalk-ng.
 
 package exec
 
 import "github.com/xo/magic/walk"
 
-// ECos is the signature "ecos" of binwalk: the handler of exceptions of the
+// ECos is the signature "ecos" of binwalk-ng: the handler of exceptions of the
 // eCos kernel, for MIPS only.
 var ECos = &walk.Signature{
 	Name: "ecos",
@@ -26,13 +26,13 @@ var ECos = &walk.Signature{
 
 // parseECos is exception_handler_parser.
 func parseECos(data []byte, off int) (walk.Match, error) {
-	endian := "big"
+	endian := "Big Endian"
 	if data[off] == 0 {
-		endian = "little"
+		endian = "Little Endian"
 	}
 	return walk.Match{
 		Offset:      off,
 		Confidence:  walk.Low,
-		Description: "eCos kernel exception handler, MIPS " + endian + " endian",
+		Description: "eCos kernel exception handler, MIPS " + endian,
 	}, nil
 }

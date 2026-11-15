@@ -1,9 +1,9 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/deb.rs and src/structures/deb.rs of
-// binwalk. binwalk does not extract a Debian package.
+// This file translates src/formats/deb.rs of binwalk-ng. binwalk-ng does not
+// extract a Debian package.
 
 package archive
 
@@ -17,7 +17,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// Deb is the signature "deb" of binwalk.
+// Deb is the signature "deb" of binwalk-ng.
 var Deb = &walk.Signature{
 	Name:        "deb",
 	Magic:       [][]byte{[]byte("!<arch>\ndebian-binary\x20\x20\x20")},

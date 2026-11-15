@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/mbr.rs, src/structures/mbr.rs and
-// src/extractors/mbr.rs of binwalk.
+// This file translates src/formats/mbr.rs of binwalk-ng.
 
 package disk
 
@@ -139,7 +138,8 @@ func parseMBRImage(data []byte) (mbrHeader, bool) {
 		if !ok {
 			return h, false
 		}
-		if e["os_type"] == 0 && e["lba_size"] == 0 {
+		// binwalk-ng leaves out an entry whose type or size is 0.
+		if e["os_type"] == 0 || e["lba_size"] == 0 {
 			continue
 		}
 		if e["status"] != 0 && e["status"] != 0x80 {

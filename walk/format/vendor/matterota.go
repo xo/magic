@@ -1,15 +1,15 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/matter_ota.rs,
-// src/structures/matter_ota.rs and src/extractors/matter_ota.rs of binwalk.
+// This file translates src/formats/matter_ota.rs of binwalk-ng.
 
 package vendor
 
 import (
 	"encoding/hex"
 	"fmt"
+	"unicode/utf8"
 
 	"github.com/xo/magic/walk"
 	"github.com/xo/magic/walk/internal/binwalk"
@@ -26,19 +26,21 @@ var MatterOTA = &walk.Signature{
 }
 
 // extractMatterOTA is extract_matter_ota: it carves the payload after the
-// header to matter_payload.bin. As in binwalk, a payload that does not fit
-// in data is not an error: the extractor writes nothing, and reports
-// success.
+// header to matter_payload.bin. The payload must end in the data.
 func extractMatterOTA(data []byte, off int, out *walk.Output) walk.Extraction {
 	h, ok := matterOTAHeader(data[off:])
 	if !ok {
 		return walk.Extraction{}
 	}
 	start := off + matterOTAStruct.Size() + h.headerSize
-	r := walk.Extraction{OK: true, Size: h.totalSize, HasSize: true}
-	if b, ok := binwalk.Range(data, start, start+h.payloadSize); ok && out != nil {
-		r.OK = out.CarveFile("matter_payload.bin", b, 0, len(b))
+	r := walk.Extraction{Size: h.totalSize, HasSize: true}
+	// A payload size above the largest int is negative here, and Range
+	// rejects it, as binwalk-ng rejects a sum that overflows.
+	b, ok := binwalk.Range(data, start, start+h.payloadSize)
+	if !ok {
+		return r
 	}
+	r.OK = out == nil || out.CarveFile("matter_payload.bin", b, 0, len(b))
 	return r
 }
 
@@ -77,8 +79,19 @@ type matterOTAInfo struct {
 	digest      string
 }
 
-// matterOTAHeader is parse_matter_ota_header.
+// matterOTAHeader is parse_matter_ota_header. It reads the elements in
+// order, and a later element replaces an earlier one of the same tag. An
+// element of a known tag must have the type of that tag, and an element of
+// an unknown tag is ignored.
 func matterOTAHeader(data []byte) (matterOTAInfo, bool) {
+	const (
+		tagVendorID        = 0
+		tagProductID       = 1
+		tagVersionString   = 3
+		tagPayloadSize     = 4
+		tagImageDigestType = 8
+		tagImageDigest     = 9
+	)
 	h, ok := matterOTAStruct.Parse(data, false)
 	if !ok {
 		return matterOTAInfo{}, false
@@ -89,29 +102,44 @@ func matterOTAHeader(data []byte) (matterOTAInfo, bool) {
 	if !ok {
 		return matterOTAInfo{}, false
 	}
-	fields, ok := tlvHeader(b)
-	if !ok {
-		return matterOTAInfo{}, false
-	}
-	for key, v := range fields {
-		switch {
-		case key == "VendorID" && v.kind == tlvUnsigned:
+	for len(b) > 0 {
+		tag, v, n, ok := tlvElement(b)
+		if !ok {
+			return matterOTAInfo{}, false
+		}
+		b = b[n:]
+		want := tlvUnsigned
+		switch tag {
+		case tagVersionString:
+			want = tlvString
+		case tagImageDigest:
+			want = tlvOctets
+		case tagVendorID, tagProductID, tagPayloadSize, tagImageDigestType:
+		default:
+			continue
+		}
+		if v.kind != want {
+			return matterOTAInfo{}, false
+		}
+		switch tag {
+		case tagVendorID:
 			r.vendorID = v.n
-		case key == "ProductID" && v.kind == tlvUnsigned:
+		case tagProductID:
 			r.productID = v.n
-		case key == "SoftwareVersionString" && v.kind == tlvString:
+		case tagVersionString:
 			r.version = v.s
-		case key == "PayloadSize" && v.kind == tlvUnsigned:
+		case tagPayloadSize:
 			r.payloadSize = v.n
-		case key == "ImageDigestType" && v.kind == tlvUnsigned:
+		case tagImageDigestType:
 			r.digestType = v.n
-		case key == "ImageDigest" && v.kind == tlvOctets:
+		case tagImageDigest:
 			r.digest = hex.EncodeToString(v.b)
 		}
 	}
-	// The sum wraps in a release build of binwalk, and so does the sum of
-	// Go ints, so both compare the same bits.
-	if r.payloadSize+start+r.headerSize != r.totalSize {
+	// binwalk-ng keeps the sizes in a usize, and rejects a sum that
+	// overflows. The sum here is in a uint64, which holds the same bits.
+	sum := uint64(r.payloadSize) + uint64(start) + uint64(r.headerSize)
+	if sum < uint64(r.payloadSize) || sum != uint64(r.totalSize) {
 		return matterOTAInfo{}, false
 	}
 	return r, true
@@ -185,7 +213,11 @@ func tlvElement(data []byte) (int, tlvValue, int, bool) {
 		if !ok {
 			return 0, tlvValue{}, 0, false
 		}
-		return tag, tlvValue{kind: tlvString, s: binwalk.CString(b)}, off + width.Size() + n, true
+		// The string must be valid UTF-8, and it holds every byte, NUL too.
+		if !utf8.Valid(b) {
+			return 0, tlvValue{}, 0, false
+		}
+		return tag, tlvValue{kind: tlvString, s: string(b)}, off + width.Size() + n, true
 	case typ >= 0b1_0000 && typ <= 0b1_0011:
 		f, ok := width.Parse(field, false)
 		if !ok {
@@ -199,41 +231,4 @@ func tlvElement(data []byte) (int, tlvValue, int, bool) {
 		return tag, tlvValue{kind: tlvOctets, b: b}, off + width.Size() + n, true
 	}
 	return 0, tlvValue{}, 0, false
-}
-
-// tlvFields are the names of the fields of the header, by their tags.
-var tlvFields = []string{
-	"VendorID",
-	"ProductID",
-	"SoftwareVersion",
-	"SoftwareVersionString",
-	"PayloadSize",
-	"MinApplicableSoftwareVersion",
-	"MaxApplicableSoftwareVersion",
-	"ReleaseNotesURL",
-	"ImageDigestType",
-	"ImageDigest",
-}
-
-// tlvHeader is parse_tlv_header. A later element replaces an earlier one of
-// the same tag, as in the HashMap of binwalk.
-func tlvHeader(data []byte) (map[string]tlvValue, bool) {
-	out := make(map[string]tlvValue)
-	next, previous := 0, -1
-	for binwalk.OffsetSafe(len(data), next, previous) {
-		tag, v, n, ok := tlvElement(data[next:])
-		if !ok {
-			return nil, false
-		}
-		previous = next
-		next += n
-		if tag < 0 {
-			continue
-		}
-		if tag >= len(tlvFields) {
-			return nil, false
-		}
-		out[tlvFields[tag]] = v
-	}
-	return out, true
 }

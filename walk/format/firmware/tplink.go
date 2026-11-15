@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/tplink.rs and src/structures/tplink.rs
-// of binwalk.
+// This file translates src/formats/tplink.rs of binwalk-ng.
 
 package firmware
 
@@ -14,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// TPLink is the signature "tplink" of binwalk.
+// TPLink is the signature "tplink" of binwalk-ng.
 var TPLink = &walk.Signature{
 	Name:        "tplink",
 	Magic:       [][]byte{[]byte("\x01\x00\x00\x00TP-LINK Technologies\x00\x00\x00\x00ver. 1.0")},
@@ -22,7 +21,7 @@ var TPLink = &walk.Signature{
 	Parse:       parseTPLink,
 }
 
-// TPLinkRTOS is the signature "tplink_rtos" of binwalk.
+// TPLinkRTOS is the signature "tplink_rtos" of binwalk-ng.
 var TPLinkRTOS = &walk.Signature{
 	Name:        "tplink_rtos",
 	Magic:       [][]byte{[]byte("\x00\x14\x2F\xC0")},
@@ -90,8 +89,8 @@ var tplinkRTOSStruct = binwalk.Struct{
 	{Name: "hardware_revision_minor", Type: "u8"},
 }
 
-// parseTPLinkRTOS is tplink_rtos_parser, with parse_tplink_rtos_header. It
-// gives no size, as in binwalk.
+// parseTPLinkRTOS is tplink_rtos_parser, with parse_tplink_rtos_header. The
+// size is the total size, and the image must fit in the data.
 func parseTPLinkRTOS(data []byte, off int) (walk.Match, error) {
 	const (
 		headerSize      = 0x94
@@ -102,11 +101,16 @@ func parseTPLinkRTOS(data []byte, off int) (walk.Match, error) {
 	if !ok || h["magic2"] != magic2 {
 		return walk.Match{}, walk.ErrNoMatch
 	}
+	total := h["data_size"] + totalSizeOffset
+	if off+total > len(data) {
+		return walk.Match{}, walk.ErrNoMatch
+	}
 	return walk.Match{
 		Offset:     off,
+		Size:       total,
 		Confidence: walk.Medium,
 		Description: fmt.Sprintf("TP-Link RTOS firmware, model number: %X, hardware version: %X.%X, header size: %d bytes, total size: %d bytes",
 			h["model_number"], h["hardware_revision_major"], h["hardware_revision_minor"],
-			headerSize, h["data_size"]+totalSizeOffset),
+			headerSize, total),
 	}, nil
 }

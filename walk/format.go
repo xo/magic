@@ -44,6 +44,10 @@ type Match struct {
 	// Extract, when it is set, extracts this match in place of the
 	// extractor of the signature, as the preferred extractor of binwalk.
 	Extract Extractor
+	// Carve is set when Extract stands for a program of binwalk-ng, as
+	// Signature.Carve. It counts only with Extract, which then replaces
+	// Signature.Carve too.
+	Carve bool
 }
 
 // Extractor writes the files of the match at off in data to out, as an
@@ -78,10 +82,19 @@ type Signature struct {
 	// of this format, as do_not_recurse of binwalk.
 	NoRecurse bool
 
+	// ZeroMagicNonZero is for a magic of only zero bytes: the distance
+	// before the magic of a byte that the parser requires to be not zero.
+	// It lets the scan skip a run of zeros, as binwalk-ng does for
+	// program_store. A magic of only zeros with no such distance stops the
+	// skip.
+	ZeroMagicNonZero int
+
 	// Carve is set when binwalk extracts the format with a program, to
 	// which it gives only the bytes of the match. The extractor then gets
 	// the data up to the end of the match, as binwalk carves it, and not
-	// the rest of the input.
+	// the rest of the input. When that fails, the extractor runs again on
+	// all the data to the end of the input, as extract of binwalk-ng does,
+	// because the size of a match can be too short.
 	Carve bool
 }
 
@@ -120,7 +133,7 @@ func Signatures() []*Signature {
 	return out
 }
 
-// rank is the place of a signature in the order of binwalk, which decides
+// rank is the place of a signature in the order of binwalk-ng, which decides
 // the order of the patterns, and so the order in which the scan tries the
 // candidates at one offset. A signature that binwalk does not have comes
 // after all of them.
@@ -131,10 +144,10 @@ func rank(name string) int {
 	return len(order)
 }
 
-// order is the order of the signatures in src/magic.rs of binwalk.
+// order is the order of the signatures in src/magic.rs of binwalk-ng.
 var order = []string{
-	"gzip", "deb", "7zip", "xz", "tarball", "squashfs", "dlob", "lzma", "bmp",
-	"bzip2", "uimage", "packimg", "crc32", "sha256", "cpio", "iso9660",
+	"gzip", "deb", "7zip", "xz", "tarball", "squashfs", "dlob", "lzma", "eva",
+	"bmp", "bzip2", "uimage", "packimg", "crc32", "sha256", "cpio", "iso9660",
 	"linux_kernel", "linux_boot_image", "linux_arm_zimage", "zstd", "zip",
 	"pchrom", "uefi_pi_volume", "uefi_capsule", "pdf", "elf", "cramfs",
 	"qnx_ifs", "romfs", "ext", "cab", "jffs2", "yaffs", "lz4", "lzop", "pe",
@@ -148,6 +161,7 @@ var order = []string{
 	"aes_forward_table", "aes_reverse_table", "aes_rcon",
 	"aes_acceleration_table", "luks", "tplink_rtos", "binhdr", "autel", "ntfs",
 	"apfs", "btrfs", "wince", "dahua_zip", "mh01", "csman", "dxbc", "dlink_tlv",
-	"dlke", "shrs", "pkcs_der_hash", "logfs", "encrpted_img", "android_bootimg",
-	"uboot", "dms", "dkbs", "encfw", "matter_ota", "dpapi", "qcow", "arj", "md5",
+	"dlink_fw", "dlke", "shrs", "pkcs_der_hash", "logfs", "encrpted_img",
+	"android_bootimg", "uboot", "dms", "dkbs", "encfw", "matter_ota", "dpapi",
+	"qcow", "arj", "md5", "program_store",
 }

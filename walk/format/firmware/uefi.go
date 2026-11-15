@@ -1,11 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/uefi.rs and src/structures/uefi.rs of
-// binwalk. binwalk extracts UEFI volumes and capsules with
-// uefi-firmware-parser, a program that the walker has no translation of, so
-// the walker only finds them.
+// This file translates src/formats/uefi.rs of binwalk-ng.
 
 package firmware
 
@@ -16,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// UEFIVolume is the signature "uefi_pi_volume" of binwalk.
+// UEFIVolume is the signature "uefi_pi_volume" of binwalk-ng.
 var UEFIVolume = &walk.Signature{
 	Name:        "uefi_pi_volume",
 	Magic:       [][]byte{[]byte("_FVH")},
@@ -25,7 +22,7 @@ var UEFIVolume = &walk.Signature{
 	NoRecurse:   true,
 }
 
-// UEFICapsule is the signature "uefi_capsule" of binwalk.
+// UEFICapsule is the signature "uefi_capsule" of binwalk-ng.
 var UEFICapsule = &walk.Signature{
 	Name: "uefi_capsule",
 	// The GUIDs of an EFI capsule, an EFI2 capsule and a UEFI capsule.
@@ -109,10 +106,8 @@ func parseUEFICapsule(data []byte, off int) (walk.Match, error) {
 	if !ok || h["header_size"] >= h["total_size"] {
 		return walk.Match{}, walk.ErrNoMatch
 	}
-	// binwalk accepts a total size at or above the rest of the data, and
-	// later drops a match past the end. So only a capsule that ends at the
-	// end of the data matches.
-	if h["total_size"] < len(data)-off {
+	// The capsule must fit in the rest of the data.
+	if h["total_size"] == 0 || h["total_size"] > len(data)-off {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	return walk.Match{

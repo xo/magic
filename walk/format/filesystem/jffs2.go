@@ -1,11 +1,10 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/jffs2.rs and src/structures/jffs2.rs
-// of binwalk. binwalk extracts JFFS2 with jefferson, from
-// src/extractors/jffs2.rs, and extractJFFS2 writes the files that jefferson
-// writes.
+// This file translates the parser of src/formats/jffs2.rs of binwalk-ng.
+// binwalk-ng extracts JFFS2 with jefferson, and extractJFFS2 writes the
+// files that jefferson writes.
 
 package filesystem
 
@@ -54,8 +53,8 @@ const jffs2HeaderSize = 12
 
 // parseJFFS2 is jffs2_parser. It finds the nodes that follow the first one,
 // each within 128 KiB of the end of the one before, and needs three of
-// them. The size runs to the end of the last node, and can pass the end of
-// the data, as in binwalk.
+// them. The size runs to the end of the last node, and stops at the end of
+// the data.
 func parseJFFS2(data []byte, off int) (walk.Match, error) {
 	const (
 		maxPageSize  = 0x20000
@@ -69,9 +68,9 @@ func parseJFFS2(data []byte, off int) (walk.Match, error) {
 	if eof >= len(data) {
 		return walk.Match{}, walk.ErrNoMatch
 	}
-	magic, endian := []byte("\x85\x19"), "little"
+	magic := []byte("\x85\x19")
 	if first.big {
-		magic, endian = []byte("\x19\x85"), "big"
+		magic = []byte("\x19\x85")
 	}
 	count := 1
 	// binwalk visits every match of the magic after the first node. A
@@ -97,7 +96,9 @@ func parseJFFS2(data []byte, off int) (walk.Match, error) {
 		}
 		if h, ok := jffs2NodeHeader(hdr); ok {
 			count++
-			eof = start + jffs2Pad(h.size)
+			// binwalk-ng stops the end at the end of the data, so that a
+			// node with a wrong size does not hide the nodes after it.
+			eof = min(start+jffs2Pad(h.size), len(data))
 		}
 	}
 	if count <= minNodeCount {
@@ -108,7 +109,7 @@ func parseJFFS2(data []byte, off int) (walk.Match, error) {
 		Offset:      off,
 		Size:        size,
 		Confidence:  walk.High,
-		Description: fmt.Sprintf("JFFS2 filesystem, %s endian, nodes: %d, total size: %d bytes", endian, count, size),
+		Description: fmt.Sprintf("JFFS2 filesystem, %s, nodes: %d, total size: %d bytes", endianName(first.big), count, size),
 	}, nil
 }
 

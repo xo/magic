@@ -88,7 +88,7 @@ func TestSevenZip(t *testing.T) {
 				"d/n.txt -rw-r--r-- "+strings.Repeat("0123456789\n", 30),
 				"d/up drwxr-xr-x",
 				"d/up/target -rw-r--r-- t",
-				"ln Lrwxrwxrwx -> ./a.txt",
+				"ln Lrwxrwxrwx -> a.txt",
 				"run.sh -rw-r--r-x #!/bin/sh\n",
 				"void drwxr-xr-x",
 			)

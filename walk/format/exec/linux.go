@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/linux.rs and src/structures/linux.rs of
-// binwalk.
+// This file translates src/formats/linux.rs of binwalk-ng.
 
 package exec
 
@@ -16,7 +15,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// LinuxKernel is the signature "linux_kernel" of binwalk: the version string
+// LinuxKernel is the signature "linux_kernel" of binwalk-ng: the version string
 // of a Linux kernel.
 var LinuxKernel = &walk.Signature{
 	Name:        "linux_kernel",
@@ -25,7 +24,7 @@ var LinuxKernel = &walk.Signature{
 	Parse:       parseLinuxKernel,
 }
 
-// LinuxBootImage is the signature "linux_boot_image" of binwalk.
+// LinuxBootImage is the signature "linux_boot_image" of binwalk-ng.
 var LinuxBootImage = &walk.Signature{
 	Name:        "linux_boot_image",
 	Magic:       [][]byte{[]byte("\xb8\xc0\x07\x8e\xd8\xb8\x00\x90\x8e\xc0\xb9\x00\x01\x29\xf6\x29")},
@@ -33,7 +32,7 @@ var LinuxBootImage = &walk.Signature{
 	Parse:       parseLinuxBootImage,
 }
 
-// LinuxARMZImage is the signature "linux_arm_zimage" of binwalk.
+// LinuxARMZImage is the signature "linux_arm_zimage" of binwalk-ng.
 var LinuxARMZImage = &walk.Signature{
 	Name:        "linux_arm_zimage",
 	Magic:       [][]byte{[]byte("\x18\x28\x6F\x01"), []byte("\x01\x6F\x28\x18")},
@@ -41,7 +40,7 @@ var LinuxARMZImage = &walk.Signature{
 	Parse:       parseLinuxARMZImage,
 }
 
-// LinuxARM64BootImage is the signature "linux_arm64_boot_image" of binwalk.
+// LinuxARM64BootImage is the signature "linux_arm64_boot_image" of binwalk-ng.
 var LinuxARM64BootImage = &walk.Signature{
 	Name:        "linux_arm64_boot_image",
 	Magic:       [][]byte{[]byte("\x00\x00\x00\x00\x00\x00\x00\x00ARMd")},
@@ -75,16 +74,16 @@ func parseLinuxARMZImage(data []byte, off int) (walk.Match, error) {
 	var endian string
 	switch nop {
 	case nopLE:
-		endian = "little"
+		endian = "Little Endian"
 	case nopBE:
-		endian = "big"
+		endian = "Big Endian"
 	default:
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	return walk.Match{
 		Offset:      start,
 		Confidence:  walk.Medium,
-		Description: "Linux ARM boot executable zImage, " + endian + " endian",
+		Description: "Linux ARM boot executable zImage, " + endian,
 	}, nil
 }
 
@@ -141,15 +140,15 @@ func parseLinuxARM64BootImage(data []byte, off int) (walk.Match, error) {
 	if flags&flagsReserved != 0 {
 		return walk.Match{}, walk.ErrNoMatch
 	}
-	endian := "little"
+	endian := "Little Endian"
 	if flags&flagsBig != 0 {
-		endian = "big"
+		endian = "Big Endian"
 	}
 	return walk.Match{
 		Offset:     start,
 		Size:       arm64BootHeader.Size(),
 		Confidence: walk.Medium,
-		Description: fmt.Sprintf("Linux kernel ARM64 boot image, %s endian, effective image size: %d bytes",
+		Description: fmt.Sprintf("Linux kernel ARM64 boot image, %s, effective image size: %d bytes",
 			endian, uint64(h["image_size"])),
 	}, nil
 }
@@ -208,19 +207,9 @@ func parseLinuxKernel(data []byte, off int) (walk.Match, error) {
 
 // hasLinuxSymbolTable is has_linux_symbol_table: it reports whether the
 // magic of a symbol table, which vmlinux-to-elf looks for too, is in data
-// once. The matches can overlap, as with find_overlapping_iter.
+// once. binwalk-ng uses memmem::find_iter, so the matches do not overlap.
 func hasLinuxSymbolTable(data []byte) bool {
 	magic := []byte("\x000\x001\x002\x003\x004\x005\x006\x007\x008\x009\x00")
-	n := 0
-	for i := 0; ; i++ {
-		j := bytes.Index(data[i:], magic)
-		if j < 0 {
-			break
-		}
-		if n++; n > 1 {
-			return false
-		}
-		i += j
-	}
-	return n == 1
+	i := bytes.Index(data, magic)
+	return i >= 0 && !bytes.Contains(data[i+len(magic):], magic)
 }

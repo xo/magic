@@ -1,10 +1,11 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/ext.rs and src/structures/ext.rs of
-// binwalk. binwalk extracts EXT with tsk_recover of The Sleuth Kit, and
-// extractEXT in exttsk.go writes the files that it writes.
+// This file translates src/formats/ext.rs of binwalk-ng. binwalk-ng
+// extracts EXT with tsk_recover of The Sleuth Kit, from
+// src/extractors/tsk.rs, and extractEXT in exttsk.go writes the files that
+// it writes.
 
 package disk
 
@@ -38,14 +39,15 @@ var EXT = &walk.Signature{
 // "reserved blocks", as binwalk does.
 func parseEXT(data []byte, off int) (walk.Match, error) {
 	const magicOffset = 1080
-	// binwalk subtracts without a check. The usize wraps, and the slice
-	// that follows fails.
+	// binwalk-ng rejects a magic that is too near the start to be in a
+	// superblock.
 	if off < magicOffset {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	start := off - magicOffset
 	h, ok := parseEXTHeader(data[start:])
-	if !ok {
+	// binwalk-ng needs a size that is not 0 and ends inside the data.
+	if !ok || h.imageSize == 0 || h.imageSize > len(data)-start {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	return walk.Match{

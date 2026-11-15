@@ -1,9 +1,9 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/dms.rs, src/structures/dms.rs and
-// src/extractors/swapped.rs of binwalk.
+// This file translates src/formats/dms.rs and src/extractors/swapped.rs of
+// binwalk-ng.
 
 package vendor
 
@@ -87,13 +87,15 @@ var dmsStruct = binwalk.Struct{
 }
 
 // byteSwap is byte_swap of swapped.rs. In each chunk of 2*n bytes, it puts
-// the second n bytes before the first n. It drops a short chunk at the end.
+// the second n bytes before the first n. A short chunk at the end stays as
+// it is.
 func byteSwap(data []byte, n int) []byte {
 	chunk := 2 * n
-	out := make([]byte, 0, len(data)/chunk*chunk)
-	for i := 0; i+chunk <= len(data); i += chunk {
+	out := make([]byte, 0, len(data))
+	i := 0
+	for ; i+chunk <= len(data); i += chunk {
 		out = append(out, data[i+n:i+chunk]...)
 		out = append(out, data[i:i+n]...)
 	}
-	return out
+	return append(out, data[i:]...)
 }

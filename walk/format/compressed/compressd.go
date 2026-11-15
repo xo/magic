@@ -1,10 +1,10 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/compressd.rs of binwalk. binwalk
-// extracts the data of compress(1) with 7zz, from
-// src/extractors/sevenzip.rs, and extractCompressd writes what 7zz writes.
+// This file translates src/formats/compressd.rs of binwalk-ng. binwalk-ng
+// extracts the data of compress(1) with 7z, from src/formats/sevenzip.rs,
+// and extractCompressd writes what 7z writes.
 
 package compressed
 
@@ -14,7 +14,7 @@ import (
 	"github.com/xo/magic/walk"
 )
 
-// Compressd is the signature "compressd" of binwalk: the LZW data of the
+// Compressd is the signature "compressd" of binwalk-ng: the LZW data of the
 // program compress, a .Z file.
 var Compressd = &walk.Signature{
 	Name:        "compressd",

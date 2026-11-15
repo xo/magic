@@ -1,8 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/pkcs_der.rs of binwalk.
+// This file translates src/formats/pkcs_der.rs of binwalk-ng.
 
 package crypto
 
@@ -12,7 +12,7 @@ import (
 	"github.com/xo/magic/walk"
 )
 
-// PKCSDERHash is the signature "pkcs_der_hash" of binwalk.
+// PKCSDERHash is the signature "pkcs_der_hash" of binwalk-ng.
 var PKCSDERHash = &walk.Signature{
 	Name:        "pkcs_der_hash",
 	Magic:       pkcsDERMagic(),
@@ -20,8 +20,9 @@ var PKCSDERHash = &walk.Signature{
 	Parse:       parsePKCSDER,
 }
 
-// pkcsDERHashes is der_hash_lookups: the DER prefix of each hash. No prefix
-// starts another, so the order of the map of binwalk does not matter.
+// pkcsDERHashes is DER_HASH_LOOKUPS: the DER prefix of each hash, in the
+// order of binwalk-ng. No prefix starts another, so the order does not change
+// a match.
 var pkcsDERHashes = []struct {
 	name  string
 	magic []byte

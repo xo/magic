@@ -1,20 +1,19 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/pchrom.rs and src/structures/pchrom.rs
-// of binwalk. binwalk extracts a PCH ROM with uefi-firmware-parser, a
-// program that the walker has no translation of, so the walker only finds
-// it.
+// This file translates src/formats/pchrom.rs of binwalk-ng.
 
 package firmware
 
 import (
+	"encoding/binary"
+
 	"github.com/xo/magic/walk"
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// PCHROM is the signature "pchrom" of binwalk.
+// PCHROM is the signature "pchrom" of binwalk-ng.
 var PCHROM = &walk.Signature{
 	Name:        "pchrom",
 	Magic:       [][]byte{[]byte("\x5a\xa5\xf0\x0f")},
@@ -42,10 +41,11 @@ func parsePCHROM(data []byte, off int) (walk.Match, error) {
 }
 
 var pchROMStruct = binwalk.Struct{
-	{Name: "flmagic", Type: "u32"},
-	{Name: "flmap0_fcba", Type: "u8"},
-	{Name: "flmap0_nc", Type: "u8"},
-	{Name: "flmap0_frba_nr", Type: "u16"},
+	{Name: "magic", Type: "u32"},
+	{Name: "fcba", Type: "u8"},
+	{Name: "nc", Type: "u8"},
+	{Name: "frba", Type: "u8"},
+	{Name: "nr", Type: "u8"},
 }
 
 // pchROMHeader is parse_pchrom_header. It returns the size of the header
@@ -64,10 +64,10 @@ func pchROMHeader(data []byte) (int, int, bool) {
 	if !ok {
 		return 0, 0, false
 	}
-	if h["flmap0_fcba"] != expectedFCBA || h["flmap0_frba_nr"] != expectedFRBA || (h["flmap0_nc"] != 0 && h["flmap0_nc"] != 1) {
+	if h["fcba"] != expectedFCBA || h["frba"] != expectedFRBA || (h["nc"] != 0 && h["nc"] != 1) {
 		return 0, 0, false
 	}
-	size, ok := pchRegionsSize(data, h["flmap0_fcba"])
+	size, ok := pchRegionsSize(data, h["fcba"])
 	if !ok {
 		return 0, 0, false
 	}
@@ -75,19 +75,14 @@ func pchROMHeader(data []byte) (int, int, bool) {
 }
 
 // pchRegionsSize is get_pch_regions_size, with an offset of 0. It returns
-// the end of the last region that the five entries of regions describe.
-//
-// binwalk takes the base of the entries from bits 16 to 23 of fcba, which
-// is a field of one byte, so the base is always 0. The fifth entry is then
-// the magic, which gives a region that ends at 16 MiB. So binwalk finds a
-// PCH ROM only in data of more than 16 MiB.
+// the end of the last region that the five entries of regions describe. The
+// entries start at fcba shifted left by 4.
 func pchRegionsSize(data []byte, fcba int) (int, bool) {
 	const (
 		regionCount     = 5
 		regionEntrySize = 4
 	)
-	base := ((fcba >> 16) & 0xFF) << 4
-	entry := binwalk.Struct{{Name: "region_value", Type: "u32"}}
+	base := fcba << 4
 	imageSize := 0
 	for i := range regionCount {
 		start := base + i*regionEntrySize
@@ -95,13 +90,12 @@ func pchRegionsSize(data []byte, fcba int) (int, bool) {
 		if !ok {
 			return 0, false
 		}
-		e, _ := entry.Parse(b, false)
-		v := e["region_value"]
+		v := int(binary.LittleEndian.Uint32(b))
 		regionBase := (v & 0x1FFF) << 12
 		regionLimit := (((v & 0x1FFF0000) >> 4) | 0xFFFF) + 1
-		// binwalk subtracts in a usize, which wraps in a release build. The
-		// size is then not 0 when the limit is not the base.
-		if regionLimit != regionBase && regionLimit > imageSize {
+		// The base and the limit are separate fields. A base after the
+		// limit gives no region.
+		if regionLimit > regionBase && regionLimit > imageSize {
 			imageSize = regionLimit
 		}
 	}

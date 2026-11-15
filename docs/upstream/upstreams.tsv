@@ -1,3 +1,3 @@
 repository	url	checkout	ports	magic	policy	base	matched
 file	https://github.com/file/file	upstream/file	libmagic (src/), the rules (magic/Magdir), the tests (tests/)	., internal/, compress/	port	eb754ace19fed5481d8142426543100a2d6bae4e	bbffb78dc8d764a707aa20f5c7a3b74c40c2b27c
-binwalk	https://github.com/ReFirmLabs/binwalk	upstream/binwalk	the signatures and parsers (src/signatures, src/structures), the extractors (src/extractors), the scan (src/binwalk.rs)	walk/	port	26713972e3f9f52dc37d4a421c4554b0bd9e82ef	
+binwalk-ng	https://github.com/binwalk-ng/binwalk-ng	upstream/binwalk-ng	the formats (src/formats), the scan (src/binwalk_ng.rs), the extraction (src/extractors)	walk/	port	beda1ffb79330d1807b959f541dd564fc97cc03a	

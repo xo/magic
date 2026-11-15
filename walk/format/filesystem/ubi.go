@@ -1,10 +1,10 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/ubi.rs and src/structures/ubi.rs of
-// binwalk. binwalk extracts an UBI image with ubireader_extract_images, and
-// an UBIFS image with ubireader_extract_files, from src/extractors/ubi.rs.
+// This file translates the parsers of src/formats/ubi.rs of binwalk-ng.
+// binwalk-ng extracts an UBI image with ubireader_extract_images, and an
+// UBIFS image with ubireader_extract_files.
 // extractUBI in this file and extractUBIFS in ubifs.go write the files that
 // those programs write. They copy the behavior of ubi_reader, not its code.
 
@@ -44,13 +44,17 @@ var UBIFS = &walk.Signature{
 }
 
 // parseUBIFS is ubifs_parser. The size is the number of logical erase
-// blocks times their size, which can be more than the data holds.
+// blocks times their size. binwalk-ng needs it to hold the superblock, and
+// to end inside the data.
 func parseUBIFS(data []byte, off int) (walk.Match, error) {
 	lebSize, lebCount, ok := ubifsSuperblock(data[off:])
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	size := lebCount * lebSize
+	if size < ubifsSuperblockSize || off+size > len(data) {
+		return walk.Match{}, walk.ErrNoMatch
+	}
 	return walk.Match{
 		Offset:      off,
 		Size:        size,
@@ -185,20 +189,23 @@ var (
 	}
 )
 
+// ubifsSuperblockSize is UBI_SUPERBLOCK_SIZE: the fields of the
+// superblock, and the 3968 bytes after them that its CRC covers.
+var ubifsSuperblockSize = ubifsSuperblockStruct.Size() + 3968
+
 // ubifsSuperblock is parse_ubi_superblock_header. The CRC covers the
 // superblock node from its byte 8 to its byte 4096.
 func ubifsSuperblock(data []byte) (lebSize, lebCount int, ok bool) {
 	const (
-		maxGroupType  = 2
-		crcStart      = 8
-		superblock    = 6
-		extraFieldLen = 3968
+		maxGroupType = 2
+		crcStart     = 8
+		superblock   = 6
 	)
 	f, ok := ubifsSuperblockStruct.Parse(data, false)
 	if !ok || f["padding1"] != 0 || f["padding2"] != 0 || f["node_type"] != superblock || f["group_type"] > maxGroupType {
 		return 0, 0, false
 	}
-	crcData, ok := binwalk.Range(data, crcStart, ubifsSuperblockStruct.Size()+extraFieldLen)
+	crcData, ok := binwalk.Range(data, crcStart, ubifsSuperblockSize)
 	if !ok || ubiCRC(crcData) != uint32(f["header_crc"]) {
 		return 0, 0, false
 	}

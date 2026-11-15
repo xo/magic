@@ -1,13 +1,13 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/dtb.rs, src/structures/dtb.rs and
-// src/extractors/dtb.rs of binwalk.
+// This file translates src/formats/dtb.rs of binwalk-ng.
 
 package firmware
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
 
@@ -15,7 +15,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// DTB is the signature "dtb" of binwalk: a flattened device tree.
+// DTB is the signature "dtb" of binwalk-ng: a flattened device tree.
 var DTB = &walk.Signature{
 	Name:        "dtb",
 	Magic:       [][]byte{[]byte("\xD0\x0D\xFE\xED")},
@@ -35,6 +35,8 @@ type dtbHeader struct {
 	stringsSize   int
 }
 
+// dtbStruct is DtbHeaderCommon: the fields of the header of version 16.
+// Version 17 adds dt_struct_size after them.
 var dtbStruct = binwalk.Struct{
 	{Name: "magic", Type: "u32"},
 	{Name: "total_size", Type: "u32"},
@@ -45,31 +47,61 @@ var dtbStruct = binwalk.Struct{
 	{Name: "min_compatible_version", Type: "u32"},
 	{Name: "cpu_id", Type: "u32"},
 	{Name: "dt_strings_size", Type: "u32"},
-	{Name: "dt_struct_size", Type: "u32"},
 }
 
-// parseDTBHeader is parse_dtb_header. It tests the offset of the structure
-// with "& 4", not "% 4", as binwalk does.
+// parseDTBHeader is parse_dtb_header. It accepts versions 16 and 17.
 func parseDTBHeader(data []byte) (dtbHeader, bool) {
+	const (
+		version16 = 16
+		version17 = 17
+	)
 	h, ok := dtbStruct.Parse(data, true)
-	if !ok || h["version"] != 17 || h["min_compatible_version"] != 16 {
+	if !ok {
 		return dtbHeader{}, false
 	}
-	if h["dt_struct_offset"]&4 != 0 || h["mem_reservation_block_offset"]%8 != 0 {
+	version := h["version"]
+	if (version != version17 && version != version16) || h["min_compatible_version"] != version16 {
 		return dtbHeader{}, false
 	}
+	if h["dt_struct_offset"]%4 != 0 || h["mem_reservation_block_offset"]%8 != 0 {
+		return dtbHeader{}, false
+	}
+	total := h["total_size"]
+	structOffset := h["dt_struct_offset"]
+	stringsOffset := h["dt_strings_offset"]
+	stringsSize := h["dt_strings_size"]
+	// Version 16 has no dt_struct_size. The structure then runs to the
+	// end of the blob.
 	size := dtbStruct.Size()
-	if h["dt_struct_offset"] < size || h["dt_strings_offset"] < size || h["mem_reservation_block_offset"] < size {
+	var structSize int
+	if version == version17 {
+		b, ok := binwalk.Range(data, size, size+4)
+		if !ok {
+			return dtbHeader{}, false
+		}
+		size += 4
+		structSize = int(binary.BigEndian.Uint32(b))
+	} else {
+		if total < structOffset {
+			return dtbHeader{}, false
+		}
+		structSize = total - structOffset
+	}
+	// The offsets start after the header.
+	if total < size || structOffset < size || stringsOffset < size || h["mem_reservation_block_offset"] < size {
+		return dtbHeader{}, false
+	}
+	if stringsOffset+stringsSize > total {
 		return dtbHeader{}, false
 	}
 	return dtbHeader{
-		totalSize:     h["total_size"],
-		version:       h["version"],
+		totalSize:     total,
+		version:       version,
 		cpuID:         h["cpu_id"],
-		structOffset:  h["dt_struct_offset"],
-		stringsOffset: h["dt_strings_offset"],
-		structSize:    h["dt_struct_size"],
-		stringsSize:   h["dt_strings_size"],
+		structOffset:  structOffset,
+		stringsOffset: stringsOffset,
+		structSize:    structSize,
+		stringsSize:   stringsSize,
 	}, true
 }
 
@@ -118,7 +150,9 @@ var (
 )
 
 // parseDTBNode is parse_dtb_node. A node that it cannot read has none of
-// its flags set.
+// its flags set. When the token or the property structure does not fit,
+// parse_dtb_node of binwalk-ng returns an error, and extract_dtb then reads
+// the same node again with no end. The walker rejects the blob there.
 func parseDTBNode(h dtbHeader, data []byte, off int) dtbNode {
 	var n dtbNode
 	nd, ok := binwalk.From(data, off)

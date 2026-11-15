@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/qcow.rs and src/structures/qcow.rs of
-// binwalk.
+// This file translates src/formats/qcow.rs of binwalk-ng.
 
 package disk
 
@@ -23,11 +22,9 @@ var QCOW = &walk.Signature{
 	Parse:       parseQCOW,
 }
 
-// parseQCOW is qcow_parser. binwalk reads the header at the start of the
-// data, not at the offset of the magic. The signature is short, so the two
-// are the same.
+// parseQCOW is qcow_parser.
 func parseQCOW(data []byte, off int) (walk.Match, error) {
-	h, ok := parseQCOWHeader(data)
+	h, ok := parseQCOWHeader(data[off:])
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
 	}

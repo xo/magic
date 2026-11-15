@@ -1,11 +1,10 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/zip.rs and src/structures/zip.rs of
-// binwalk.
+// This file translates src/formats/zip.rs of binwalk-ng.
 
-// Package zipsig holds the parser of the ZIP signature of binwalk, which the
+// Package zipsig holds the parser of the ZIP signature of binwalk-ng, which the
 // signatures zip and dahua_zip share.
 package zipsig
 
@@ -34,27 +33,30 @@ func Parse(data []byte, off int) (walk.Match, error) {
 			first.Major, first.Minor, count, m.Size)
 		return m, nil
 	}
-	// With no end of central directory, follow the local file headers.
-	// binwalk compares the absolute offset of the next header with the bytes
-	// after off, and the Go code does the same.
-	available := len(data) - off
+	// With no end of central directory, follow the local file headers
+	// until one does not parse, or until the data ends. A cut archive ends
+	// at the end of the data.
 	next, previous := off+first.TotalSize, -1
-	for binwalk.OffsetSafe(available, next, previous) {
+	for binwalk.OffsetSafe(len(data), next, previous) {
 		h, ok := Header(data[next:])
 		if !ok {
-			m.Size = next - off
-			m.Description = fmt.Sprintf("ZIP archive, version: %d.%d, missing end-of-central-directory header, total size: %d bytes",
-				first.Major, first.Minor, m.Size)
-			return m, nil
+			break
 		}
 		previous = next
 		next += h.TotalSize
 	}
-	return walk.Match{}, walk.ErrNoMatch
+	m.Size = min(next, len(data)) - off
+	if m.Size <= 0 {
+		return walk.Match{}, walk.ErrNoMatch
+	}
+	m.Description = fmt.Sprintf("ZIP archive, version: %d.%d, missing end-of-central-directory header, total size: %d bytes",
+		first.Major, first.Minor, m.Size)
+	return m, nil
 }
 
 // EOF is find_zip_eof: the end of the first end of central directory
-// after off that parses, and the count of its files.
+// after off that parses and whose comment ends in the data, and the count
+// of its files.
 func EOF(data []byte, off int) (int, int, bool) {
 	magic := []byte("PK\x05\x06\x00\x00\x00\x00")
 	for start := off; ; start++ {
@@ -63,7 +65,7 @@ func EOF(data []byte, off int) (int, int, bool) {
 			return 0, 0, false
 		}
 		start += i
-		if size, count, ok := eocd(data[start:]); ok {
+		if size, count, ok := eocd(data[start:]); ok && size <= len(data)-start {
 			return start + size, count, true
 		}
 	}
@@ -95,14 +97,22 @@ type HeaderInfo struct {
 	NameLen               int // the bytes of the name, after the fixed fields
 	Major, Minor          int // the version that made the file
 	Flags, Method         int // the flags and the compression method
+	Size                  int // the size of the data after decompression
 }
 
-// Header is parse_zip_header of structures/zip.rs. It does not check the
-// magic.
+// Header is parse_zip_header. The magic is that of a ZIP local file
+// header, or that of a Dahua ZIP archive. The version is 0, or 1.0 to 6.3,
+// which the ZIP specification defines.
 func Header(data []byte) (HeaderInfo, bool) {
 	const unusedFlags = 0b11010111_10000000
 	h, ok := localStruct.Parse(data, false)
-	if !ok || h["flags"]&unusedFlags != 0 || !slices.Contains(methods, h["compression"]) {
+	if !ok || !bytes.HasPrefix(data, []byte("PK\x03\x04")) && !bytes.HasPrefix(data, []byte("DH\x03\x04")) {
+		return HeaderInfo{}, false
+	}
+	if v := h["version"]; v != 0 && (v < 10 || v > 63) {
+		return HeaderInfo{}, false
+	}
+	if h["flags"]&unusedFlags != 0 || !slices.Contains(methods, h["compression"]) {
 		return HeaderInfo{}, false
 	}
 	size := h["compressed_size"]
@@ -118,6 +128,7 @@ func Header(data []byte) (HeaderInfo, bool) {
 		Minor:      h["version"] % 10,
 		Flags:      h["flags"],
 		Method:     h["compression"],
+		Size:       h["uncompressed_size"],
 	}, true
 }
 
@@ -132,7 +143,7 @@ var eocdStruct = binwalk.Struct{
 	{Name: "comment_length", Type: "u16"},
 }
 
-// eocd is parse_eocd_header of structures/zip.rs. It returns the size of
+// eocd is parse_eocd_header. It returns the size of
 // the end of central directory, with its comment, and the count of files.
 func eocd(data []byte) (int, int, bool) {
 	h, ok := eocdStruct.Parse(data, false)

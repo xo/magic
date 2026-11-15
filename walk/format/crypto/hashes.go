@@ -1,8 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/hashes.rs of binwalk.
+// This file translates src/formats/hashes.rs of binwalk-ng.
 
 package crypto
 
@@ -16,7 +16,7 @@ import (
 const hashMagicLen = 16
 
 // The magics of each hash. The first is big endian, the second little
-// endian, as hash_endianess expects.
+// endian, as hash_endianness expects.
 var (
 	crc32Magic = [][]byte{
 		[]byte("\x00\x00\x00\x00\x77\x07\x30\x96\xEE\x0E\x61\x2C\x99\x09\x51\xBA"),
@@ -57,19 +57,19 @@ var MD5 = &walk.Signature{
 }
 
 // hashParser returns crc32_parser, sha256_parser or md5_parser: each accepts
-// the candidate, and names the byte order of the magic, as hash_endianess
+// the candidate, and names the byte order of the magic, as hash_endianness
 // does.
 func hashParser(desc string, magics [][]byte) func([]byte, int) (walk.Match, error) {
 	return func(data []byte, off int) (walk.Match, error) {
-		endian := "little"
+		endian := "Little Endian"
 		if bytes.HasPrefix(data[off:], magics[0]) {
-			endian = "big"
+			endian = "Big Endian"
 		}
 		return walk.Match{
 			Offset:      off,
 			Size:        hashMagicLen,
 			Confidence:  walk.Low,
-			Description: desc + ", " + endian + " endian",
+			Description: desc + ", " + endian,
 		}, nil
 	}
 }

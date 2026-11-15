@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"slices"
 	"testing"
 
@@ -23,15 +24,17 @@ func arjHeader(version, host, flags, method, typ byte, name string, date, csize,
 	body := slices.Concat(first, []byte(name), []byte{0, 0})
 	b := []byte{0x60, 0xea}
 	b = binary.LittleEndian.AppendUint16(b, uint16(len(body)))
-	return slices.Concat(b, body, []byte{1, 2, 3, 4, 0, 0})
+	b = slices.Concat(b, body)
+	b = binary.LittleEndian.AppendUint32(b, crc32.ChecksumIEEE(body))
+	return append(b, 0, 0)
 }
 
-// TestARJ holds the descriptions of binwalk, and that only the main header
-// is not declined. The descriptions are those that binwalk gives.
+// TestARJ holds the descriptions of binwalk-ng, and that only the main
+// header is not declined. The descriptions are those that binwalk-ng gives.
 func TestARJ(t *testing.T) {
 	t.Parallel()
 	main := arjHeader(11, 2, 0x10, 0, 2, "archive.arj", 0x5a216000, 0, 0)
-	file := arjHeader(11, 0, 0x25, 1, 0, "file.txt", 1700000000, 1234, 5678)
+	file := arjHeader(11, 0, 0x25, 1, 0, "file.txt", 0xffffffff, 1234, 5678)
 	data := slices.Concat(noise(40), main, file)
 	var got []string
 	for e, err := range walk.WalkBytes(context.Background(), data, walk.WithFormats("arj")) {
@@ -43,13 +46,13 @@ func TestARJ(t *testing.T) {
 		}
 	}
 	check(t, got,
-		"40 30 medium false ARJ archive data, header size: 30, version 11, minimum version to extract: 1, "+
+		fmt.Sprint(40, " ", len(main)-2)+" high false ARJ archive data, header size: 51, version 11, minimum version to extract: 1, "+
 			"flags: no password|slash-switched, compression method: stored, file type: comment header, "+
-			"original name: archive.arj, original file date: 2017-12-01 13:58:24, compressed file size: 0, "+
+			"original name: archive.arj, original file date: 2025-01-01 12:00:00, compressed file size: 0, "+
 			"uncompressed file size: 0, os: UNIX",
-		fmt.Sprint(40+len(main))+" 30 medium false ARJ archive data, header size: 30, version 11, minimum version to extract: 1, "+
+		fmt.Sprint(40+len(main), " ", len(file)-2)+" high false ARJ archive data, header size: 48, version 11, minimum version to extract: 1, "+
 			"flags: password|multi-volume|backup, compression method: compressed most, file type: binary, "+
-			"original name: file.txt, original file date: 2023-11-14 22:13:20, compressed file size: 1234, "+
+			"original name: file.txt, original file date: 2106-02-07 06:28:15, compressed file size: 1234, "+
 			"uncompressed file size: 5678, os: MS-DOS",
 	)
 	m, err := parseARJ(data, 40)
@@ -61,11 +64,12 @@ func TestARJ(t *testing.T) {
 		t.Errorf("expected %q, got: %q", "declined", fmt.Sprint(m.Declined, err))
 	}
 	for name, b := range map[string][]byte{
-		"version":  arjHeader(17, 0, 0, 0, 0, "a", 0, 0, 0),
-		"host":     arjHeader(11, 10, 0, 0, 0, "a", 0, 0, 0),
+		"version":  arjHeader(0, 0, 0, 0, 0, "a", 0, 0, 0),
+		"host":     arjHeader(11, 12, 0, 0, 0, "a", 0, 0, 0),
 		"method":   arjHeader(11, 0, 0, 5, 0, "a", 0, 0, 0),
-		"type":     arjHeader(11, 0, 0, 0, 5, "a", 0, 0, 0),
+		"type":     arjHeader(11, 0, 0, 0, 7, "a", 0, 0, 0),
 		"negative": arjHeader(11, 0, 0, 0, 0, "a", 0, 0x80000000, 0),
+		"crc":      slices.Concat(arjHeader(11, 0, 0, 0, 0, "a", 0, 0, 0)[:36], []byte{0, 0, 0, 0, 0, 0}),
 	} {
 		if _, err := parseARJ(b, 0); err == nil {
 			t.Errorf("%s: expected %q, got: %q", name, walk.ErrNoMatch, "a match")
@@ -91,6 +95,13 @@ func TestRAR(t *testing.T) {
 		if got := fmt.Sprint(m.Size, " ", m.Confidence, " ", m.Description); err != nil || got != c.exp {
 			t.Errorf("expected %q, got: %q", c.exp, got)
 		}
+	}
+	// RAR 1.3 has no marker of the end.
+	rar13 := slices.Concat(noise(9), []byte("RE~^"), noise(20))
+	m, err := parseRAR(rar13, 9)
+	exp := "0 low RAR archive, version: 13, total size: 0 bytes (failed to locate RAR EOF)"
+	if got := fmt.Sprint(m.Size, " ", m.Confidence, " ", m.Description); err != nil || got != exp {
+		t.Errorf("expected %q, got: %q", exp, got)
 	}
 	if _, err := parseRAR([]byte("Rar!\x1a\x07\x02"), 0); err == nil {
 		t.Errorf("expected %q, got: %q", walk.ErrNoMatch, "a match")

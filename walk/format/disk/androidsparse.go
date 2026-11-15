@@ -1,15 +1,14 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/androidsparse.rs,
-// src/structures/androidsparse.rs and src/extractors/androidsparse.rs of
-// binwalk.
+// This file translates src/formats/androidsparse.rs of binwalk-ng.
 
 package disk
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/xo/magic/walk"
 	"github.com/xo/magic/walk/internal/binwalk"
@@ -98,8 +97,11 @@ func parseSparseChunk(data []byte) (sparseChunkHeader, bool) {
 	size := c["total_size"] - sparseChunk.Size()
 	switch c["chunk_type"] {
 	case typeRaw:
-	case typeFill, typeCRC:
+	case typeFill:
 		ok = size == 4
+	case typeCRC:
+		// binwalk-ng needs a CRC chunk to have no blocks.
+		ok = size == 4 && c["output_block_count"] == 0
 	case typeDontCare:
 		ok = size == 0
 	default:
@@ -115,12 +117,12 @@ func parseSparseChunk(data []byte) (sparseChunkHeader, bool) {
 }
 
 // extractAndroidSparse is extract_android_sparse: it writes the blocks of
-// the chunks to unsparsed.img. The size of a dry run can reach past the end
-// of the data, because a dry run reads only the headers of the chunks.
+// the chunks to unsparsed.img. binwalk-ng makes the file before it reads
+// the chunks, and keeps what it wrote when a chunk is not valid.
 func extractAndroidSparse(data []byte, off int, out *walk.Output) walk.Extraction {
 	const (
 		outName = "unsparsed.img"
-		// binwalk makes no image larger than 16 GiB.
+		// binwalk-ng makes no image larger than 16 GiB.
 		maxUnsparsed = 16 << 30
 	)
 	h, ok := parseSparseHeader(data[off:])
@@ -130,6 +132,13 @@ func extractAndroidSparse(data []byte, off int, out *walk.Output) walk.Extractio
 	// The product of two u32 values fits in a uint64, as in a usize.
 	if u64(h, "block_count")*u64(h, "block_size") > maxUnsparsed {
 		return walk.Extraction{}
+	}
+	var w *sparseWriter
+	if out != nil {
+		if !out.CreateFile(outName, nil) {
+			return walk.Extraction{}
+		}
+		w = &sparseWriter{out: out, name: outName}
 	}
 	count, written := 0, 0
 	next, previous := off+h["header_size"], -1
@@ -146,16 +155,22 @@ func extractAndroidSparse(data []byte, off int, out *walk.Output) walk.Extractio
 		if c.raw && uint64(c.blockCount)*u64(h, "block_size") != uint64(c.dataSize) {
 			break
 		}
-		if out != nil {
-			start := next + sparseChunk.Size()
-			b, ok := binwalk.Range(data, start, start+c.dataSize)
-			if !ok || !extractSparseChunk(h["block_size"], c, b, outName, out) {
-				break
-			}
+		// binwalk-ng needs the data of the chunk in a dry run too.
+		start := next + sparseChunk.Size()
+		b, ok := binwalk.Range(data, start, start+c.dataSize)
+		if !ok {
+			break
+		}
+		if w != nil && !w.chunk(h["block_size"], c, b) {
+			break
 		}
 		count++
 		previous = next
 		next += sparseChunk.Size() + c.dataSize
+	}
+	// binwalk-ng sets the length of the file to the end of the last hole.
+	if w != nil && !w.flush() {
+		return walk.Extraction{}
 	}
 	// Every chunk that the header counts must be valid.
 	if count != h["total_chunks"] {
@@ -164,40 +179,64 @@ func extractAndroidSparse(data []byte, off int, out *walk.Output) walk.Extractio
 	return walk.Extraction{OK: true, Size: next - off, HasSize: true}
 }
 
-// extractSparseChunk is extract_chunk: it adds the blocks of one chunk to
-// the file name. A CRC chunk adds nothing.
-//
-// binwalk adds one block at a time. When a block has no bytes, it adds an
-// empty block once for each block of the chunk, which can be billions of
-// times. The walker adds it once, which gives the same file.
-func extractSparseChunk(blockSize int, c sparseChunkHeader, b []byte, name string, out *walk.Output) bool {
-	var block []byte
+// sparseWriter writes unsparsed.img. binwalk-ng seeks over the blocks of
+// zeros, which makes a hole in the file, and sets the length of the file at
+// the end. The Output has no holes, so sparseWriter counts the zeros of a
+// hole, and writes them before the next data and at the end. The bytes of
+// the file are the same.
+type sparseWriter struct {
+	out  *walk.Output
+	name string
+	hole uint64 // the zeros that are not written yet
+}
+
+// chunk is extract_chunk: it adds the blocks of one chunk to the file. A
+// CRC chunk adds nothing.
+func (w *sparseWriter) chunk(blockSize int, c sparseChunkHeader, b []byte) bool {
 	switch {
 	case c.raw:
 		// A raw chunk holds its blocks as they are.
-		return out.AppendFile(name, b)
+		return w.write(b)
+	case c.dontCare || c.fill && !slices.ContainsFunc(b, func(x byte) bool { return x != 0 }):
+		// write_hole: the blocks are zeros.
+		w.hole += uint64(c.blockCount) * uint64(blockSize)
+		return true
 	case c.fill:
 		// A fill chunk repeats its 4 bytes over each block.
-		if len(b) == 0 {
-			return false
-		}
+		var block []byte
 		for i := 0; i < blockSize; i += len(b) {
 			block = append(block, b...)
 		}
-	case c.dontCare:
-		// The blocks of a chunk that does not care are zeros.
-		block = make([]byte, blockSize)
-	default:
-		return true
+		for range c.blockCount {
+			if !w.write(block) {
+				return false
+			}
+		}
 	}
-	n := c.blockCount
-	if len(block) == 0 {
-		n = min(n, 1)
+	return true
+}
+
+// write adds the zeros of the hole, then b, to the file.
+func (w *sparseWriter) write(b []byte) bool {
+	if !w.flush() {
+		return false
 	}
-	for range n {
-		if !out.AppendFile(name, block) {
+	return len(b) == 0 || w.out.AppendFile(w.name, b)
+}
+
+// flush adds the zeros of the hole to the file.
+func (w *sparseWriter) flush() bool {
+	const chunk = 1 << 20
+	var zeros []byte
+	for w.hole > 0 {
+		n := min(w.hole, chunk)
+		if zeros == nil {
+			zeros = make([]byte, n)
+		}
+		if !w.out.AppendFile(w.name, zeros[:n]) {
 			return false
 		}
+		w.hole -= n
 	}
 	return true
 }

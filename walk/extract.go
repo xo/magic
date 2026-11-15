@@ -57,8 +57,20 @@ func (e *Entry) Extractable() bool {
 	return e.extractor() != nil
 }
 
+// carve reports whether the extractor of e stands for a program of
+// binwalk-ng, which gets only the bytes of the match.
+func (e *Entry) carve() bool {
+	if e.match.Extract != nil {
+		return e.match.Carve
+	}
+	return e.sig != nil && e.sig.Carve
+}
+
 // run runs the extractor of e to s, and reports ErrNotExtracted when it
-// fails or writes nothing, as execute of binwalk.
+// fails or writes nothing, as extract and execute of binwalk-ng. When a
+// carved extraction fails, it runs the extractor once more on all the data
+// to the end of the input, as extract does, after it removes what the
+// first run wrote.
 func (e *Entry) run(ctx context.Context, s sink, limit int64) error {
 	ex := e.extractor()
 	if ex == nil {
@@ -67,11 +79,24 @@ func (e *Entry) run(ctx context.Context, s sink, limit int64) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("walk: stopped: %w", err)
 	}
-	out := newOutput(s, limit)
-	data := e.data
-	if e.sig != nil && e.sig.Carve {
-		data = data[:e.Offset+e.Size]
+	end := int(e.Offset + e.Size)
+	if !e.carve() || end >= len(e.data) {
+		return e.attempt(ex, e.data, s, limit)
 	}
+	err := e.attempt(ex, e.data[:end], s, limit)
+	if err == nil {
+		return nil
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("walk: stopped: %w", err)
+	}
+	s.reset()
+	return e.attempt(ex, e.data, s, limit)
+}
+
+// attempt runs ex once on data, as execute of binwalk-ng.
+func (e *Entry) attempt(ex Extractor, data []byte, s sink, limit int64) error {
+	out := newOutput(s, limit)
 	r := ex(data, int(e.Offset), out)
 	if out.budget.n >= limit && limit > 0 && !r.OK {
 		return fmt.Errorf("%w: %s at %#x is above the limit of %d bytes", ErrNotExtracted, e.Format, e.Offset, limit)

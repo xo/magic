@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/seama.rs and src/structures/seama.rs
-// of binwalk.
+// This file translates src/formats/seama.rs of binwalk-ng.
 
 package firmware
 
@@ -14,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// SEAMA is the signature "seama" of binwalk.
+// SEAMA is the signature "seama" of binwalk-ng.
 var SEAMA = &walk.Signature{
 	Name: "seama",
 	// The magic in big-endian and in little-endian order.

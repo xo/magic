@@ -1,10 +1,10 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/tarball.rs of binwalk. binwalk
-// extracts a tar archive with tar, from src/extractors/tarball.rs, and
-// extractTarball writes the files that tar writes.
+// This file translates src/formats/tarball.rs of binwalk-ng. binwalk-ng
+// extracts a tar archive with its own code, through the crate tar, and
+// extractTarball writes the files that it writes.
 
 package archive
 
@@ -14,14 +14,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
-	"math"
+	"path"
 
 	"github.com/xo/magic/walk"
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// Tarball is the signature "tarball" of binwalk.
+// Tarball is the signature "tarball" of binwalk-ng.
 var Tarball = &walk.Signature{
 	Name:        "tarball",
 	Magic:       [][]byte{[]byte("ustar\x00"), []byte("ustar  \x00")},
@@ -45,10 +44,9 @@ const (
 )
 
 // parseTarball is tarball_parser. The magic is at 257 bytes into the first
-// header.
+// header. A header counts when its checksum and its magic are valid, and its
+// entry ends in the data.
 func parseTarball(data []byte, off int) (walk.Match, error) {
-	// binwalk subtracts in a usize, which wraps below 0 to an offset past
-	// the data, and finds nothing.
 	start := off - tarMagicOffset
 	if start < 0 {
 		return walk.Match{}, walk.ErrNoMatch
@@ -60,11 +58,11 @@ func parseTarball(data []byte, off int) (walk.Match, error) {
 		if !ok || !tarChecksumValid(block) {
 			break
 		}
-		count++
 		size, ok := tarEntrySize(block)
-		if !ok {
+		if !ok || size > len(data)-next {
 			break
 		}
+		count++
 		total += size
 		previous = next
 		next += size
@@ -87,7 +85,10 @@ func parseTarball(data []byte, off int) (walk.Match, error) {
 // tarChecksumValid is header_checksum_is_valid: the sum of the bytes of the
 // header, with spaces in place of the checksum, against the checksum.
 func tarChecksumValid(block []byte) bool {
-	want := tarOctal(block[tarChecksumStart:tarChecksumEnd])
+	want, ok := tarOctal(block[tarChecksumStart:tarChecksumEnd])
+	if !ok {
+		return false
+	}
 	sum := 0
 	for i, c := range block {
 		if i >= tarChecksumStart && i < tarChecksumEnd {
@@ -100,94 +101,120 @@ func tarChecksumValid(block []byte) bool {
 }
 
 // tarEntrySize is tarball_entry_size: the header and the data of an entry,
-// in whole blocks. binwalk divides in an f32, which loses precision above
-// 2^24 bytes, and the Go code does the same.
+// in whole blocks.
 func tarEntrySize(block []byte) (int, bool) {
 	if string(block[tarMagicOffset:tarMagicOffset+tarMagicSize]) != tarUniversalMagic {
 		return 0, false
 	}
-	size := tarOctal(block[tarSizeOffset : tarSizeOffset+tarSizeLen])
-	blocks := 1 + int(math.Ceil(float64(float32(size)/float32(tarBlockSize))))
-	return blocks * tarBlockSize, true
+	size, ok := tarOctal(block[tarSizeOffset : tarSizeOffset+tarSizeLen])
+	if !ok {
+		return 0, false
+	}
+	return (1 + (size+tarBlockSize-1)/tarBlockSize) * tarBlockSize, true
 }
 
-// tarOctal is tarball_octal. It stops at the first byte that is not a
-// digit, and takes 8 and 9 as digits, as binwalk does.
-func tarOctal(b []byte) int {
-	n := 0
+// tarOctal is tarball_octal. A NUL or a space ends the number, and only
+// NULs and spaces can follow it. Any other byte rejects the field. The
+// field is at most 11 digits, so the number cannot overflow.
+func tarOctal(b []byte) (int, bool) {
+	n, ended := 0, false
 	for _, c := range b {
-		if c < '0' || c > '9' {
-			break
+		switch {
+		case c >= '0' && c <= '7':
+			if ended {
+				return 0, false
+			}
+			n = n*8 + int(c-'0')
+		case c == 0 || c == ' ':
+			ended = true
+		default:
+			return 0, false
 		}
-		n = n*8 + int(c-'0')
 	}
-	return n
+	return n, true
 }
 
-// extractTarball writes the members of the tar archive whose first header
-// is at off, as tar -x writes them from the bytes that binwalk carves. A
-// hard link is a copy of its target. tar stops at a header that it cannot
-// read, and keeps what it wrote, so the extractor does the same.
+// counter counts the bytes that the reader of tar reads. It hides the
+// method Seek of the bytes, so that the reader reads each byte that it
+// skips, and the count is the position in the archive.
+type counter struct {
+	r io.Reader
+	n int
+}
+
+func (c *counter) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += n
+	return n, err //nolint:wrapcheck // a reader returns io.EOF as it is
+}
+
+// extractTarball is extract_tarball. It reads the entries from off to the
+// end of the data, and stops at the first entry that it cannot read. A
+// folder, a regular file and a link are written. A hard link becomes a
+// symbolic link to its target. Another type of entry is skipped, and counts
+// as written. The size is the end of the data of the last entry that was
+// read, in whole blocks.
 func extractTarball(data []byte, off int, out *walk.Output) walk.Extraction {
-	m, err := parseTarball(data, off+tarMagicOffset)
-	if err != nil || m.Offset != off {
-		return walk.Extraction{}
-	}
-	if out == nil {
-		return walk.Extraction{OK: true}
-	}
-	// binwalk carves the bytes of the match to a file, and fails when the
-	// match goes past the end of the data.
-	b, ok := binwalk.Range(data, off, off+m.Size)
+	b, ok := binwalk.From(data, off)
 	if !ok {
 		return walk.Extraction{}
 	}
-	w := &writer{out: out}
-	// files holds the content and the mode of each regular file, for the
-	// hard links to it.
-	type file struct {
-		data []byte
-		mode fs.FileMode
+	c := &counter{r: bytes.NewReader(b)}
+	tr := tar.NewReader(c)
+	wrote, consumed := false, 0
+	// The modes of the folders are set after each entry is written, so that
+	// a folder without the permission to write still gets its files.
+	type dir struct {
+		name string
+		mode uint32
 	}
-	files := map[string]file{}
-	tr := tar.NewReader(bytes.NewReader(b))
-	for !w.stopped {
+	var dirs []dir
+	for {
 		h, err := tr.Next()
 		if err != nil && !errors.Is(err, tar.ErrInsecurePath) {
 			break
 		}
-		mem := member{name: h.Name, mode: fs.FileMode(h.Mode) & fs.ModePerm, link: h.Linkname}
-		switch h.Typeflag {
-		case tar.TypeReg, tar.TypeCont, tar.TypeGNUSparse:
-			b, err := io.ReadAll(tr)
-			if err != nil {
-				return w.result()
-			}
-			files[h.Name] = file{b, mem.mode}
-			mem.data = bytes.NewReader(b)
-		case tar.TypeLink:
-			// A hard link shares the mode of its target.
-			f, ok := files[h.Linkname]
-			if !ok {
-				continue
-			}
-			files[h.Name] = f
-			mem.data, mem.mode = bytes.NewReader(f.data), f.mode
-		case tar.TypeDir:
-			mem.mode |= fs.ModeDir
-		case tar.TypeSymlink:
-			mem.mode |= fs.ModeSymlink
-		case tar.TypeChar:
-			mem.mode |= fs.ModeDevice | fs.ModeCharDevice
-		case tar.TypeBlock:
-			mem.mode |= fs.ModeDevice
-		case tar.TypeFifo:
-			mem.mode |= fs.ModeNamedPipe
-		default:
+		// After Next, the count is the position of the data of the entry.
+		consumed = min(c.n+int(max(h.Size, 0)), len(b))
+		consumed = (consumed + tarBlockSize - 1) / tarBlockSize * tarBlockSize
+		if out == nil {
+			wrote = true
 			continue
 		}
-		mem.major, mem.minor = int(h.Devmajor), int(h.Devminor)
-		w.write(mem)
+		mode := uint32(h.Mode) & 0o7777
+		var ok bool
+		switch h.Typeflag {
+		case tar.TypeDir:
+			ok = out.CreateDirectory(h.Name)
+			if ok {
+				dirs = append(dirs, dir{h.Name, mode})
+			}
+		case tar.TypeSymlink, tar.TypeLink:
+			ok = out.CreateSymlink(h.Name, h.Linkname)
+			if ok {
+				out.SetOwnership(h.Name, uint32(h.Uid), uint32(h.Gid))
+			}
+		case tar.TypeReg, tar.TypeCont, tar.TypeGNUSparse:
+			// The content keeps the bytes before an error of the data, as
+			// the crate tar reads a cut entry.
+			content, _ := io.ReadAll(tr)
+			out.CreateDirectory(path.Dir(h.Name))
+			ok = out.CreateFile(h.Name, content)
+			if ok {
+				out.SetOwnership(h.Name, uint32(h.Uid), uint32(h.Gid))
+				out.SetMode(h.Name, mode)
+			}
+		default:
+			ok = true
+		}
+		wrote = wrote || ok
 	}
-	return w.result()
+	for _, d := range dirs {
+		out.SetOwnership(d.name, 0, 0)
+		out.SetMode(d.name, d.mode)
+	}
+	if !wrote {
+		return walk.Extraction{}
+	}
+	return walk.Extraction{OK: true, Size: consumed, HasSize: true}
 }

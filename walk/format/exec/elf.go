@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/elf.rs and src/structures/elf.rs of
-// binwalk.
+// This file translates src/formats/elf.rs of binwalk-ng.
 
 package exec
 
@@ -14,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// ELF is the signature "elf" of binwalk.
+// ELF is the signature "elf" of binwalk-ng.
 var ELF = &walk.Signature{
 	Name:        "elf",
 	Magic:       [][]byte{[]byte("\x7FELF")},
@@ -31,7 +30,7 @@ func parseELF(data []byte, off int) (walk.Match, error) {
 	return walk.Match{
 		Offset:     off,
 		Confidence: walk.Medium,
-		Description: fmt.Sprintf("ELF binary, %s-bit %s, %s for %s, %s endian",
+		Description: fmt.Sprintf("ELF binary, %s-bit %s, %s for %s, %s",
 			h.class, h.exeType, h.machine, h.osabi, h.endianness),
 	}, nil
 }
@@ -65,7 +64,7 @@ var (
 
 var elfClasses = map[int]string{1: "32", 2: "64"}
 
-var elfEndianness = map[int]string{1: "little", 2: "big"}
+var elfEndianness = map[int]string{1: "Little Endian", 2: "Big Endian"}
 
 var elfOSABI = map[int]string{
 	0:   "System-V (Unix)",
@@ -294,6 +293,19 @@ var elfMachines = map[int]string{
 	259: "ChipON KungFu32",
 }
 
+// elfType is parse_elf_type. binwalk-ng names the ranges of types that an
+// operating system or a processor reserves.
+func elfType(t int) (string, bool) {
+	switch {
+	case t >= 0xFE00 && t <= 0xFEFF:
+		return "OS-specific", true
+	case t >= 0xFF00 && t <= 0xFFFF:
+		return "processor-specific", true
+	}
+	s, ok := elfTypes[t]
+	return s, ok
+}
+
 // parseELFHeader is parse_elf_header.
 func parseELFHeader(data []byte) (elfHeader, bool) {
 	const (
@@ -316,11 +328,11 @@ func parseELFHeader(data []byte) (elfHeader, bool) {
 	if !ok {
 		return elfHeader{}, false
 	}
-	info, ok := elfInfo.Parse(raw, endian == "big")
+	info, ok := elfInfo.Parse(raw, endian == "Big Endian")
 	if !ok || info["version"] != expectedVersion {
 		return elfHeader{}, false
 	}
-	typ, ok := elfTypes[info["type"]]
+	typ, ok := elfType(info["type"])
 	if !ok {
 		return elfHeader{}, false
 	}

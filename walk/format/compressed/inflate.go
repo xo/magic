@@ -1,11 +1,9 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/extractors/inflate.rs, src/signatures/gzip.rs,
-// src/structures/gzip.rs, src/extractors/gzip.rs, src/signatures/zlib.rs,
-// src/extractors/zlib.rs, src/signatures/gpg.rs and src/extractors/gpg.rs of
-// binwalk.
+// This file translates src/extractors/inflate.rs, src/formats/gzip.rs,
+// src/formats/zlib.rs and src/formats/gpg.rs of binwalk-ng.
 
 package compressed
 
@@ -33,10 +31,10 @@ type inflated struct {
 // appends what comes out to decompressed.bin when out is set. It succeeds
 // when the stream ends and gave some data.
 //
-// flate2, which binwalk uses, ends a stream that is cut short as it ends a
-// whole one, and reports every byte as read. The flate of the walker reports
-// io.ErrUnexpectedEOF, after it read every byte, and inflate takes that as
-// the end. It decodes as miniz_oxide, the inflater of flate2, decodes. A bytes.Reader is an io.ByteReader, so flate reads no byte past
+// flate2 1.1.10, which binwalk-ng uses, fails on a stream that is cut
+// short, and the flate of the walker reports io.ErrUnexpectedEOF for it.
+// The flate of the walker decodes as miniz_oxide, the inflater of flate2,
+// decodes. A bytes.Reader is an io.ByteReader, so flate reads no byte past
 // the end of a whole stream, and the bytes that it read are the size.
 func inflate(data []byte, off int, out *walk.Output) inflated {
 	const blockSize = 8192
@@ -61,7 +59,7 @@ func inflate(data []byte, off int, out *walk.Output) inflated {
 		switch {
 		case err == nil:
 			continue
-		case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
+		case errors.Is(err, io.EOF):
 			if total == 0 {
 				return inflated{}
 			}
@@ -72,7 +70,7 @@ func inflate(data []byte, off int, out *walk.Output) inflated {
 	}
 }
 
-// Gzip is the signature "gzip" of binwalk.
+// Gzip is the signature "gzip" of binwalk-ng.
 var Gzip = &walk.Signature{
 	Name:        "gzip",
 	Magic:       [][]byte{[]byte("\x1f\x8b\x08")},
@@ -202,11 +200,11 @@ func gzipHeader(data []byte) (gzipInfo, bool) {
 	return info, len(data) >= info.size
 }
 
-// Zlib is the signature "zlib" of binwalk.
+// Zlib is the signature "zlib" of binwalk-ng.
 var Zlib = &walk.Signature{
 	Name:        "zlib",
 	Short:       true,
-	Magic:       [][]byte{[]byte("\x78\x9c"), []byte("\x78\xDA"), []byte("\x78\x5E")},
+	Magic:       [][]byte{[]byte("\x78\x01"), []byte("\x78\x9c"), []byte("\x78\xDA"), []byte("\x78\x5E")},
 	Description: "Zlib compressed file",
 	Parse:       parseZlib,
 	Extract:     extractZlib,
@@ -242,7 +240,7 @@ func parseZlib(data []byte, off int) (walk.Match, error) {
 	}, nil
 }
 
-// GPGSigned is the signature "gpg_signed" of binwalk: zlib data whose two
+// GPGSigned is the signature "gpg_signed" of binwalk-ng: zlib data whose two
 // bytes of magic are those of GPG.
 var GPGSigned = &walk.Signature{
 	Name:        "gpg_signed",

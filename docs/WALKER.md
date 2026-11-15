@@ -10,40 +10,51 @@ extracts them. It can then walk each file that it extracts.
 
 ## What binwalk is
 
-These facts come from the repository of binwalk, read on 2026-11-15. The
-newest commit was `26713972e3`, of 2026-08-11. The newest release is v3.1.0.
+The walker follows binwalk-ng (D60). binwalk-ng is the fork of binwalk 3
+that is maintained. These facts come from its repository, read on
+2026-11-16, when its newest commit was `02835ae0f4`, of 2026-10-31.
 
-1. binwalk 3 is a rewrite in Rust. Its license is MIT, the same as the
-   license of the code of magic.
+1. binwalk 3 is a rewrite in Rust of binwalk 2. ReFirmLabs/binwalk holds it,
+   and has had few commits since 2026-05. binwalk-ng forked from it at
+   `beda1ffb`, of 2026-05-27, and released 4.0.0 on 2026-09-29. The license of
+   both is MIT, the same as the license of the code of magic.
 2. binwalk 2 is in Python, and does not use libmagic. Its `core/magic.py`
    says that it replaces libmagic. Its rule files use the format of libmagic,
    with words of its own such as `{invalid}`, `{size:...}` and `{jump:...}`.
-3. binwalk 3 has no rule files. Each signature is Rust code: a list of magic
-   bytes, and a parser that reads the bytes at a match. The parser accepts or
-   rejects the match. If it accepts the match, it gives a description, a
-   confidence and, when it can, the size of the embedded file.
-4. binwalk 3 reads the whole file into memory before it scans.
+3. binwalk-ng has no rule files. Each signature is Rust code in
+   `src/formats/`: a list of magic bytes, a parser that reads the bytes at a
+   match, and the extractor. The parser accepts or rejects the match. If it
+   accepts the match, it gives a description, a confidence and, when it can,
+   the size of the embedded file.
+4. binwalk-ng reads the whole file into memory before it scans.
+5. The samples of binwalk-ng are a submodule of its repository,
+   binwalk-ng/binwalk-ng-samples, in `tests/testdata/samples`.
 
 The backlog said that two claims about binwalk were not confirmed. Items 1
 and 2 answer them. The claim that binwalk 2 uses libmagic was wrong.
 
-### How binwalk 3 scans
+### How binwalk-ng scans
 
 1. A "short" signature is a few bytes that match too often at random, such as
-   the magic of zlib or of FAT. binwalk tries a short signature only at offset
-   0, unless the option `--search-all` is set.
-2. binwalk puts the magic bytes of every other signature into one
+   the magic of zlib or of FAT. binwalk-ng tries a short signature only at
+   offset 0, unless the option `--search-all` is set.
+2. binwalk-ng puts the magic bytes of every other signature into one
    Aho-Corasick matcher. An Aho-Corasick matcher finds many fixed patterns in
-   one pass over the data. binwalk runs it over the file once.
-3. At each match, binwalk runs the parser of that signature. The parser gives
-   one of three confidences: low, medium or high.
-4. If a match has medium or high confidence and a known size, binwalk starts
-   the scan again at the end of that match. It does not look for signatures
-   inside a file that it already identified.
-5. After the scan, binwalk sorts the matches by offset. If two matches
-   overlap, binwalk keeps the one with the higher confidence. If the
-   confidences are the same, binwalk keeps the first one.
-6. A match with no known size ends where the next match of medium or high
+   one pass over the data. It also puts a run of zero bytes into the matcher.
+   The run is longer than every run of zeros in a magic.
+3. At each match, binwalk-ng runs the parser of that signature. The parser
+   gives one of three confidences: low, medium or high.
+4. If a match has medium or high confidence and a known size, binwalk-ng
+   starts the scan again at the end of that match. It does not look for
+   signatures inside a file that it already identified.
+5. If the matcher finds the run of zeros, binwalk-ng starts the scan again
+   just before the next byte that is not zero. It goes back by the most zeros
+   that a magic has before its first byte that is not zero. So the padding of
+   a firmware image costs little.
+6. After the scan, binwalk-ng sorts the matches by offset. If two matches
+   overlap, it keeps the one with the higher confidence. If the confidences
+   are the same, it keeps the first one.
+7. A match with no known size ends where the next match of medium or high
    confidence starts, or at the end of the file.
 
 ### What binwalk does with a match
@@ -61,36 +72,43 @@ and 2 answer them. The claim that binwalk 2 uses libmagic was wrong.
 | `-t` | sets the number of threads, which work on separate files |
 
 An extractor is one of two kinds. An internal extractor is Rust code in
-binwalk. An external extractor runs a program of the system, such as `7zz`
+binwalk-ng. An external extractor runs a program of the system, such as `7z`
 or `sasquatch`. magic runs no outside program (D36). Each format that binwalk
 extracts with a program needs Go code in magic, or magic only finds it.
 
 ### The formats
 
-binwalk 3 has 111 signatures. Its own code extracts 39 of them, 18 outside
-programs extract 33, and binwalk finds the other 39 and does not extract
-them. In the tables, "binwalk" means that the code of binwalk extracts the
-format, a program name means that program extracts it, and "none" means that
-binwalk only finds it. A short signature has "(short)" after its name.
+binwalk-ng has 114 signatures: the 111 of binwalk 3, and `eva`,
+`program_store` and `dlink_fw`. Its own code extracts 51 of them, 13 outside
+programs extract 24, and it finds the other 39 and does not extract them. In
+the tables, "binwalk-ng" means that its own code extracts the format, a
+program name means that program extracts it, and "none" means that
+binwalk-ng only finds it. A short signature has "(short)" after its name.
+The walker extracts every format of binwalk-ng's own code but `lzfse`, `rar`
+and `qnx_ifs`, which need decoders that the walker does not have (D60). It
+also extracts 15 of the 24 formats of the programs. It does not extract
+`arj`, `apfs`, `efigpt`, `ntfs`, `dmg`, `linux_kernel`, `pchrom`,
+`uefi_capsule` and `uefi_pi_volume`.
 
 Compressed data:
 
 | Signature | Extractor |
 | --- | --- |
-| `gzip`, `zlib` (short), `bzip2`, `xz` | binwalk |
-| `lzma`, `compressd` (short) | `7zz` |
-| `zstd`, `lz4`, `lzop`, `lzfse` | the program of the same name |
-| `arcadyan` (LZMA with the bytes changed), `gpg_signed` (short, zlib inside) | binwalk |
+| `gzip`, `zlib` (short), `bzip2`, `lzma`, `zstd`, `lz4` | binwalk-ng |
+| `xz` | binwalk-ng, or `7z` when a stream is not valid |
+| `lzfse` | binwalk-ng, with the crate `lzfse_rust`. The walker only finds it |
+| `compressd` (short) | `7z` |
+| `lzop` | `lzop` |
+| `arcadyan` (LZMA with the bytes changed), `gpg_signed` (short, zlib inside) | binwalk-ng |
 
 Archives:
 
 | Signature | Extractor |
 | --- | --- |
-| `zip`, `7zip`, `cpio`, `arj` | `7zz` |
-| `tarball` | `tar` |
+| `zip`, `7zip`, `cpio`, `arj` | `7z`. The walker has no decoder for `arj` |
+| `tarball`, `dahua_zip` (a zip file with a changed header) | binwalk-ng |
 | `cab` | `cabextract` |
-| `rar` | `unrar` |
-| `dahua_zip` (a zip file with a changed header) | binwalk |
+| `rar` | binwalk-ng, with the crate `rars`. The walker only finds it |
 | `deb` | none |
 
 File systems and disk images:
@@ -98,41 +116,40 @@ File systems and disk images:
 | Signature | Extractor |
 | --- | --- |
 | `squashfs` | `sasquatch`, which reads the variants of vendors |
-| `cramfs`, `iso9660`, `apfs` | `7zz` |
+| `cramfs`, `iso9660` | `7z` |
+| `apfs`, `efigpt` | `7z`. The walker only finds them |
 | `jffs2` | `jefferson` |
 | `yaffs` | `unyaffs` |
-| `ubi`, `ubifs` | `ubireader_extract_files` |
+| `ubi` | `ubireader_extract_images` |
+| `ubifs` | `ubireader_extract_files` |
 | `ext`, `fat` (short), `ntfs` | `tsk_recover`, of The Sleuth Kit |
-| `romfs` | binwalk |
-| `qnx_ifs` | `dumpifs` |
+| `romfs`, `mbr` (short), `android_sparse` | binwalk-ng |
+| `qnx_ifs` | binwalk-ng, with the crate `qnx-ifs`. The walker only finds it |
 | `dmg` | `dmg2img` |
 | `btrfs`, `logfs`, `luks`, `qcow` (short) | none |
-| `mbr` (short), `android_sparse` | binwalk |
-| `efigpt` | `7zz` |
 
 Kernels, boot loaders and the headers of firmware:
 
 | Signature | Extractor |
 | --- | --- |
-| `uimage`, `trx`, `dtb`, `jboot_sch2`, `wince`, `vxworks_symtab`, `mh01`, `csman` (short), `matter_ota` (short), `autel`, `dms` | binwalk |
-| `encfw` (short), `encrpted_img` (short), `dlink_tlv`, `dlke`, `shrs`, `dkbs`, `openssl` | binwalk, which decrypts them with keys that are known for each vendor |
+| `uimage`, `trx`, `dtb`, `jboot_sch2`, `wince`, `vxworks_symtab`, `mh01`, `csman` (short), `matter_ota` (short), `autel`, `dms`, `eva`, `program_store`, `srecord`, `srecord_generic` (short) | binwalk-ng |
+| `encfw` (short), `encrpted_img` (short), `dlink_tlv`, `dlink_fw`, `dlke`, `shrs`, `dkbs`, `openssl` | binwalk-ng, which decrypts them with keys that are known for each vendor |
 | `linux_kernel` | `vmlinux-to-elf` |
 | `uefi_pi_volume`, `uefi_capsule`, `pchrom` | `uefi-firmware-parser` |
-| `srecord`, `srecord_generic` (short) | `srec_cat` |
 | `uboot`, `linux_boot_image`, `linux_arm_zimage`, `linux_arm64_boot_image`, `android_bootimg`, `wind_kernel`, `ecos`, `cfe`, `seama`, `tplink`, `tplink_rtos`, `chk`, `dlob`, `packimg`, `binhdr`, `rtk` (short), `jboot_arm`, `jboot_stag` | none |
 
 Images, documents and executables:
 
 | Signature | Extractor |
 | --- | --- |
-| `png`, `jpeg`, `gif`, `bmp`, `riff`, `svg`, `dxbc` | binwalk, which carves the file at its size |
+| `png`, `jpeg`, `gif`, `bmp`, `riff`, `svg`, `dxbc` | binwalk-ng, which carves the file at its size |
 | `pdf`, `pjl`, `elf`, `pe` | none |
 
 Keys, tables of constants, captures and text:
 
 | Signature | Extractor |
 | --- | --- |
-| `pem_certificate`, `pem_public_key`, `pem_private_key`, `pcapng` | binwalk, which carves the file |
+| `pem_certificate`, `pem_public_key`, `pem_private_key`, `pcapng` | binwalk-ng, which carves the file |
 | `pkcs_der_hash`, `rsa`, `dpapi` (short), `aes_sbox`, `aes_forward_table`, `aes_reverse_table`, `aes_rcon`, `aes_acceleration_table`, `crc32`, `sha256`, `md5`, `copyright` | none |
 
 The last group finds tables of constants of AES, CRC32, SHA-256 and MD5 in
@@ -285,7 +302,7 @@ The formats build only on a system where an `int` has 64 bits, because
 binwalk refuses to build on any other system. On a system of 32 bits, the
 package `walk` builds and finds no format. A parser gets the whole input and
 the offset of the magic, as a parser of binwalk does, and returns `walk.ErrNoMatch` to reject the candidate. The
-walker sorts the signatures in the order of `src/magic.rs` of binwalk,
+walker sorts the signatures in the order of `src/magic.rs` of binwalk-ng,
 whatever the order of the imports, because that order decides which
 candidate the scan tries first. Phase W2 adds the unpacker of a format, which
 gives its members.
@@ -294,9 +311,9 @@ gives its members.
 
 1. A Go file translates the Rust files of one format: the signature, the
    structure and the dry run of the extractor that the parser calls. It opens
-   with the notice of binwalk and names those files (D49).
+   with the notice of binwalk-ng and names those files (D49, D60).
 2. The magic, the short flag, the confidence, the size, the offset and the
-   text of the description are the same as in binwalk. The gate compares
+   text of the description are the same as in binwalk-ng. The gate compares
    them as text.
 3. Where binwalk would panic, for a slice out of range or an unwrap of
    nothing, the parser rejects the candidate, and a comment says so. A panic
@@ -367,15 +384,15 @@ time of the system. The limits hold from the first release:
 
 ### How it is tested
 
-The walker follows binwalk 3 as the port follows libmagic (D49):
+The walker follows binwalk-ng as the port follows libmagic (D49, D60):
 
-1. `docs/upstream/upstreams.tsv` names the commit of binwalk, and
-   `docs/upstream/binwalk.tsv` is the ledger of the commits after it (D25,
-   D26). The checkout is in `upstream/binwalk/`.
-2. `test/oracle/build-binwalk.sh` builds binwalk at that commit into
+1. `docs/upstream/upstreams.tsv` names the commit of binwalk-ng, and
+   `docs/upstream/binwalk-ng.tsv` is the ledger of the commits after its
+   fork from binwalk (D25, D26). The checkout is in `upstream/binwalk-ng/`.
+2. `test/oracle/build-binwalk.sh` builds binwalk-ng at that commit into
    `test/.binwalk/`, with cargo. It needs the toolchain of Rust. It applies
-   the patches in `test/oracle/patches/` first, which fix the bugs of binwalk
-   that the walker fixes too (D59).
+   the patches in `test/oracle/patches/` first, if any, which fix the bugs
+   of binwalk-ng that the walker fixes too (D59). Today there are none.
 3. `TestWalkMatchesBinwalk` in `test/diff` runs binwalk on each input with
    `-l -` and `--include=` with the formats that the walker has. It compares
    the offset, the size, the name, the confidence and the description of each
@@ -383,8 +400,11 @@ The walker follows binwalk 3 as the port follows libmagic (D49):
 4. `TestWalkExtractsAsBinwalk` runs binwalk with `-e`, and compares the
    folder of each match with the members of the walker: the path, the type,
    the bytes, the target of a link and the bit of execution. It covers the
-   formats that binwalk extracts with its own code. binwalk extracts the
-   others with programs, so `TestWalkDecodes` and the tests of
+   formats that binwalk-ng extracts with its own code, and the formats that
+   it extracts with 7z, sasquatch and cabextract, when they are installed.
+   The walker does not extract lzfse, rar and QNX IFS, which binwalk-ng
+   decodes with crates of its own (D60), so the gate leaves them out.
+   `TestWalkDecodes` and the tests of
    `walk/format/archive` check them against data that Go makes.
 5. `TestWalkRecursesAsBinwalk` walks each input with `WithDepth`, and
    compares the matches of each file inside an extraction with binwalk.
@@ -404,17 +424,18 @@ The walker follows binwalk 3 as the port follows libmagic (D49):
    test skips when its tool is missing. `FuzzWalk` in `walk/format/all`
    fuzzes every format.
 7. The corpus, from `corpus.Walk`, holds the files of the gates of the port,
-   the test inputs of binwalk, the samples in `test/corpus/testdata/walk/`,
+   the samples of binwalk-ng, the samples in `test/corpus/testdata/walk/`,
    damaged copies of them, and 200 images. An image holds several of the
    files at random offsets between random bytes, from a fixed seed.
 8. Each parser is fuzzed, in a later step. A parser reads hostile bytes, and
    must not panic or read past its limits.
 
-Five things of binwalk need care in the gates:
+Seven things of binwalk-ng need care in the gates:
 
-1. binwalk sorts its matches by offset and then by a random identifier. Of two
-   matches of the same confidence at one offset, it keeps a random one. When
-   the answers differ, the gate asks binwalk again, up to three times.
+1. binwalk 3 sorted its matches by offset and then by a random identifier,
+   so of two matches of the same confidence at one offset, it kept a random
+   one. binwalk-ng sorts by offset only, and keeps the order of the scan.
+   The gate still asks again, up to three times, when the answers differ.
 2. Under load, binwalk can close its list of JSON before its worker logs the
    result, and print only "]". The client runs it again, up to five times.
 3. The option `-y` takes many values, and takes the path of the file as one
@@ -427,9 +448,20 @@ Five things of binwalk need care in the gates:
    of a small last file, and of the files in it. The client runs binwalk
    with `-e` on one file at a time, and walks the extractions itself, as
    `main.rs` does.
+6. sasquatch can stop at another block on another run, more often under
+   load, because the timing of its threads decides it. The extraction gate
+   runs binwalk-ng again up to six times when the files of an outside
+   program differ. It then runs each input that still differs once more,
+   alone.
+7. On a damaged copy of LZMA data, 7z writes what it decoded before the
+   error. The walker writes nothing for a stream with an error, and has no
+   decoder that stops where 7z stops (D60). For a damaged copy of `7zip` or
+   `xz` data, the gate accepts members of the walker that are a part of the
+   members of binwalk-ng.
 
-binwalk extracts many formats with outside programs, so the oracle compares
-the matches, and not the extracted files, for those formats.
+The gate compares the files of an outside program only when that program
+is installed: 7z, sasquatch and cabextract. The other programs of the
+tables have no counterpart in the walker.
 
 ## The order of the work
 
@@ -445,9 +477,9 @@ phase W4 are the least sure.
 | W4 | the other file systems of firmware | `cramfs`, `jffs2`, `yaffs`, `ubi`, `ubifs`, `iso9660`, `fat`, `ext` | 10 to 20 |
 | W5 | the formats that binwalk decrypts or changes, and the rest | `encfw` and the others with keys, `7zip`, `cab`, `lz4`, `lzop`, `uefi_*`, `srecord`, `linux_kernel` | 5 to 10 |
 
-`rar`, `ntfs`, `apfs`, `dmg`, `lzfse` and `qnx_ifs` stay "find only" until a
-maintainer asks for them. Each one is a large parser, or needs a decoder that
-Go does not have.
+`rar`, `ntfs`, `apfs`, `dmg`, `lzfse`, `qnx_ifs`, `arj` and `efigpt` stay
+"find only" until a maintainer asks for them. Each one is a large parser, or
+needs a decoder that Go does not have. D60 adds no decoder.
 
 ## The answers
 
@@ -456,7 +488,7 @@ were questions 17 to 22 of `docs/PLAN.md`.
 
 | Question | Answer | Decision |
 | --- | --- | --- |
-| 17. Does the walker follow binwalk 3, with a ledger and an oracle? | Yes. The test module builds binwalk with Rust. CI does not run it (D58) | D49, D58 |
+| 17. Does the walker follow binwalk 3, with a ledger and an oracle? | Yes. The test module builds binwalk with Rust. CI does not run it (D58). Since D60, the walker follows binwalk-ng | D49, D58, D60 |
 | 18. Is the walker a package of this module? | Yes, `github.com/xo/magic/walk` | D50 |
 | 19. Does the walker take the names and descriptions of binwalk? | Yes, as they are, so that the oracle compares them as text | D49 |
 | 20. Is the API an iterator with `SkipMembers`? | Yes, as this document gives it | D50 |

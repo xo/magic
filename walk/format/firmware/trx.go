@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/trx.rs, src/structures/trx.rs and
-// src/extractors/trx.rs of binwalk.
+// This file translates src/formats/trx.rs of binwalk-ng.
 
 package firmware
 
@@ -14,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// TRX is the signature "trx" of binwalk.
+// TRX is the signature "trx" of binwalk-ng.
 var TRX = &walk.Signature{
 	Name:        "trx",
 	Magic:       [][]byte{[]byte("HDR0")},
@@ -77,10 +76,13 @@ func extractTRX(data []byte, off int, out *walk.Output) walk.Extraction {
 	for i, p := range h.partitions {
 		size := h.totalSize - p
 		if i+1 < len(h.partitions) {
-			// A partition after this one at a lower offset gives a
-			// negative size, which binwalk wraps to a range that does not
-			// fit, so the carve fails in both.
 			size = h.partitions[i+1] - p
+		}
+		// The partitions need not be in order. A partition after this one
+		// at a lower offset gives a negative size, and binwalk-ng stops.
+		if size < 0 {
+			r.OK = false
+			break
 		}
 		r.OK = out.CarveFile(fmt.Sprintf("partition_%d.bin", i), data, off+p, size)
 		if !r.OK {
@@ -120,11 +122,16 @@ func trxHeader(data []byte) (trxInfo, bool) {
 	if h["partition1_offset"] > total || h["partition2_offset"] > total || h["partition3_offset"] > total {
 		return trxInfo{}, false
 	}
+	// Only version 2 has a fourth partition. For version 1, those bytes are
+	// after the header, and binwalk-ng does not check them.
+	version := h["version"]
+	if version == 2 && h["partition4_offset"] > total {
+		return trxInfo{}, false
+	}
 	size := trxStruct.Size()
 	if total <= size {
 		return trxInfo{}, false
 	}
-	version := h["version"]
 	if version != 1 && version != 2 {
 		return trxInfo{}, false
 	}

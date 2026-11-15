@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/pe.rs and src/structures/pe.rs of
-// binwalk.
+// This file translates src/formats/pe.rs of binwalk-ng.
 
 package exec
 
@@ -14,7 +13,7 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// PE is the signature "pe" of binwalk.
+// PE is the signature "pe" of binwalk-ng.
 var PE = &walk.Signature{
 	Name: "pe",
 	// The first 16 bytes of a DOS header, from e_magic to e_ss, as most

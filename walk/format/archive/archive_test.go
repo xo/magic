@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/fs"
 	"math/rand/v2"
+	"slices"
 	"strings"
 	"testing"
 
@@ -121,7 +122,7 @@ func TestZIP(t *testing.T) {
 		"d drwxr-xr-x",
 		"d/a.txt -rw-r--r-- "+strings.Repeat("a", 100),
 		"run.sh -rw-r--r-x #!/bin/sh\n",
-		"ln Lrwxrwxrwx -> ./d/a.txt",
+		"ln Lrwxrwxrwx -> d/a.txt",
 		"up.txt -rw-r--r-- up",
 	)
 }
@@ -144,9 +145,6 @@ func TestZIPWithoutEOCD(t *testing.T) {
 	t.Parallel()
 	z := append(zipLocalHeader("a", "hello"), zipLocalHeader("b/c", "world")...)
 	data := append(noise(64), z...)
-	// binwalk stops at the first header past the end of the archive only
-	// when that header is before len(data)-off, so more than 64 bytes
-	// follow.
 	data = append(data, bytes.Repeat([]byte{0xff}, 100)...)
 	e, lines := walkOne(t, data, "zip")
 	exp := fmt.Sprintf("ZIP archive, version: 1.0, missing end-of-central-directory header, total size: %d bytes", len(z))
@@ -194,24 +192,23 @@ func TestTarball(t *testing.T) {
 	if exp := "POSIX tar archive, file count: 8"; e.Description != exp {
 		t.Errorf("expected %q, got: %q", exp, e.Description)
 	}
+	// binwalk-ng sets the mode of each file and folder. It makes a hard
+	// link a symbolic link, whose target is relative to the folder of the
+	// link. It writes no device and no FIFO.
 	check(t, lines,
 		"etc drwxr-xr-x",
 		"etc/passwd -rw-r--r-- root:",
 		"bin drwxr-xr-x",
-		"bin/sh -rw-r--r-x roo",
+		"bin/sh -rwxr-xr-x roo",
 		"bin/ls Lrwxrwxrwx -> ../bin/sh",
-		"bin/ash -rw-r--r-x roo",
-		"dev drwxr-xr-x",
-		"dev/null -rw-r--r-- c 1 3",
-		"dev/sda -rw-r--r-- b 8 0",
-		"dev/fifo -rw-r--r-- fifo",
+		"bin/ash Lrwxrwxrwx -> ../bin/bin/sh",
 	)
 }
 
 // cpioNewc returns an entry of a newc archive.
-func cpioNewc(magic, name string, mode, major, minor int, content string) []byte {
+func cpioNewc(magic, name string, ino, mode, major, minor int, content string) []byte {
 	b := fmt.Appendf(nil, "%s%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X",
-		magic, 1, mode, 0, 0, 1, 0, len(content), 0, 0, major, minor, len(name)+1, 0)
+		magic, ino, mode, 0, 0, 1, 0, len(content), 0, 0, major, minor, len(name)+1, 0)
 	b = append(b, name...)
 	b = append(b, 0)
 	for len(b)%4 != 0 {
@@ -228,7 +225,7 @@ func TestCPIO(t *testing.T) {
 	t.Parallel()
 	for _, magic := range []string{"070701", "070702"} {
 		c := make([]byte, 0, 1024)
-		for _, e := range []struct {
+		for i, e := range []struct {
 			name               string
 			mode, major, minor int
 			content            string
@@ -240,10 +237,17 @@ func TestCPIO(t *testing.T) {
 			{"dev/console", 0o020600, 5, 1, ""},
 			{"dev/loop0", 0o060600, 7, 0, ""},
 			{"dev/initctl", 0o010600, 0, 0, ""},
+			{"etc/issue", 0o100600, 0, 0, ""},
 			{"etc/motd", 0o100644, 0, 0, "hi"},
 			{cpioTrailer, 0, 0, 0, ""},
 		} {
-			c = append(c, cpioNewc(magic, e.name, e.mode, e.major, e.minor, e.content)...)
+			// etc/issue is a hard link to etc/motd: it has the inode of
+			// etc/motd, and no data.
+			ino := i + 1
+			if e.name == "etc/issue" {
+				ino++
+			}
+			c = append(c, cpioNewc(magic, e.name, ino, e.mode, e.major, e.minor, e.content)...)
 		}
 		data := append(noise(333), c...)
 		data = append(data, make([]byte, 512)...)
@@ -251,7 +255,7 @@ func TestCPIO(t *testing.T) {
 		if e.Offset != 333 || e.Size != int64(len(c)) {
 			t.Errorf("%s: expected %q, got: %q", magic, fmt.Sprint(333, len(c)), fmt.Sprint(e.Offset, e.Size))
 		}
-		if exp := "CPIO ASCII archive, file count: 8"; e.Description != exp {
+		if exp := "CPIO ASCII archive, file count: 9"; e.Description != exp {
 			t.Errorf("%s: expected %q, got: %q", magic, exp, e.Description)
 		}
 		check(t, lines,
@@ -259,10 +263,11 @@ func TestCPIO(t *testing.T) {
 			"bin/busybox -rw-r--r-x ELF",
 			"bin/sh Lrwxrwxrwx -> ../bin/busybox",
 			"dev drwxr-xr-x",
-			"dev/console -rw-r--r-- c 5 1",
-			"dev/loop0 -rw-r--r-- b 7 0",
-			"dev/initctl -rw-r--r-- fifo",
+			"dev/console -rw-r--r-- ",
+			"dev/loop0 -rw-r--r-- ",
+			"dev/initctl -rw-r--r-- ",
 			"etc drwxr-xr-x",
+			"etc/issue -rw-r--r-- hi",
 			"etc/motd -rw-r--r-- hi",
 		)
 	}
@@ -298,17 +303,98 @@ func TestParseQuirks(t *testing.T) {
 			t.Errorf("%q: expected %q, got: %q", s, fmt.Sprint(exp), fmt.Sprint(n))
 		}
 	}
-	for s, exp := range map[string]int{"0000000017\x00": 15, "19\x00": 17, "7x7": 7} {
-		if n := tarOctal([]byte(s)); n != exp {
+	for s, exp := range map[string]int{"0000000017\x00": 15, "17  \x00": 15, "\x00": 0, "": 0, "19\x00": -1, "7x7": -1, "1 7": -1} {
+		n, ok := tarOctal([]byte(s))
+		if !ok {
+			n = -1
+		}
+		if n != exp {
 			t.Errorf("%q: expected %q, got: %q", s, fmt.Sprint(exp), fmt.Sprint(n))
 		}
 	}
-	// An f32 holds 2^24+1 as 2^24, so binwalk counts no block for the
-	// last byte.
+	// binwalk-ng divides in integers, so the last byte of 2^24+1 bytes
+	// takes a block of its own.
 	block := make([]byte, 512)
 	copy(block[257:], "ustar")
 	copy(block[124:], fmt.Sprintf("%011o", 1<<24+1))
-	if n, _ := tarEntrySize(block); n != 512+1<<24 {
-		t.Errorf("expected %q, got: %q", fmt.Sprint(512+1<<24), fmt.Sprint(n))
+	if n, _ := tarEntrySize(block); n != 2*512+1<<24 {
+		t.Errorf("expected %q, got: %q", fmt.Sprint(2*512+1<<24), fmt.Sprint(n))
 	}
+}
+
+// TestZIPDescriptor holds how 7z reads members whose sizes follow the data,
+// in an archive without a central directory. The first member ends at the
+// descriptor whose size is that of its data. The last has no such
+// descriptor, so it runs to the end of the carved bytes.
+func TestZIPDescriptor(t *testing.T) {
+	t.Parallel()
+	described := func(name, content string, descriptor bool) []byte {
+		b := zipLocalHeader(name, "")
+		binary.LittleEndian.PutUint16(b[6:], 8)
+		b = append(b, content...)
+		if descriptor {
+			b = append(b, "PK\x07\x08"...)
+			b = binary.LittleEndian.AppendUint32(b, 0)
+			b = binary.LittleEndian.AppendUint32(b, uint32(len(content)))
+			b = binary.LittleEndian.AppendUint32(b, uint32(len(content)))
+		}
+		return b
+	}
+	first := described("a", "hello", true)
+	data := slices.Concat(noise(64), first, described("b", "world", false))
+	// The parser counts no data for a member with a descriptor, so the
+	// first match ends at the data of its member, and 7z gets the bytes to
+	// the end of the input on its second run. The second member is a match
+	// of its own too.
+	var got []string
+	for e, err := range walk.WalkBytes(context.Background(), data, walk.WithFormats("zip")) {
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		for m, err := range e.Members(context.Background()) {
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			rc, err := m.Open()
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			b, _ := io.ReadAll(rc)
+			got = append(got, fmt.Sprint(e.Offset, " ", m.Name, " ", string(b)))
+		}
+	}
+	check(t, got,
+		"64 a hello",
+		"64 b world",
+		fmt.Sprint(64+len(first), " b world"),
+	)
+}
+
+// TestZIPMismatch holds that 7z writes an empty file for a member whose
+// local header does not match the central directory.
+func TestZIPMismatch(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, name := range []string{"a", "b"} {
+		w, err := zw.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Store})
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		if _, err := io.WriteString(w, name+name); err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	z := buf.Bytes()
+	// Change the method of the local header of "b".
+	i := bytes.LastIndex(z, []byte("PK\x03\x04"))
+	z[i+8] = 8
+	_, lines := walkOne(t, append(noise(10), z...), "zip")
+	check(t, lines,
+		"a -rw-r--r-- aa",
+		"b -rw-r--r-- ",
+	)
 }

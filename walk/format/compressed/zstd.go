@@ -1,9 +1,8 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/zstd.rs and src/structures/zstd.rs of
-// binwalk.
+// This file translates src/formats/zstd.rs of binwalk-ng.
 
 package compressed
 
@@ -15,9 +14,10 @@ import (
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
-// Zstd is the signature "zstd" of binwalk. binwalk extracts it with the
-// program zstd, which writes the data to zstd_<offset in hexadecimal>. The
-// walker writes the same file, with the decoder of compress/zstd.
+// Zstd is the signature "zstd" of binwalk-ng. binwalk-ng extracts it with
+// its own code, through the crate zstd, which writes the data to
+// decompressed.bin. The walker writes the same file, with the decoder of
+// compress/zstd.
 var Zstd = &walk.Signature{
 	Name:        "zstd",
 	Magic:       [][]byte{[]byte("\x28\xb5\x2f\xfd")},
@@ -98,20 +98,24 @@ func parseZstd(data []byte, off int) (walk.Match, error) {
 	return walk.Match{}, walk.ErrNoMatch
 }
 
-// extractZstd writes what zstd -d writes for the carved match: the data of
-// its frame, in a file named after the signature and the offset. binwalk
-// carves the size that the parser found, so the frame ends there.
+// extractZstd is zstd_decompress. It decodes the frame that the parser
+// finds, so the bytes after the frame do not count. It fails when the frame
+// ends past the data, and when it gives no data.
 func extractZstd(data []byte, off int, out *walk.Output) walk.Extraction {
 	m, err := parseZstd(data, off)
 	if err != nil {
+		return walk.Extraction{}
+	}
+	frame, ok := binwalk.Range(data, off, off+m.Size)
+	if !ok {
 		return walk.Extraction{}
 	}
 	s, ok := compress.LookupStream(compress.Zstd)
 	if !ok {
 		return walk.Extraction{}
 	}
-	w := &appender{out: out, name: fmt.Sprintf("zstd_%X", off)}
-	if _, err := s(data[off:off+m.Size], w); err != nil || w.failed {
+	w := &appender{out: out, name: "decompressed.bin"}
+	if _, err := s(frame, w); err != nil || w.failed || w.n == 0 {
 		return walk.Extraction{}
 	}
 	return walk.Extraction{OK: true, Size: m.Size, HasSize: true}

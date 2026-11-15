@@ -1,6 +1,6 @@
 # D59. The walker fixes a bug of binwalk with a decision, and so does the oracle
 
-Status: Decided. Amends D49.
+Status: Decided. Amends D49. Amended by D60.
 
 The maintainers decided on 2026-11-15 that the walker fixes a bug of binwalk
 when the bug makes the walker miss what binwalk found before it, and that

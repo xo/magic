@@ -19,8 +19,9 @@ import (
 )
 
 // TestWalkLZ4 extracts frames that the program lz4 makes, with linked
-// blocks, checksums of blocks and the size of the content. binwalk extracts
-// LZ4 with lz4 -d, which writes decompressed.bin. It skips without lz4.
+// blocks, checksums of blocks and the size of the content. binwalk-ng
+// extracts LZ4 with the crate lz4_flex, and writes decompressed.bin. It
+// skips without lz4.
 func TestWalkLZ4(t *testing.T) {
 	t.Parallel()
 	if _, err := exec.LookPath("lz4"); err != nil {

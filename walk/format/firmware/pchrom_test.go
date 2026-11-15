@@ -10,21 +10,22 @@ import (
 	_ "github.com/xo/magic/walk/format/firmware"
 )
 
-// TestPCHROM finds a PCH ROM. binwalk finds one only in more than 16 MiB, so
-// the samples of test/corpus/testdata/walk cannot hold one, and the test
-// makes the image in memory. binwalk gives the expected values for the same
-// bytes.
+// TestPCHROM finds a PCH ROM in an image that the test makes in memory.
+// binwalk-ng gives the expected values for the same bytes.
 func TestPCHROM(t *testing.T) {
 	t.Parallel()
 	const (
 		start = 8
-		size  = 0x1000000 + 16
+		size  = 0x20000 + 16
 	)
 	data := make([]byte, start+size+8)
-	// The five region entries, the last of which is the magic, and then
-	// FCBA 3, NC 1 and FRBA 4.
-	copy(data[start:], "\x01\x00\x03\x00\x02\x00\x05\x00\x00\x00\x00\x00\x10\x00\x10\x00"+
-		"\x5a\xa5\xf0\x0f\x03\x01\x04\x00")
+	// The magic, then FCBA 3, NC 1 and FRBA 4.
+	copy(data[start+16:], "\x5a\xa5\xf0\x0f\x03\x01\x04\x00")
+	// The five region entries, at FCBA shifted left by 4. The first ends at
+	// 0x20000. The third and the fifth have a base after their limit, and
+	// give no region.
+	copy(data[start+0x30:], "\x00\x00\x10\x00\x01\x00\x00\x00\xff\x1f\x00\x00"+
+		"\x00\x00\x00\x00\xff\x7f\x00\x00")
 	var got []string
 	for e, err := range walk.WalkBytes(context.Background(), data) {
 		if err != nil {

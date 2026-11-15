@@ -55,8 +55,8 @@ func TestTheLedgerIsComplete(t *testing.T) {
 	for _, up := range ups {
 		names = append(names, up[0])
 	}
-	if want := []string{"file", "binwalk"}; !slices.Equal(names, want) {
-		t.Fatalf("expected the upstreams %q in %s, got: %q. See D26 and D49", want, filepath.Join(upstreamDir, "upstreams.tsv"), names)
+	if want := []string{"file", "binwalk-ng"}; !slices.Equal(names, want) {
+		t.Fatalf("expected the upstreams %q in %s, got: %q. See D26 and D60", want, filepath.Join(upstreamDir, "upstreams.tsv"), names)
 	}
 	for _, up := range ups {
 		t.Run(up[0], func(t *testing.T) {

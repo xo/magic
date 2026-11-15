@@ -3,8 +3,8 @@
 // Package vendor registers the firmware images of vendors, most of them
 // encrypted or obfuscated, that binwalk finds: OpenSSL encryption, Arcadyan
 // obfuscated LZMA, D-Link MH01, Autel, DMS, Matter OTA, Dahua ZIP, CSman DAT,
-// known encrypted firmware, D-Link encrpted_img, D-Link TLV, DLKE, SHRS and
-// DKBS.
+// known encrypted firmware, D-Link encrpted_img, D-Link TLV, D-Link firmware
+// with a header of the model, DLKE, SHRS and DKBS.
 //
 // The package carries no key. It extracts the formats that binwalk extracts
 // without a key. The package encrypted adds the decryption of the others,
@@ -15,7 +15,7 @@ import "github.com/xo/magic/walk"
 
 func init() {
 	walk.Register(
-		Arcadyan, OpenSSL, Autel, DahuaZIP, MH01, CSman, DLinkTLV, DLKE, SHRS,
-		EncrptedImg, DMS, DKBS, EncFW, MatterOTA,
+		Arcadyan, OpenSSL, Autel, DahuaZIP, MH01, CSman, DLinkTLV, DLinkFW, DLKE,
+		SHRS, EncrptedImg, DMS, DKBS, EncFW, MatterOTA,
 	)
 }

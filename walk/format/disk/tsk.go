@@ -1,9 +1,9 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/extractors/tsk.rs of binwalk. binwalk extracts
-// FAT, EXT and NTFS with tsk_recover of The Sleuth Kit, as
+// This file translates src/extractors/tsk.rs of binwalk-ng. binwalk-ng
+// extracts FAT, EXT and NTFS with tsk_recover of The Sleuth Kit, as
 // "tsk_recover -i raw -a <image> rootfs", and recoverTSK writes the files
 // that tsk_recover writes. It copies the behavior of tsk_recover and of the
 // library of The Sleuth Kit, not their code. A comment names the C function

@@ -1,10 +1,11 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates src/signatures/fat.rs and src/structures/fat.rs of
-// binwalk. binwalk extracts FAT with tsk_recover of The Sleuth Kit, and
-// extractFAT in fattsk.go writes the files that it writes.
+// This file translates src/formats/fat.rs of binwalk-ng. binwalk-ng
+// extracts FAT with tsk_recover of The Sleuth Kit, from
+// src/extractors/tsk.rs, and extractFAT in fattsk.go writes the files that
+// it writes.
 
 package disk
 
@@ -80,7 +81,8 @@ func parseFATHeader(data []byte) (int, bool, bool) {
 		!slices.Contains([]int{512, 1024, 2048, 4096}, h["bytes_per_sector"]) ||
 		!slices.Contains([]int{1, 2, 4, 8, 16, 32, 64, 128}, h["sectors_per_cluster"]) ||
 		h["reserved_sectors"] == 0 ||
-		h["fat_count"] != 2 ||
+		// binwalk-ng accepts one FAT, as flash media can have.
+		(h["fat_count"] != 1 && h["fat_count"] != 2) ||
 		!slices.Contains([]int{0xF0, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE}, h["media_type"]) {
 		return 0, false, false
 	}

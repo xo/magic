@@ -1,12 +1,13 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
+// Copyright (c) 2024 devttys0 and the contributors of binwalk-ng. Under the MIT license, in LICENSE.
 //
-// This file translates the crate delink of the author of binwalk, at commit
-// 4735669, which binwalk uses to decrypt the firmware of D-Link: src/aes.rs,
+// This file translates the crate delink-ng 0.2.1 of binwalk-ng, which
+// binwalk-ng uses to decrypt the firmware of D-Link: src/aes.rs,
 // src/openssl.rs, src/sha1_hmac.rs, src/decryptor.rs, src/r95.rs,
 // src/shrs.rs, src/mh01.rs, src/dlk.rs, src/encimg.rs, src/tlv.rs,
-// src/dap1610.rs and src/encrpted.rs. delink is under the MIT license.
+// src/dap1325.rs, src/dap1610.rs and src/encrpted.rs. delink-ng is under the
+// MIT license.
 
 package encrypted
 
@@ -29,7 +30,7 @@ import (
 func decrypt(data []byte) ([]byte, bool) {
 	for _, d := range []func([]byte) ([]byte, bool){
 		decryptR95, decryptSHRS, decryptMH01, decryptDLK, decryptEncimg,
-		decryptTLV, decryptDAP1610, decryptEncrpted,
+		decryptTLV, decryptDAP1325, decryptDAP1610, decryptEncrpted,
 	} {
 		if b, ok := d(data); ok {
 			return b, true
@@ -39,12 +40,13 @@ func decrypt(data []byte) ([]byte, bool) {
 }
 
 // aesCBC is aes_cbc_decrypt of aes.rs: AES of the key size, on the first
-// size bytes of the key, in CBC mode, with or without the padding of
-// PKCS#7. The data must be whole blocks.
+// size bytes of the key and the first 16 bytes of the IV, in CBC mode, with
+// or without the padding of PKCS#7. The data must be whole blocks.
 func aesCBC(data, key, iv []byte, size int, padded bool) ([]byte, bool) {
-	if len(key) < size || len(iv) != aes.BlockSize || len(data)%aes.BlockSize != 0 {
+	if len(key) < size || len(iv) < aes.BlockSize || len(data)%aes.BlockSize != 0 {
 		return nil, false
 	}
+	iv = iv[:aes.BlockSize]
 	if padded && len(data) == 0 {
 		return nil, false
 	}
@@ -57,25 +59,63 @@ func aesCBC(data, key, iv []byte, size int, padded bool) ([]byte, bool) {
 	if !padded {
 		return out, true
 	}
-	n := int(out[len(out)-1])
-	if n == 0 || n > aes.BlockSize {
+	return unpadPKCS7(out)
+}
+
+// unpadPKCS7 removes the padding of PKCS#7 from whole blocks: n bytes of
+// the value n, from 1 to 16.
+func unpadPKCS7(b []byte) ([]byte, bool) {
+	if len(b) == 0 {
 		return nil, false
 	}
-	for _, c := range out[len(out)-n:] {
+	n := int(b[len(b)-1])
+	if n == 0 || n > aes.BlockSize || n > len(b) {
+		return nil, false
+	}
+	for _, c := range b[len(b)-n:] {
 		if int(c) != n {
 			return nil, false
 		}
 	}
-	return out[:len(out)-n], true
+	return b[:len(b)-n], true
 }
 
-// openSSL is decrypt of openssl.rs: data that starts with "Salted__" and a
-// salt, whose key and IV come from the password and the salt, as
-// EVP_BytesToKey of OpenSSL makes them, with one round of the digest. An IV
-// that is not nil takes the place of the one that it makes.
-func openSSL(data []byte, password string, size int, newHash func() hash.Hash, iv []byte) ([]byte, bool) {
-	if len(data) < 16 || string(data[:8]) != "Salted__" {
+// aesECB128 is aes_128_ecb_decrypt_pkcs7 of aes.rs: AES-128 in ECB mode, on
+// the first 16 bytes of the key, with the padding of PKCS#7. The data must
+// be whole blocks.
+func aesECB128(data, key []byte) ([]byte, bool) {
+	if len(key) < 16 || len(data)%aes.BlockSize != 0 {
 		return nil, false
+	}
+	block, err := aes.NewCipher(key[:16])
+	if err != nil {
+		return nil, false
+	}
+	out := make([]byte, len(data))
+	for i := 0; i < len(data); i += aes.BlockSize {
+		block.Decrypt(out[i:i+aes.BlockSize], data[i:i+aes.BlockSize])
+	}
+	return unpadPKCS7(out)
+}
+
+// openSSL is aes_256_cbc_decrypt of openssl.rs: data that starts with
+// "Salted__" and a salt, decrypted with AES-256 in CBC mode, whose key and
+// IV come from the password and the salt, as EVP_BytesToKey of OpenSSL
+// makes them, with one round of the digest. An IV that is not nil takes the
+// place of the one that it makes.
+func openSSL(data []byte, password string, newHash func() hash.Hash, iv []byte) ([]byte, bool) {
+	key, iv, ok := openSSLKeyIV(data, password, newHash, iv)
+	if !ok {
+		return nil, false
+	}
+	return aesCBC(data[16:], key, iv, 32, true)
+}
+
+// openSSLKeyIV is extract_openssl_key_iv of openssl.rs: the key of 32 bytes
+// and the IV that openSSL decrypts with.
+func openSSLKeyIV(data []byte, password string, newHash func() hash.Hash, iv []byte) ([]byte, []byte, bool) {
+	if len(data) < 16 || string(data[:8]) != "Salted__" {
+		return nil, nil, false
 	}
 	passSalt := append([]byte(password), data[8:16]...)
 	sum := func(b []byte) []byte {
@@ -92,7 +132,7 @@ func openSSL(data []byte, password string, size int, newHash func() hash.Hash, i
 	if iv == nil {
 		iv = material[32:48]
 	}
-	return aesCBC(data[16:], material[:32], iv, size, true)
+	return material[:32], iv, true
 }
 
 // decryptR95 is decrypt of r95.rs.
@@ -105,7 +145,7 @@ func decryptR95(data []byte) ([]byte, bool) {
 		"CAD1C42B11F1982FFA94B6A24C260A43", "A11E331C15CE73ABA8E06171A11D2FB6",
 		"BE81AE1B6F523AC7164C4FD67B6BD8FD", "91A9A3AF2218F4EA60AC37D5835EB318",
 	} {
-		if b, ok := openSSL(data[off:], pw, 32, sha256.New, nil); ok && bytes.HasPrefix(b, []byte("\xd0\x0d\xfe\xed")) {
+		if b, ok := openSSL(data[off:], pw, sha256.New, nil); ok && bytes.HasPrefix(b, []byte("\xd0\x0d\xfe\xed")) {
 			return b, true
 		}
 	}
@@ -130,9 +170,26 @@ func decryptSHRS(data []byte) ([]byte, bool) {
 	return b, true
 }
 
-// dap1610 is decrypt of dap1610.rs.
+// decryptDAP1325 is decrypt of dap1325.rs: the firmware of DAP-1325 and
+// DAP-1610 A1, a header of 64 bytes in plain text, then data in AES-128 in
+// ECB mode, which decrypts to a uImage. It returns the header and the
+// decrypted data.
+func decryptDAP1325(data []byte) ([]byte, bool) {
+	const headerSize = 0x40
+	key := []byte("\x3b\xae\x35\x16\x28\xae\xd2\xa6\x0b\xf7\x15\x28\xc9\xcf\xdf\x3c")
+	if len(data) <= headerSize || !bytes.HasPrefix(data, []byte("DAP-1325")) && !bytes.HasPrefix(data, []byte("DAP-1610")) {
+		return nil, false
+	}
+	b, ok := aesECB128(data[headerSize:], key)
+	if !ok || !bytes.HasPrefix(b, []byte("\x27\x05\x19\x56")) {
+		return nil, false
+	}
+	return append(slices.Clone(data[:headerSize]), b...), true
+}
+
+// decryptDAP1610 is decrypt of dap1610.rs.
 func decryptDAP1610(data []byte) ([]byte, bool) {
-	b, ok := openSSL(data, "2c3b6fa78bd60b41bb0796fef4b058b0", 32, sha256.New, nil)
+	b, ok := openSSL(data, "2c3b6fa78bd60b41bb0796fef4b058b0", sha256.New, nil)
 	if !ok || len(b) < 0x106 || string(b[0x101:0x106]) != "ustar" {
 		return nil, false
 	}
@@ -178,7 +235,7 @@ func decryptTLV(data []byte) ([]byte, bool) {
 	model, board := cstr(data[4:0x24]), cstr(data[0x24:0x44])
 	mac := hmac.New(sha1.New, board)
 	mac.Write(model)
-	return openSSL(data[headerSize:], hex.EncodeToString(mac.Sum(nil)), 32, md5.New, nil)
+	return openSSL(data[headerSize:], hex.EncodeToString(mac.Sum(nil)), md5.New, nil)
 }
 
 // mh01Keys are known_keys of mh01.rs: the password of each model, in the
@@ -213,8 +270,19 @@ func decryptMH01(data []byte) ([]byte, bool) {
 	if err != nil || headerSize+n > len(data) {
 		return nil, false
 	}
+	crypt := data[headerSize : headerSize+n]
 	for _, k := range mh01Keys {
-		if b, ok := openSSL(data[headerSize:headerSize+n], k.key, 16, sha256.New, iv); ok && bytes.HasPrefix(b, []byte("MH01")) {
+		// The first block must decrypt to the magic, and then the whole
+		// data must decrypt, with AES-128 on the key of 32 bytes.
+		key, iv, ok := openSSLKeyIV(crypt, k.key, sha256.New, iv)
+		if !ok || len(crypt) < 32 {
+			continue
+		}
+		first, ok := aesCBC(crypt[16:32], key, iv, 16, false)
+		if !ok || !bytes.HasPrefix(first, []byte("MH01")) {
+			continue
+		}
+		if b, ok := aesCBC(crypt[16:], key, iv, 16, true); ok {
 			return b, true
 		}
 	}
@@ -278,6 +346,9 @@ var encimgSigns = []struct {
 	{sign: "wrgac65_dlink.2015_dir842"},
 	{sign: "wrgac05_dlob.hans_dir850l"},
 	{sign: "wrgac25_dlink.2013gui_dir850l"},
+	{sign: "wrgac16_dlink.2013gui_dir880"},
+	{sign: "wrgac42_dlink.2015_dir885l"},
+	{sign: "wapac28_dlink.2015_dap1720"},
 	{fromAt: true, start: 0xA0},
 }
 
@@ -290,6 +361,9 @@ var encimgBoards = []string{
 	"db6zOuf7GJWGI64bm0DXpZ1rn4hFmPTxoVhq0hvXHdfaGFLdubM4/QvuVHdKee7vh6tC/sBL2t8h\n9GtlNghPDnf9wPrYOLk0BO5nlYankuVBe4sWaltHEHh7NToCSdq",
 	"2q02Oz+DDDKjLmMENiZN+3M8VucG4rYfKNpsEntCcsep1jdFIs3wnXySKRGNCGmfzYHzJEPD3GbX\ne/AF4zbvpjuPlmq58fHuph587JdKHrtAUlrli4/FkiKXBfDFbn2",
 	"XYWFilP+ZyydvsXAJSgKeF/p15q05g68xQYoRZeD726UAbRb846kO7TeNw8eZa6ucKxYrhxNbzjP\nbpgFJ7Yxa6sBeujdJ7fzufEbNF3kUafxFiESBRQI6qQbszYOvJI",
+	"zUKwzudh76LnvKn9ZuU7iCEKLn4AyZTzFA83N1HdSQ9a5YcaaR1lqgkNdoEMeC1Kiagz1vo2YQby\nDmbiJ26WkCUONBWMRAHpQkgnYasQKO8a85wFo/Afeai1osr1EMs",
+	"HmV3mM6LvKgme0I1ItdkG6GI6zF1z4dxB1QrUHCIiUnKDLmHe+1Z4F/GlkTtrbk4ke+WpvIIYUz2\naRNm8ctukxR8Chx4NtGsWa+i+wqeloTIefj73nDe1ZJ1GH3YlfY",
+	"0F7Suq0T6zpS1oglmOWAZrtGAzhbVZ5zqBiz6o/1RVQTtJBd3FS7FDbqogE8yoBm8+xNhquuPyrT\njjSmIagnLik1G/uNmJGEfDMqWWxHCOhEqgYAooA3QPHAShwPOP5",
 }
 
 // encimgXOR is encrypt_xor of encimg.rs.
@@ -330,8 +404,16 @@ func decryptEncimg(data []byte) ([]byte, bool) {
 		for _, board := range encimgBoards {
 			key := encimgXOR(sign, []byte(board[0x20:0x40]))
 			iv := encimgXOR(sign, []byte(board[0x60:0x70]))
-			b, ok := aesCBC(enc, key, iv, 32, false)
-			if ok && len(b) >= 4 && slices.Contains(magics, string(b[:4])) {
+			// The first block must decrypt to a known magic, and then the
+			// whole data must decrypt.
+			if len(enc) < 16 {
+				continue
+			}
+			first, ok := aesCBC(enc[:16], key, iv, 32, false)
+			if !ok || !slices.Contains(magics, string(first[:4])) {
+				continue
+			}
+			if b, ok := aesCBC(enc, key, iv, 32, false); ok {
 				return b, true
 			}
 		}

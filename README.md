@@ -127,10 +127,11 @@ library and finds no program that decodes it. magic never runs a program.
 ## Walk a firmware image
 
 The package `walk` finds the files that are embedded in a binary file, such
-as a firmware image, as binwalk 3 does, and extracts them. It has the 111
-signatures of binwalk, with the same names and descriptions, and gives the
-same matches, at the commit of binwalk that `docs/upstream/upstreams.tsv`
-names:
+as a firmware image, as binwalk does, and extracts them. It follows
+[binwalk-ng](https://github.com/binwalk-ng/binwalk-ng), the fork of binwalk
+that is maintained. It has the 114 signatures of binwalk-ng, with the same
+names and descriptions, and gives the same matches, at the commit of
+binwalk-ng that `docs/upstream/upstreams.tsv` names:
 
 ```go
 for e, err := range walk.WalkFile(ctx, "firmware.bin", walk.WithDepth(8)) {
@@ -237,7 +238,7 @@ is under the MIT license, in `LICENSE`. The port translates `file`, which is
 under its own BSD license, in `LICENSE.file`. Each translated Go file opens
 with the notice of the file of `file` that it translates, and the compiled
 rules carry the notices of `file` and of its rule files, in
-`internal/table/LICENSE`. The binary walker in `walk/` translates binwalk, which is under the MIT license, in `LICENSE.binwalk`,
+`internal/table/LICENSE`. The binary walker in `walk/` translates binwalk-ng, which is under the MIT license, in `LICENSE.binwalk`,
 and holds copies of two decoders of the Go standard library, under the BSD
 license of Go, in `walk/internal/flate/LICENSE` and
 `walk/internal/bzip2/LICENSE`.

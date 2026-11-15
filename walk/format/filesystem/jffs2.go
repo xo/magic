@@ -24,6 +24,7 @@ import (
 	"github.com/xo/magic/compress"
 	"github.com/xo/magic/walk"
 	"github.com/xo/magic/walk/internal/binwalk"
+	"github.com/xo/magic/walk/internal/lzo"
 )
 
 // JFFS2 is the signature "jffs2" of binwalk.
@@ -410,7 +411,7 @@ func (fs *jffs2FS) decode(d *jffs2Data, compr byte, src []byte) error {
 		h = binary.LittleEndian.AppendUint64(h, uint64(d.dsize))
 		out, err = jffs2LZMA(append(h, src[min(5, len(src)):]...))
 	case jffs2ComprLZO:
-		out, err = lzo1x(src, jffs2MaxNode)
+		out, err = lzo.Decode(src, jffs2MaxNode)
 	default:
 		d.data = src
 		return nil

@@ -124,6 +124,39 @@ need other modules. Get them with `go get` as well. For a format with no
 decoder, magic answers as libmagic does when it was built without the
 library and finds no program that decodes it. magic never runs a program.
 
+## Walk a firmware image
+
+The package `walk` finds the files that are embedded in a binary file, such
+as a firmware image, as binwalk 3 does, and extracts them. It has the 111
+signatures of binwalk, with the same names and descriptions, and gives the
+same matches, at the commit of binwalk that `docs/upstream/upstreams.tsv`
+names:
+
+```go
+for e, err := range walk.WalkFile(ctx, "firmware.bin", walk.WithDepth(8)) {
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%*s%#x %s\n", 2*e.Depth, "", e.Offset, e.Description)
+}
+```
+
+A program imports the formats that it needs, or all of them:
+
+```go
+import _ "github.com/xo/magic/walk/format/all"
+```
+
+`Entry.Members` gives the files of a match in memory, and `walk.Extract`
+writes them under an `os.Root`. binwalk extracts many formats with programs,
+such as 7-Zip, sasquatch and tsk_recover. The walker runs no program, and
+writes what those programs write. The formats of xz, lzma and zstd need the
+decoders of `compress/xz` and `compress/zstd`, and the keys of D-Link firmware
+are in `walk/format/encrypted`. `docs/WALKER.md` has the design, and
+`cmd/walk` is an example program.
+
+The formats build only where an `int` has 64 bits, as binwalk does.
+
 ## Size
 
 A program that prints the MIME type of a file grows by about 980 KB with
@@ -204,8 +237,7 @@ is under the MIT license, in `LICENSE`. The port translates `file`, which is
 under its own BSD license, in `LICENSE.file`. Each translated Go file opens
 with the notice of the file of `file` that it translates, and the compiled
 rules carry the notices of `file` and of its rule files, in
-`internal/table/LICENSE`. The binary walker in `walk/`, which is not done
-yet, translates binwalk, which is under the MIT license, in `LICENSE.binwalk`,
+`internal/table/LICENSE`. The binary walker in `walk/` translates binwalk, which is under the MIT license, in `LICENSE.binwalk`,
 and holds copies of two decoders of the Go standard library, under the BSD
 license of Go, in `walk/internal/flate/LICENSE` and
 `walk/internal/bzip2/LICENSE`.

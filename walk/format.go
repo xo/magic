@@ -77,6 +77,12 @@ type Signature struct {
 	// NoRecurse is set when the walk of members does not walk the files
 	// of this format, as do_not_recurse of binwalk.
 	NoRecurse bool
+
+	// Carve is set when binwalk extracts the format with a program, to
+	// which it gives only the bytes of the match. The extractor then gets
+	// the data up to the end of the match, as binwalk carves it, and not
+	// the rest of the input.
+	Carve bool
 }
 
 var registry struct {

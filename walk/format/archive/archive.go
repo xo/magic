@@ -1,12 +1,14 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-// Package archive registers the archives that binwalk finds: ZIP, POSIX tar
-// and CPIO.
+// Package archive registers the archives that binwalk finds: ZIP, POSIX tar,
+// CPIO, 7-Zip, ARJ, Microsoft Cabinet and RAR.
 //
-// binwalk extracts the three with programs of the system: 7zz for ZIP and
-// CPIO, and tar for POSIX tar. The walker runs no program (D36), so each
-// extractor of this package reads the archive in Go, and writes the files
-// that those programs write.
+// binwalk extracts them with programs of the system: 7zz for ZIP, CPIO,
+// 7-Zip and ARJ, tar for POSIX tar, cabextract for a cabinet, and unrar for
+// RAR. The walker runs no program (D36), so each extractor of this package
+// reads the archive in Go, and writes the files that those programs write.
+// ARJ and RAR have no extractor: each file says why. binwalk finds Debian
+// packages too, and does not extract them.
 package archive
 
 import (
@@ -19,7 +21,8 @@ import (
 )
 
 func init() {
-	walk.Register(Tarball, CPIO, ZIP)
+	walk.Register(Tarball, CPIO, ZIP, SevenZip, ARJ, CAB, RAR)
+	walk.Register(Deb)
 }
 
 // parent makes the folder of name, as tar and 7zz make the folders of a

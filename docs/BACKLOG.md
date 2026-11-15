@@ -113,31 +113,33 @@ such as a firmware image, find the files that are embedded in it at any
 offset, and extract them. It comes after the port of libmagic is finished
 (D31). `docs/WALKER.md` is its design, with the formats of binwalk 3.
 
-Phases W1 to W4 of D52, and the decryption of W5, ported 97 of the 111
-signatures of binwalk, in the packages under `walk/format/`, with
-`Entry.Members`, `Extract` and `WithDepth`. The three gates in `test/diff`
-give the same matches, files and walks as binwalk on 1623 inputs, and a test
-for each file system compares its files with a tool or with the tree that
-made it. These are left:
+Phases W1 to W5 of D52 ported the 111 signatures of binwalk, in the packages
+under `walk/format/`, and the extractors of 39 of them that binwalk runs with
+its own code. The walker also extracts most of the formats that binwalk
+extracts with programs, and writes what those programs write. The three
+gates in `test/diff` give the same matches, files and walks as binwalk on
+1821 inputs, and a test for each file system and archive compares its files
+with a tool or with the tree that made it. These are left:
 
-1. The 14 signatures that the walker does not have: `7zip`, `arj`, `cab`,
-   `compressd`, `deb`, `dtb`, `lz4`, `lzfse`, `lzop`, `pchrom`, `qnx_ifs`,
-   `rar`, `uefi_capsule` and `uefi_pi_volume`. binwalk extracts `dtb` with
-   its own code, and the others with programs.
-2. No parser is fuzzed in the tests yet. The agents of W4 ran short fuzz
-   runs on their formats and found no panic.
-3. SquashFS: the walker reads version 4.0, in both byte orders, with every
-   compression. sasquatch also reads the versions 1 to 3, and the variants of
-   LZMA of vendors. mksquashfs makes no image in big-endian order, so no
-   test reads one. sasquatch, the oracle that binwalk uses, is not built:
-   building it from its source needs the permission of a maintainer.
-4. NTFS: the walker finds it, and does not extract it. binwalk extracts it
-   with tsk_recover.
-5. binwalk extracts most file systems and archives with programs: 7-Zip,
-   tar, zstd, sasquatch, jefferson, unyaffs, ubireader and tsk_recover. The
-   walker writes what those programs write, and the differences are in the
-   comments of each extractor. No oracle checks the files of jffs2, yaffs
-   and ubi; their tests write the images themselves.
+1. Formats that the walker finds and does not extract, where binwalk runs a
+   program: `lzfse`, `arj`, `rar`, `ntfs`, `pchrom`, `qnx_ifs`,
+   `uefi_capsule` and `uefi_pi_volume`. binwalk extracts nothing from `arj`
+   either, because it carves only the first header.
+2. Parts of formats that the walker does not extract: SquashFS before 4.0
+   and the variants of LZMA of vendors, which sasquatch reads; 7-Zip with
+   filters (BCJ, BCJ2, Delta), AES or PPMd; cab with LZX or Quantum; lz4 in
+   the legacy frame.
+3. sasquatch, 7zz, lzop, jefferson, unyaffs, ubireader and tsk_recover are
+   not installed, so no test compares the walker with them. The tests
+   compare with the tree that made each image, and with mksquashfs,
+   unsquashfs, 7z (p7zip), cabextract and lz4 where they are installed.
+   Building sasquatch from its source needs the permission of a maintainer.
+4. `FuzzWalk` in `walk/format/all` fuzzes every format with the walk of
+   members. Two runs of 3 and 4 minutes found no panic and no input over 5
+   seconds. CI runs only its seeds.
+5. Under a heavy load, a gate has once in a while shown one difference that
+   the next run did not show. binwalk can exit before its worker starts,
+   and the clients retry, but not without limit.
 6. A stream of lzma of unknown size makes the decoder of `compress/xz`
    allocate the whole dictionary that the header names, up to 512 MiB,
    where liblzma maps the memory and touches only what it uses.

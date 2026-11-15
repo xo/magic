@@ -18,6 +18,11 @@ linters:
     - unconvert
     - usetesting
   settings:
+    # An error of a package of this module needs no wrap to cross into
+    # another one.
+    wrapcheck:
+      ignore-package-globs:
+        - github.com/xo/magic/*
     staticcheck:
       checks:
         - all

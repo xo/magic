@@ -68,7 +68,11 @@ func (e *Entry) run(ctx context.Context, s sink, limit int64) error {
 		return fmt.Errorf("walk: stopped: %w", err)
 	}
 	out := newOutput(s, limit)
-	r := ex(e.data, int(e.Offset), out)
+	data := e.data
+	if e.sig != nil && e.sig.Carve {
+		data = data[:e.Offset+e.Size]
+	}
+	r := ex(data, int(e.Offset), out)
 	if out.budget.n >= limit && limit > 0 && !r.OK {
 		return fmt.Errorf("%w: %s at %#x is above the limit of %d bytes", ErrNotExtracted, e.Format, e.Offset, limit)
 	}

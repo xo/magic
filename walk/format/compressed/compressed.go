@@ -1,7 +1,9 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
 // Package compressed registers the compressed data that binwalk finds:
-// gzip, zlib, bzip2, xz, lzma, zstd, and the zlib data of a GPG signed file.
+// gzip, zlib, bzip2, xz, lzma, zstd, the zlib data of a GPG signed file,
+// LZ4, lzop, the LZW data of compress, and LZFSE. The walker extracts each
+// of them except LZFSE.
 //
 // The walker decodes xz and lzma with the decoder of
 // github.com/xo/magic/compress/xz, and extracts zstd with the decoder of
@@ -18,5 +20,6 @@ package compressed
 import "github.com/xo/magic/walk"
 
 func init() {
-	walk.Register(Gzip, XZ, LZMA, Bzip2, Zstd, Zlib, GPGSigned)
+	walk.Register(Gzip, XZ, LZMA, Bzip2, Zstd, Zlib, GPGSigned, LZ4, LZOP,
+		Compressd, LZFSE)
 }

@@ -1,17 +1,19 @@
 //go:build amd64 || arm64 || loong64 || mips64 || mips64le || ppc64 || ppc64le || riscv64 || s390x || sparc64 || wasm
 
-package filesystem
+// Package lzo decodes LZO1X, as lzo1x_decompress_safe of the LZO library.
+package lzo
 
 import "errors"
 
+// errLZO is the error of data that is not valid LZO1X.
 var errLZO = errors.New("lzo: the data is not valid")
 
-// lzo1x decodes a block of LZO1X, as lzo1x_decompress_safe of the LZO
+// Decode decodes a block of LZO1X, as lzo1x_decompress_safe of the LZO
 // library, which squashfs uses, and writes at most limit bytes. It follows
 // the states of the decoder of the library: a run of literals, a match of
 // one of four kinds by the size of its distance, and the literals that the
 // two low bits of a match add.
-func lzo1x(in []byte, limit int) ([]byte, error) {
+func Decode(in []byte, limit int) ([]byte, error) {
 	var out []byte
 	ip := 0
 	byteAt := func() (int, bool) {

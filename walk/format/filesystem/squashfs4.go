@@ -13,6 +13,8 @@ import (
 
 	"github.com/xo/magic/compress"
 	"github.com/xo/magic/walk"
+	"github.com/xo/magic/walk/internal/lz4"
+	"github.com/xo/magic/walk/internal/lzo"
 )
 
 // The errors of the reader of SquashFS.
@@ -100,9 +102,9 @@ func (s *sqfs) decompress(b []byte, limit int) ([]byte, error) {
 		_, err = dec(b, &buf)
 		out = buf.Bytes()
 	case 3:
-		out, err = lzo1x(b, limit)
+		out, err = lzo.Decode(b, limit)
 	case 5:
-		out, err = lz4Block(b, limit)
+		out, err = lz4.Block(b, limit)
 	default:
 		return nil, errCompression
 	}
@@ -489,65 +491,4 @@ func (s *sqfs) write(out *walk.Output, p string, dir *inode, depth int) error {
 		}
 	}
 	return nil
-}
-
-// lz4Block decodes one block of LZ4, as squashfs writes it: a block with no
-// frame, of at most limit bytes.
-func lz4Block(src []byte, limit int) ([]byte, error) {
-	var out []byte
-	for i := 0; i < len(src); {
-		tok := src[i]
-		i++
-		n := int(tok >> 4)
-		if n == 15 {
-			for {
-				if i >= len(src) {
-					return nil, errSquashFS
-				}
-				b := src[i]
-				i++
-				n += int(b)
-				if b != 255 {
-					break
-				}
-			}
-		}
-		if i+n > len(src) || len(out)+n > limit {
-			return nil, errSquashFS
-		}
-		out = append(out, src[i:i+n]...)
-		i += n
-		if i == len(src) {
-			return out, nil // the last sequence has no match
-		}
-		if i+2 > len(src) {
-			return nil, errSquashFS
-		}
-		dist := int(src[i]) | int(src[i+1])<<8
-		i += 2
-		ml := int(tok & 15)
-		if ml == 15 {
-			for {
-				if i >= len(src) {
-					return nil, errSquashFS
-				}
-				b := src[i]
-				i++
-				ml += int(b)
-				if b != 255 {
-					break
-				}
-			}
-		}
-		ml += 4
-		if dist == 0 || dist > len(out) || len(out)+ml > limit {
-			return nil, errSquashFS
-		}
-		// The match can overlap the bytes that it writes.
-		base := len(out) - dist
-		for k := range ml {
-			out = append(out, out[base+k])
-		}
-	}
-	return out, nil
 }

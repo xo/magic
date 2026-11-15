@@ -203,3 +203,40 @@ func TestOutputSub(t *testing.T) {
 		t.Errorf("expected vol/bin/busybox to exist")
 	}
 }
+
+// TestCarve holds that an extractor of a signature with Carve gets the data
+// up to the end of the match only.
+func TestCarve(t *testing.T) {
+	t.Parallel()
+	s := &Signature{
+		Name:  "carve_test",
+		Carve: true,
+		Magic: [][]byte{[]byte("CRV")},
+		Parse: func(_ []byte, off int) (Match, error) {
+			return Match{Offset: off, Confidence: Low}, nil
+		},
+		Extract: func(data []byte, off int, out *Output) Extraction {
+			return Extraction{OK: out == nil || out.CreateFile("rest", data[off:])}
+		},
+	}
+	Register(s, sigAt("carve_next", "NXT", High))
+	data := []byte("..CRV.....NXT.....")
+	for e, err := range WalkBytes(context.Background(), data, WithFormats("carve_test", "carve_next")) {
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		if e.Format != "carve_test" {
+			continue
+		}
+		for m, err := range e.Members(context.Background()) {
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			r, _ := m.Open()
+			b, _ := io.ReadAll(r)
+			if string(b) != "CRV....." {
+				t.Errorf("expected %q, got: %q", "CRV.....", b)
+			}
+		}
+	}
+}

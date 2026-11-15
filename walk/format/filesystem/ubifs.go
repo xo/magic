@@ -17,6 +17,7 @@ import (
 
 	"github.com/xo/magic/compress"
 	"github.com/xo/magic/walk"
+	"github.com/xo/magic/walk/internal/lzo"
 )
 
 // The errors of the reader of UBIFS. errUBIFSFatal is an error that stops
@@ -438,7 +439,7 @@ func ubifsDecompress(d ubifsData) ([]byte, error) {
 	limit := max(int(d.size), ubifsBlockSize)
 	switch d.compr {
 	case 1:
-		return lzo1x(d.payload, limit)
+		return lzo.Decode(d.payload, limit)
 	case 2:
 		b, err := io.ReadAll(io.LimitReader(flate.NewReader(bytes.NewReader(d.payload)), int64(limit)+1))
 		if err != nil {

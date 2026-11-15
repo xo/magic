@@ -393,8 +393,12 @@ The walker follows binwalk 3 as the port follows libmagic (D49):
    `TestWalkEXT` make images with mkfs.cramfs, xorrisofs, mkisofs, mkfs.vfat
    and mkfs.ext4, and compare the files with the tree, and with 7-Zip where
    it is installed. `TestWalkJFFS2`, `TestWalkYAFFS` and `TestWalkUBI` write
-   their images themselves, because no tool to make them is installed. Each
-   test skips when its tool is missing.
+   their images themselves, because no tool to make them is installed.
+   `TestWalkSevenZip`, `TestWalkLZ4`, `TestWalkLZOP`, `TestWalkCompressd` and
+   the tests of `walk/format/archive` check the archives and the compressed
+   formats against 7z, cabextract and lz4, or against writers in Go. Each
+   test skips when its tool is missing. `FuzzWalk` in `walk/format/all`
+   fuzzes every format.
 7. The corpus, from `corpus.Walk`, holds the files of the gates of the port,
    the test inputs of binwalk, the samples in `test/corpus/testdata/walk/`,
    damaged copies of them, and 200 images. An image holds several of the

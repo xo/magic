@@ -1,91 +1,91 @@
 upstream	date	status	magic	note
-6f542ce1d84a0f564f10dd844d9bcf32e4540d70	2026-06-08	pending		First pass at lz4 support (untested). It changes configure.ac, src/
-720797ad15e8400a15f5e19ccbdc82bef8a65417	2026-06-08	pending		commit. It changes ChangeLog, README.md, configure.ac, src/
+6f542ce1d84a0f564f10dd844d9bcf32e4540d70	2026-06-08	not-applicable		First pass at lz4 support (untested). It changes configure.ac, src/. Not applicable: lz4 has no decoder in the port, and the reference is built without liblz4 (D45)
+720797ad15e8400a15f5e19ccbdc82bef8a65417	2026-06-08	not-applicable		commit. It changes ChangeLog, README.md, configure.ac, src/. Not applicable: lz4 has no decoder in the port, and the reference is built without liblz4 (D45)
 b2ec6f7cd333ba633deb8049b31312a351d9fabf	2026-06-08	not-applicable		note lz4. It changes ChangeLog only, which the port does not hold
-4e059e0b934be939ce53517f54cb33a605c7321b	2026-06-08	pending		Fix LZ4 support, enable LRZIP. It changes src/
-bccec717f29897a571859ca374644bf233ccb88a	2026-06-08	pending		comment out lrzip and explain why this time. It changes src/
-558181b8a3a59644316b6ebd05dd8b82ffd5001f	2026-06-08	pending		add missing endif. It changes src/
-b610530d1e68c3dcb4b8255f4cb0b8e66dc3a892	2026-06-09	pending		PR/173: neheb: Allow U+0000 (NUL) in UTF-16/32 text detection. It changes src/
-61d32c41719a1727a328fd88d4db419f67d95871	2026-06-24	pending		PR/174: Nathan Scott: Add sysstat sar data file detection. It changes magic/
-7fdb7bf98852d2357b473bd6d786a2e77dba3e48	2026-06-28	pending		Add st_flags printing support. It changes ChangeLog, configure.ac, src/
-5429660069b729e9f332c94f4399e4f7b2f97986	2026-07-06	pending		Add LMDB. It changes magic/
-d330264faa2243b44fff3f12e914962665ffb259	2026-07-12	pending		Use snprintf (orbisai security). It changes src/
-78ca8edac583c76417645b7cad28d3645adbea4f	2026-07-12	pending		Add mime for XBM (r1w1s1). It changes magic/
-4263527b2a7ac85d2f6817fb3f165ffcd0e79e2d	2026-07-31	pending		Add nfdump. It changes magic/
-61e0e1c123347ffce8631d0b74662d75cb502740	2026-08-02	pending		Remove url (Michael Kebe). It changes magic/
-1079438bb4e5c852963ce2eac05273845b1dac34	2026-08-03	pending		Check the length of the Windows COFF Optional Header in Portable Executables before reading it. This prevents reading and parsing Windows COFF Optional Header if is not present. (from pali). It changes magic/
-565c7caf336a370ca218225e1cdf3471f61b449f	2026-08-03	pending		Prevent misdetection that matches MIPS COFF binaries with 7 sections and they are detected as an LFS filesystem image. (from pali). It changes magic/
-711ccc264519cdc5073ccb26651c0a9bafc3b47a	2026-08-05	pending		Recognize COFF object files and executables with mask 0x8080 Mask 0x8080 is set by older version of MS CL386.EXE compiler. (from pali). It changes magic/
-db69d9fe15259ceee467efbb2852940e826c9ce9	2026-08-17	pending		Add Fabylon FAB2 book container (Martijn Benders). It changes magic/
-9de57c0b0607c53c6196967fbad53499022a0991	2026-08-20	pending		fix missing _. It changes src/
-f7185a135c2d691b44c97a9b65f23e9582cdce19	2026-08-23	pending		Recognize MIPS COFF executables compiled by an old MS compiler. These executables have optional COFF header which is 160 bytes long. Can be found in Windows NT 3.1 April 1991 build (WOW Reversi MIPS Demo). (from pali). It changes magic/
-dcf3495219a0ccae60f10c00e6b16696c6fe3977	2026-08-27	pending		PR/785: hexa: Disable execute restrictions for now. On NixOS and Fedora this breaks executing binaries like bzip2. It changes src/
-ea59758edd53e64879ff2e41862d09ebdabee6d9	2026-08-28	pending		move substitute implementations into missing. It changes ChangeLog, configure.ac, src/
-1d7c7c070d80e46914040b9991505834faefe503	2026-08-28	pending		fix check that caused an extra space to be printed. It changes src/
-facbbe7ac63f0da4c22b319122c92683287fe81f	2026-08-28	pending		Add amiga port (Cameron Armstrong). It changes .github/, .gitignore, ChangeLog, README.md, amiga-variants.sh, build-amiga-sdk.sh, configure.ac, contrib/, file.readme, magic.readme, make-curated-magic.sh, package-amiga.sh, src/
-c15a81782651a1f4296b6a665d4cf1e6136732c6	2026-08-28	pending		teach file about snapshots (Taylor Campbell). It changes src/
-24bbf7f71daeb16c6a4e12cefe05bf644aa933bb	2026-08-28	pending		add brackets around strings. It changes tests/
+4e059e0b934be939ce53517f54cb33a605c7321b	2026-06-08	not-applicable		Fix LZ4 support, enable LRZIP. It changes src/. Not applicable: lz4 and lrzip have no decoder in the port, and the reference is built without them (D45)
+bccec717f29897a571859ca374644bf233ccb88a	2026-06-08	not-applicable		comment out lrzip and explain why this time. It changes src/. Not applicable: lrzip has no decoder in the port (D45)
+558181b8a3a59644316b6ebd05dd8b82ffd5001f	2026-06-08	not-applicable		add missing endif. It changes src/. Not applicable: lrzip has no decoder in the port (D45)
+b610530d1e68c3dcb4b8255f4cb0b8e66dc3a892	2026-06-09	ported	74ab2ee	PR/173: neheb: Allow U+0000 (NUL) in UTF-16/32 text detection. It changes src/
+61d32c41719a1727a328fd88d4db419f67d95871	2026-06-24	ported	74ab2ee	PR/174: Nathan Scott: Add sysstat sar data file detection. It changes magic/
+7fdb7bf98852d2357b473bd6d786a2e77dba3e48	2026-06-28	ported	74ab2ee	Add st_flags printing support. It changes ChangeLog, configure.ac, src/
+5429660069b729e9f332c94f4399e4f7b2f97986	2026-07-06	ported	74ab2ee	Add LMDB. It changes magic/
+d330264faa2243b44fff3f12e914962665ffb259	2026-07-12	not-applicable		Use snprintf (orbisai security). It changes src/. Not applicable: OS/2 application types, which the port does not hold
+78ca8edac583c76417645b7cad28d3645adbea4f	2026-07-12	ported	74ab2ee	Add mime for XBM (r1w1s1). It changes magic/
+4263527b2a7ac85d2f6817fb3f165ffcd0e79e2d	2026-07-31	ported	74ab2ee	Add nfdump. It changes magic/
+61e0e1c123347ffce8631d0b74662d75cb502740	2026-08-02	ported	74ab2ee	Remove url (Michael Kebe). It changes magic/
+1079438bb4e5c852963ce2eac05273845b1dac34	2026-08-03	ported	74ab2ee	Check the length of the Windows COFF Optional Header in Portable Executables before reading it. This prevents reading and parsing Windows COFF Optional Header if is not present. (from pali). It changes magic/
+565c7caf336a370ca218225e1cdf3471f61b449f	2026-08-03	ported	74ab2ee	Prevent misdetection that matches MIPS COFF binaries with 7 sections and they are detected as an LFS filesystem image. (from pali). It changes magic/
+711ccc264519cdc5073ccb26651c0a9bafc3b47a	2026-08-05	ported	74ab2ee	Recognize COFF object files and executables with mask 0x8080 Mask 0x8080 is set by older version of MS CL386.EXE compiler. (from pali). It changes magic/
+db69d9fe15259ceee467efbb2852940e826c9ce9	2026-08-17	ported	74ab2ee	Add Fabylon FAB2 book container (Martijn Benders). It changes magic/
+9de57c0b0607c53c6196967fbad53499022a0991	2026-08-20	not-applicable		fix missing _. It changes src/. Not applicable: a name of an unused macro in der.c
+f7185a135c2d691b44c97a9b65f23e9582cdce19	2026-08-23	ported	74ab2ee	Recognize MIPS COFF executables compiled by an old MS compiler. These executables have optional COFF header which is 160 bytes long. Can be found in Windows NT 3.1 April 1991 build (WOW Reversi MIPS Demo). (from pali). It changes magic/
+dcf3495219a0ccae60f10c00e6b16696c6fe3977	2026-08-27	not-applicable		PR/785: hexa: Disable execute restrictions for now. On NixOS and Fedora this breaks executing binaries like bzip2. It changes src/. Not applicable: landlock of the file command, which the port does not hold
+ea59758edd53e64879ff2e41862d09ebdabee6d9	2026-08-28	not-applicable		move substitute implementations into missing. It changes ChangeLog, configure.ac, src/. Not applicable: moves the substitutes of C library functions, which Go does not need
+1d7c7c070d80e46914040b9991505834faefe503	2026-08-28	ported	74ab2ee	fix check that caused an extra space to be printed. It changes src/
+facbbe7ac63f0da4c22b319122c92683287fe81f	2026-08-28	not-applicable		Add amiga port (Cameron Armstrong). It changes .github/, .gitignore, ChangeLog, README.md, amiga-variants.sh, build-amiga-sdk.sh, configure.ac, contrib/, file.readme, magic.readme, make-curated-magic.sh, package-amiga.sh, src/. Not applicable: the port to AmigaOS
+c15a81782651a1f4296b6a665d4cf1e6136732c6	2026-08-28	not-applicable		teach file about snapshots (Taylor Campbell). It changes src/. Not applicable: BSD file flags. The reference, Linux, has no st_flags (D33)
+24bbf7f71daeb16c6a4e12cefe05bf644aa933bb	2026-08-28	not-applicable		add brackets around strings. It changes tests/. Not applicable: the test program of file. The harness reads the results (D30)
 b01da8ddac7f2fd7807311f4c9a8eddb43743e31	2026-08-28	not-applicable		more changes. It changes ChangeLog only, which the port does not hold
-b6f6480149d90ff016592edf754f470ff73ca1e9	2026-08-28	pending		Recognize AaruFormat images (Mike Swanson). It changes magic/
-2220970c46420ef51e02b8ef39477d8ed868931e	2026-08-28	pending		Limit memory use from the cdf parser (Acts1631). It changes src/
-6926336fbcb139ac882764c80025715de10e5442	2026-08-28	pending		Add support for parsing old Portable Executables which are not COFF based. They are used by: - Windows NT 3.1 ePDK (September 1991, build 196) - Windows NT 3.1 PDK1 (October 1991) - Microsoft C/C++ 7.0. It changes magic/
-aea115bebb8b1067a7b2669b24f2d09a24896ebd	2026-08-28	pending		PR/795: polluks: Add bitmap font. It changes magic/
-f0cb2aa5f9ffbad00e1b5121ec3ce30f4f87234b	2026-08-28	pending		PR/802: Kid: Add env -S to commands. It changes magic/
+b6f6480149d90ff016592edf754f470ff73ca1e9	2026-08-28	ported	74ab2ee	Recognize AaruFormat images (Mike Swanson). It changes magic/
+2220970c46420ef51e02b8ef39477d8ed868931e	2026-08-28	ported	74ab2ee	Limit memory use from the cdf parser (Acts1631). It changes src/
+6926336fbcb139ac882764c80025715de10e5442	2026-08-28	ported	74ab2ee	Add support for parsing old Portable Executables which are not COFF based. They are used by: - Windows NT 3.1 ePDK (September 1991, build 196) - Windows NT 3.1 PDK1 (October 1991) - Microsoft C/C++ 7.0. It changes magic/
+aea115bebb8b1067a7b2669b24f2d09a24896ebd	2026-08-28	ported	74ab2ee	PR/795: polluks: Add bitmap font. It changes magic/
+f0cb2aa5f9ffbad00e1b5121ec3ce30f4f87234b	2026-08-28	ported	74ab2ee	PR/802: Kid: Add env -S to commands. It changes magic/
 5e57b94cdd3f2bc2f6db8581dcce76a89fc9c9f7	2026-08-28	not-applicable		make executable. It changes amiga-variants.sh, build-amiga-sdk.sh, contrib/, make-curated-magic.sh, package-amiga.sh only, which the port does not hold
-5ceeb27f60ee13f55d13e1295599efa8932b9551	2026-10-10	pending		Fix default magic location (Cameron Armstrong). It changes .github/, README.md, configure.ac, file.readme, magic.readme, package-amiga.sh, src/
-c103bdc52b1e73818937c2952a88acd21eeb7ef3	2026-10-10	pending		Add support for Apple Sparse Image (ASIF) format (Guy Harris). It changes magic/
-08f1381d166593beb8e81a059ddaa6cd9cadddb1	2026-10-10	pending		Allow dup3 for the archs that use it to emulate dup2 (Lars Corneliussen). It changes src/
-9803862780baf1a8f42a720e566e0cb850a63bfd	2026-10-10	pending		PR/810: suyuanwang: NUL terminate the directory name in debugging code. It changes src/
-8f10450070eb234dcca8b6130ca5393d6b1504ed	2026-10-10	pending		PR/803: polluks: Add Ninja Tracker Plus. It changes magic/
-dc32b7e387666f1e3fe20d040c4a1f87083a5c24	2026-10-10	pending		PR/801: Leon: Add compression types for MAME disk images. It changes magic/
-5e41e1684025ac89e94f3ae905b4b5d2ee9c21dd	2026-10-10	pending		GitHub/180: landfillbaby: riff: fix WebP VP8L alpha detection. It changes magic/
-e3ac30d25f9e57404cf71704a1fe241688a793eb	2026-10-10	pending		GitHub/179: wehrwolfmann: Don't install the seccomp filter when LD_PRELOAD is set. It changes doc/, src/
-b3aa8f7521ea21c918771ab9dcf0fa12aac2c25e	2026-10-10	pending		seccomp functions return negative errno's and 0 for success. It changes src/
+5ceeb27f60ee13f55d13e1295599efa8932b9551	2026-10-10	not-applicable		Fix default magic location (Cameron Armstrong). It changes .github/, README.md, configure.ac, file.readme, magic.readme, package-amiga.sh, src/. Not applicable: the default path of the rules on AmigaOS
+c103bdc52b1e73818937c2952a88acd21eeb7ef3	2026-10-10	ported	74ab2ee	Add support for Apple Sparse Image (ASIF) format (Guy Harris). It changes magic/
+08f1381d166593beb8e81a059ddaa6cd9cadddb1	2026-10-10	not-applicable		Allow dup3 for the archs that use it to emulate dup2 (Lars Corneliussen). It changes src/. Not applicable: seccomp of the file command
+9803862780baf1a8f42a720e566e0cb850a63bfd	2026-10-10	not-applicable		PR/810: suyuanwang: NUL terminate the directory name in debugging code. It changes src/. Not applicable: debugging code of cdf.c
+8f10450070eb234dcca8b6130ca5393d6b1504ed	2026-10-10	ported	74ab2ee	PR/803: polluks: Add Ninja Tracker Plus. It changes magic/
+dc32b7e387666f1e3fe20d040c4a1f87083a5c24	2026-10-10	ported	74ab2ee	PR/801: Leon: Add compression types for MAME disk images. It changes magic/
+5e41e1684025ac89e94f3ae905b4b5d2ee9c21dd	2026-10-10	ported	74ab2ee	GitHub/180: landfillbaby: riff: fix WebP VP8L alpha detection. It changes magic/
+e3ac30d25f9e57404cf71704a1fe241688a793eb	2026-10-10	not-applicable		GitHub/179: wehrwolfmann: Don't install the seccomp filter when LD_PRELOAD is set. It changes doc/, src/. Not applicable: seccomp of the file command
+b3aa8f7521ea21c918771ab9dcf0fa12aac2c25e	2026-10-10	not-applicable		seccomp functions return negative errno's and 0 for success. It changes src/. Not applicable: seccomp of the file command
 75dc3587d299d103ba6613e1c8651f0c0b6d0915	2026-10-10	not-applicable		catch up with missing stuff was moved to the missing directory. It changes README.md only, which the port does not hold
 a1479e905b667c67b8ba8f22a6ac12d71a3f01f4	2026-10-10	not-applicable		LD_PRELOAD change. It changes ChangeLog only, which the port does not hold
-5823e0479b1b6928d37148cae1ae72342cf23ea0	2026-10-10	pending		More plan9 executable archs from Grayson Tinker. It changes magic/
-0a4e67595f5eb710a0dc7e060324eacae2a36a7c	2026-10-10	pending		Add tarantool (Sergey Bronnikov). It changes magic/
-c3ff6ac2e9192a92b5dd294da0ed3caf256b1d3b	2026-10-12	pending		From Link Mauve, update mime for nintendo roms https://www.iana.org/assignments/media-types/application/vnd.nintendo.nitro.rom. It changes magic/
-b4c112c66998bc16f900514f01770c399a620854	2026-10-12	pending		Add support for Neversight (from support at neversight dot com). It changes magic/
-2bd955577ef4a47b2d3b177653f99f2325d6934f	2026-10-12	pending		Add tarantool tests (Sergey Bronnikov). It changes tests/
-7136dcd98397dd81836ce6813e5ee418cdf61621	2026-10-13	pending		Fix from Lawrence D'Oliveiro. It changes magic/
-029e5bae7362e71671b3e1f316d4f3936d8a7819	2026-10-13	pending		PR/812: mgl: NUL terminate string passed to cdf_app_to_mime(). It changes src/
-e05b2cae63f9c8fcf603fa47864d4d14d1ba62e8	2026-10-13	pending		more careful with ifdefs for unused variables. It changes src/
-dd0ce2bef327471e2a412b5cd4a5ae41d4af1576	2026-10-13	pending		PR/811: polluks: Add autodocs. It changes magic/
-09eb1aa08ad051c068687d7cfb5bd5a6806ece26	2026-10-13	pending		fix typo. It changes src/
-7b292d2aae583f2772eed7b6bda82cfe128abf74	2026-10-13	pending		PR/789: david.hedley: Bump zip to beat DOS/MBR RCVS: ----------------------------------------------------------------------. It changes magic/
-06ac9cb3c8cfe89a3790094b4ebb003f9813df4d	2026-10-13	pending		Undo previous, it beats Word docs and other zip files now. It changes magic/
-bcbb6064ec68ab505fe075d7a213a8918e2868c1	2026-10-13	pending		PR/808: mgl: Don't use unaligned pointers. It changes src/
-712375c5e288201bd167902fd506c4c3c54ba1c2	2026-10-13	pending		PR/807: Huimin Zeng: the lifecycle of fnamebuf is complicated so use a local copy to avoid use-after-free. It changes src/
-8dea80fa95de579bc1276af79c0b3d246845dbf5	2026-10-13	pending		PR/804: will2397: Don't try to print NULL. It changes src/
-9184ead176dfb7104bd018716fed040aba191f9c	2026-10-13	pending		PR/799: Anton Monroe: Trim cr/eof for __OS2__. It changes src/
-f110051518c438be122c90f133b492ca56ab89cb	2026-10-13	pending		PR/798: Anton Monroe: Search more for info files. It changes magic/
-4eae60a63cc185f97efb913f0a69cf064488e2a9	2026-10-14	pending		PR/181: soma0121: fix infinite loop in cdf_unpack_catalog on zero-length record. It changes src/
+5823e0479b1b6928d37148cae1ae72342cf23ea0	2026-10-10	ported	74ab2ee	More plan9 executable archs from Grayson Tinker. It changes magic/
+0a4e67595f5eb710a0dc7e060324eacae2a36a7c	2026-10-10	ported	74ab2ee	Add tarantool (Sergey Bronnikov). It changes magic/
+c3ff6ac2e9192a92b5dd294da0ed3caf256b1d3b	2026-10-12	ported	74ab2ee	From Link Mauve, update mime for nintendo roms https://www.iana.org/assignments/media-types/application/vnd.nintendo.nitro.rom. It changes magic/
+b4c112c66998bc16f900514f01770c399a620854	2026-10-12	ported	74ab2ee	Add support for Neversight (from support at neversight dot com). It changes magic/
+2bd955577ef4a47b2d3b177653f99f2325d6934f	2026-10-12	ported	74ab2ee	Add tarantool tests (Sergey Bronnikov). It changes tests/
+7136dcd98397dd81836ce6813e5ee418cdf61621	2026-10-13	ported	74ab2ee	Fix from Lawrence D'Oliveiro. It changes magic/
+029e5bae7362e71671b3e1f316d4f3936d8a7819	2026-10-13	ported	74ab2ee	PR/812: mgl: NUL terminate string passed to cdf_app_to_mime(). It changes src/
+e05b2cae63f9c8fcf603fa47864d4d14d1ba62e8	2026-10-13	not-applicable		more careful with ifdefs for unused variables. It changes src/. Not applicable: conditional compilation for platforms without some functions
+dd0ce2bef327471e2a412b5cd4a5ae41d4af1576	2026-10-13	ported	74ab2ee	PR/811: polluks: Add autodocs. It changes magic/
+09eb1aa08ad051c068687d7cfb5bd5a6806ece26	2026-10-13	not-applicable		fix typo. It changes src/. Not applicable: a typo in conditional compilation of apprentice.c
+7b292d2aae583f2772eed7b6bda82cfe128abf74	2026-10-13	ported	74ab2ee	PR/789: david.hedley: Bump zip to beat DOS/MBR RCVS: ----------------------------------------------------------------------. It changes magic/
+06ac9cb3c8cfe89a3790094b4ebb003f9813df4d	2026-10-13	ported	74ab2ee	Undo previous, it beats Word docs and other zip files now. It changes magic/
+bcbb6064ec68ab505fe075d7a213a8918e2868c1	2026-10-13	ported	74ab2ee	PR/808: mgl: Don't use unaligned pointers. It changes src/
+712375c5e288201bd167902fd506c4c3c54ba1c2	2026-10-13	not-applicable		PR/807: Huimin Zeng: the lifecycle of fnamebuf is complicated so use a local copy to avoid use-after-free. It changes src/. Not applicable: the memory of the name of the rule file, which changes no output
+8dea80fa95de579bc1276af79c0b3d246845dbf5	2026-10-13	ported	74ab2ee	PR/804: will2397: Don't try to print NULL. It changes src/
+9184ead176dfb7104bd018716fed040aba191f9c	2026-10-13	ported	74ab2ee	PR/799: Anton Monroe: Trim cr/eof for __OS2__. It changes src/
+f110051518c438be122c90f133b492ca56ab89cb	2026-10-13	ported	74ab2ee	PR/798: Anton Monroe: Search more for info files. It changes magic/
+4eae60a63cc185f97efb913f0a69cf064488e2a9	2026-10-14	ported	74ab2ee	PR/181: soma0121: fix infinite loop in cdf_unpack_catalog on zero-length record. It changes src/
 f7f841f1f5956e491930b8307fbaedd1875060cb	2026-10-14	not-applicable		handle renaming of file_ca.readme to file.readme. It changes package-amiga.sh only, which the port does not hold
-4ee5ca8fb938c3168bcededd0ce7c2e03daea485	2026-10-16	pending		check offset before copying (found by oss-fuzz). It changes src/
-f54b0776b92527be98033f8f73d09faf2d540188	2026-10-22	pending		PR/183:soma0121: file_pipe2file sets umask(0) around mkstemp and restores it afterwards. umask is process-wide, so in a threaded libmagic consumer any file another thread creates during that window gets no umask applied: open(path, O_CREAT, 0666) under umask 022 comes out 0666. the window opens whenever magic_descriptor is handed a pipe or socket whose data starts with an ELF header (file_tryelf -> file_pipe2file), so whoever supplies that stream can keep reopening it. with one thread identifying a 256-byte ELF header from pipes and another creating files under umask 022, 33715 of 200000 files came out 0666; with umask(0177) it is 0 of 200000 and the tests still pass. 0177 also keeps the temporary 0600 on libcs whose mkstemp honours the umask. a file created concurrently can still pick up the temporary mask, but that only makes it more restrictive, never group or world writable. It changes src/
-0b3fad95ff8d0b99b636337ae3dc0029504276dc	2026-10-22	pending		Properly check offset. It changes src/
-f09f5f37edc32dd4ed59eb0f0c841c9ebc32f8cd	2026-10-22	pending		recognize SH4A no-FPU ELF objects (Artem Novak). It changes magic/, tests/
-ba72caa54bb0d36b3ce024dc5182f7e4e38b7094	2026-10-22	pending		TrueType fonts lose their MIME type since the FontKit change (Nicolas Grekas). It changes magic/
-d0cf75017de1f55d5e6b160ff93d1e70671d27ab	2026-10-22	pending		PR/816: shb: garbage version for text containing "%PDF-", wrong version for UTF-8 BOM PDFs. It changes magic/, tests/
-fa063973bca8a5d0c91587f129b28560becf11ad	2026-10-22	pending		PR/815: lav: Text containing SO/SI (0x0e/0x0f) is classified as "data", even when it is ordinary terminal-formatted text. It changes src/, tests/
-751b64970044dac77c0bac4d54f9f56cb9fcccce	2026-10-22	pending		PR/794: SINN: Fix SEGV on Android-4.4 by checking setlocale return and regex ranges. It changes src/
-81c1be797655161f15ee6f1325b4872d38e94396	2026-10-22	pending		PR/813: douzeb: YBLOB post-quantum object storage format support. It changes magic/
-41b1123083ab0bbdfe32f6d4ec14f6aec9a91e59	2026-10-22	pending		PR/814: p_turczak@wiwa.de: Add STEP file format detection for 3D-CAD data. It changes magic/
-a263c904a5eae6156dbb3e2a216ea083aadd4c4f	2026-10-29	pending		PR/191: soma0212: don't leave tv_sec uninitialized in cdf_timestamp_to_timespec. It changes src/, tests/
-8f17d5e5379a8a2983210991b93441d4541dfe3c	2026-10-29	pending		PR/188: soma0212: fix inverted test and double free. It changes src/
-6bed58866740d36817aedf0f86e686b798841d3c	2026-10-29	pending		PR/187: soma0212: treat a short read in buffer_File as an error. It changes src/
-457e44b8f693fb9bcaa65d2fb179fb5fcae50140	2026-10-29	pending		PR/186: jtbandes: Add MCAP. It changes magic/, tests/
-b41051b72d50b4a0d4ea6228d1fe246d4e6fe021	2026-10-29	pending		PR/190: Artem Novak: recognize Casio graphing calculator files. It changes magic/, tests/
-589c6a6161a126dd41cb97f8f9c545d6c2e0e65c	2026-10-29	pending		PR/188: soma0212: fix use after free. It changes src/
-e538991ae0a412de82e8cb280cc13cd749cb6dc1	2026-10-29	pending		remove unused label. It changes src/
-584caf71c7f9b5a581d888636bdbf80c11bfd087	2026-10-30	pending		remove debugging printf. It changes src/
-f5e28671ed1419067306673f0502c62e97d5c2a1	2026-11-03	pending		Portability fixes from Yegor Yefremov. It changes src/
-f851f46b999c71b6f29ec931a22ad6357e531e97	2026-11-03	pending		Oops forgot to add that as part of PR/186. It changes magic/
-87e3caac3df86f3d3a7945edd0096eb06e935638	2026-11-09	pending		bump ruby to beat the bump of html in sgml:1.53 (Olav Moerkrid). It changes magic/
-b778217dbd35291d3539abb446e50b43a972a5fc	2026-11-09	pending		Clamp paramaters to SIZE_MAX / 2 to prevent overflows (runpei miao). It changes src/
-8f2696b23a912c7ad1b04d2371ba4a06245b6ca4	2026-11-12	pending		PR/822: Ayushman Bhattacharya: Magic for RV565 video, now with format version 7. It changes magic/, tests/
-204cf5866eef86886f5601485dda8fe5886c4c6a	2026-11-14	pending		PR/192: sevaksargsyan: g->charjump was adjusted to &g->charjump[-(CHAR_MIN)] in computejumps() so that it can be indexed by signed chars; undo the adjustment before freeing it, same as regfree() does. It changes src/
-e21714a4377210bbf651496d6130c51b037b460a	2026-11-14	pending		PR/193: cheznewa Add Sunway (custom unofficial number for the Sunway/SW-64 instruction set). It changes magic/
-4c98a9ea7d8f6ae10bc88a1aaed5f9e7ed348474	2026-11-14	pending		fix sunway. It changes magic/
-bbffb78dc8d764a707aa20f5c7a3b74c40c2b27c	2026-11-14	pending		PR/194: 0xdevalias: Add Apple Photos property list journal magic. It changes magic/
+4ee5ca8fb938c3168bcededd0ce7c2e03daea485	2026-10-16	ported	74ab2ee	check offset before copying (found by oss-fuzz). It changes src/
+f54b0776b92527be98033f8f73d09faf2d540188	2026-10-22	not-applicable		PR/183:soma0121: file_pipe2file sets umask(0) around mkstemp and restores it afterwards. umask is process-wide, so in a threaded libmagic consumer any file another thread creates during that window gets no umask applied: open(path, O_CREAT, 0666) under umask 022 comes out 0666. the window opens whenever magic_descriptor is handed a pipe or socket whose data starts with an ELF header (file_tryelf -> file_pipe2file), so whoever supplies that stream can keep reopening it. with one thread identifying a 256-byte ELF header from pipes and another creating files under umask 022, 33715 of 200000 files came out 0666; with umask(0177) it is 0 of 200000 and the tests still pass. 0177 also keeps the temporary 0600 on libcs whose mkstemp honours the umask. a file created concurrently can still pick up the temporary mask, but that only makes it more restrictive, never group or world writable. It changes src/. Not applicable: the umask of a temporary file of the file command
+0b3fad95ff8d0b99b636337ae3dc0029504276dc	2026-10-22	ported	74ab2ee	Properly check offset. It changes src/
+f09f5f37edc32dd4ed59eb0f0c841c9ebc32f8cd	2026-10-22	ported	74ab2ee	recognize SH4A no-FPU ELF objects (Artem Novak). It changes magic/, tests/
+ba72caa54bb0d36b3ce024dc5182f7e4e38b7094	2026-10-22	ported	74ab2ee	TrueType fonts lose their MIME type since the FontKit change (Nicolas Grekas). It changes magic/
+d0cf75017de1f55d5e6b160ff93d1e70671d27ab	2026-10-22	ported	74ab2ee	PR/816: shb: garbage version for text containing "%PDF-", wrong version for UTF-8 BOM PDFs. It changes magic/, tests/
+fa063973bca8a5d0c91587f129b28560becf11ad	2026-10-22	ported	74ab2ee	PR/815: lav: Text containing SO/SI (0x0e/0x0f) is classified as "data", even when it is ordinary terminal-formatted text. It changes src/, tests/
+751b64970044dac77c0bac4d54f9f56cb9fcccce	2026-10-22	not-applicable		PR/794: SINN: Fix SEGV on Android-4.4 by checking setlocale return and regex ranges. It changes src/. Not applicable: a NULL locale on Android, and a check of regexec offsets that glibc never needs
+81c1be797655161f15ee6f1325b4872d38e94396	2026-10-22	ported	74ab2ee	PR/813: douzeb: YBLOB post-quantum object storage format support. It changes magic/
+41b1123083ab0bbdfe32f6d4ec14f6aec9a91e59	2026-10-22	ported	74ab2ee	PR/814: p_turczak@wiwa.de: Add STEP file format detection for 3D-CAD data. It changes magic/
+a263c904a5eae6156dbb3e2a216ea083aadd4c4f	2026-10-29	ported	74ab2ee	PR/191: soma0212: don't leave tv_sec uninitialized in cdf_timestamp_to_timespec. It changes src/, tests/
+8f17d5e5379a8a2983210991b93441d4541dfe3c	2026-10-29	not-applicable		PR/188: soma0212: fix inverted test and double free. It changes src/. Not applicable: lrzip, which has no decoder in the port (D45)
+6bed58866740d36817aedf0f86e686b798841d3c	2026-10-29	ported	74ab2ee	PR/187: soma0212: treat a short read in buffer_File as an error. It changes src/
+457e44b8f693fb9bcaa65d2fb179fb5fcae50140	2026-10-29	ported	74ab2ee	PR/186: jtbandes: Add MCAP. It changes magic/, tests/
+b41051b72d50b4a0d4ea6228d1fe246d4e6fe021	2026-10-29	ported	74ab2ee	PR/190: Artem Novak: recognize Casio graphing calculator files. It changes magic/, tests/
+589c6a6161a126dd41cb97f8f9c545d6c2e0e65c	2026-10-29	not-applicable		PR/188: soma0212: fix use after free. It changes src/. Not applicable: memory handling in compress.c, which changes no output
+e538991ae0a412de82e8cb280cc13cd749cb6dc1	2026-10-29	not-applicable		remove unused label. It changes src/. Not applicable: an unused label
+584caf71c7f9b5a581d888636bdbf80c11bfd087	2026-10-30	not-applicable		remove debugging printf. It changes src/. Not applicable: a debugging printf
+f5e28671ed1419067306673f0502c62e97d5c2a1	2026-11-03	not-applicable		Portability fixes from Yegor Yefremov. It changes src/. Not applicable: seccomp of the file command
+f851f46b999c71b6f29ec931a22ad6357e531e97	2026-11-03	ported	74ab2ee	Oops forgot to add that as part of PR/186. It changes magic/
+87e3caac3df86f3d3a7945edd0096eb06e935638	2026-11-09	ported	74ab2ee	bump ruby to beat the bump of html in sgml:1.53 (Olav Moerkrid). It changes magic/
+b778217dbd35291d3539abb446e50b43a972a5fc	2026-11-09	not-applicable		Clamp paramaters to SIZE_MAX / 2 to prevent overflows (runpei miao). It changes src/. Not applicable: magic_setparam, which the port does not hold. WithLimit refuses a limit that is not positive
+8f2696b23a912c7ad1b04d2371ba4a06245b6ca4	2026-11-12	ported	74ab2ee	PR/822: Ayushman Bhattacharya: Magic for RV565 video, now with format version 7. It changes magic/, tests/
+204cf5866eef86886f5601485dda8fe5886c4c6a	2026-11-14	not-applicable		PR/192: sevaksargsyan: g->charjump was adjusted to &g->charjump[-(CHAR_MIN)] in computejumps() so that it can be indexed by signed chars; undo the adjustment before freeing it, same as regfree() does. It changes src/. Not applicable: the bundled BSD regex, which glibc does not need (D33, D44)
+e21714a4377210bbf651496d6130c51b037b460a	2026-11-14	ported	74ab2ee	PR/193: cheznewa Add Sunway (custom unofficial number for the Sunway/SW-64 instruction set). It changes magic/
+4c98a9ea7d8f6ae10bc88a1aaed5f9e7ed348474	2026-11-14	ported	74ab2ee	fix sunway. It changes magic/
+bbffb78dc8d764a707aa20f5c7a3b74c40c2b27c	2026-11-14	ported	74ab2ee	PR/194: 0xdevalias: Add Apple Photos property list journal magic. It changes magic/

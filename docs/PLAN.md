@@ -36,6 +36,13 @@ questions on 1,544 inputs. D30 lists the parts. The harness also found that
 the cgo package crashed when it was linked with glibc, and D43 fixed it: the
 gate now passes with gcc and glibc, and with zig and musl.
 
+Phase 2 has started. `internal/rules` compiles the rules (D35): it reads the
+356 files that the build of file compiles, and gives an array of entries that
+is the same as the `magic.mgc` of the oracle, byte for byte: 24,985 entries
+in 4,213 rules, with each field, strength and place in the order.
+`TestCompilerMatchesMagicMgc` in the test module holds it. The engine that
+matches the entries is next.
+
 The tags `v0.1.0` (`7b14d3f`), `v0.2.0` (`dedf132`) and `v0.2.1` (`a629036`)
 held the archives in the root module. `v0.3.0` gave each target a module
 (D17), `v0.3.1` rebuilt the archives with zlib 1.4 (D13) and broke Windows and

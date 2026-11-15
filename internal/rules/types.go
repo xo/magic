@@ -178,8 +178,8 @@ func (t Type) String() string {
 	return "invalid"
 }
 
-// isString reports whether t holds a string value, as IS_STRING of file.h.
-func (t Type) isString() bool {
+// IsString reports whether t holds a string value, as IS_STRING of file.h.
+func (t Type) IsString() bool {
 	switch t {
 	case String, PString, BEString16, LEString16, Regex, Search, Indirect, Name, Use, Octal:
 		return true

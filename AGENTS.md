@@ -6,10 +6,10 @@ libmagic as static archives for eight targets, and it embeds the magic database
 in the package. A program that imports `magic` needs Go and a C compiler, and
 nothing else.
 
-magic is becoming a pure Go port of libmagic (D22). No code of the port exists
-yet. The plan and the rules come first (D24), and the plan is open. Until the
-port is ready, the cgo package is what users get, and it is kept in working
-order.
+magic is becoming a pure Go port of libmagic (D22). Phase 2 of the port is
+done: `internal/rules` and `internal/engine` give the MIME types of libmagic,
+in pure Go. The descriptions are phase 3. Until the port is ready, the cgo
+package is what users get, and it is kept in working order.
 
 ## Standing rules
 
@@ -45,7 +45,7 @@ of `docs/PLAN.md`. Ask a maintainer.
 | tagging a release | D17 and D18, then `CONTRIBUTING.md`, under Release. Tag only when a maintainer says so |
 | changing CI | D12, then `.github/workflows/test.yml` |
 | looking for work that is known and not done | `docs/BACKLOG.md` |
-| working on the port of libmagic | D22 to D41, then `docs/PLAN.md`. Write no code of the port until the plan is ready (D24) |
+| working on the port of libmagic | D22 to D44, then `docs/PLAN.md` and `docs/BACKLOG.md`, under Phase 3 of the port |
 | designing or changing the API of the port | D39, D40 and D42, then `docs/API.md` |
 | following upstream, or adding to the ledger | `docs/UPSTREAM.md`, D25 and D26 |
 | the binary walker | D31, then `docs/BACKLOG.md`, under The binary walker. It waits for the port |
@@ -107,6 +107,8 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `go.mod` | the root module. It requires each target module and has a `replace` line for each (D17) |
 | `link_<goos>_<goarch>.go` | one generated file for each target. It imports the module of its platform. Do not edit it |
 | `cmd/file/` | an example program that prints the type of each file that it gets |
+| `internal/rules/` | the port: the compiler of the rules, which gives the entries of `magic.mgc` (D35) |
+| `internal/engine/` | the port: the engine that runs the compiled rules, and the detectors of the formats that rules cannot read. It translates each regular expression for Go (D44) |
 | `libmagic/magic.h`, `libmagic/zstd.h`, `libmagic/zstd_errors.h` | the headers that the cgo code includes, shared by all targets. `TestHeadersAreComplete` fails if one includes a header that is not here |
 | `libmagic/magic.mgc.zst`, `libmagic/magic.mgc.sha256` | the compiled database, compressed with zstd, and the hash of the database before it is compressed (D20). `magic.go` embeds the first |
 | `libmagic/<goos>_<goarch>/` | one target. It is a Go module that holds the static archives, a `go.mod` and a generated `link.go`. `linux_arm` is armv7 |

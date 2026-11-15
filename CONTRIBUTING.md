@@ -75,8 +75,9 @@ documents name no maintainer (D32).
 
 ## The port
 
-magic is becoming a pure Go port of libmagic (D22). No code of the port is
-written before the plan is ready (D24). `docs/PLAN.md` holds the plan, and
+magic is becoming a pure Go port of libmagic (D22). The port is in
+`internal/rules` and `internal/engine`, and the cgo package stays what users
+get until phase 4. `docs/PLAN.md` holds the plan, and
 `docs/UPSTREAM.md` holds the rules for following upstream. The port reads the
 checkout of file in `upstream/file/`, which git ignores. Make it with:
 

@@ -108,6 +108,39 @@ it a step of the build script, so that no one has to remember it.
 16. `TestVersion` logs the version and fails on nothing. Source:
     `magic_test.go`.
 
+## Phase 3 of the port
+
+Phase 2 found these. Each one is work for phase 3 (docs/PLAN.md).
+
+17. The port prints no description yet. `mprint` in
+    `internal/engine/print.go` prints the text of a rule without its value.
+    Phase 3 needs the `printf` formats of C, the dates and the floats. Source:
+    `softmagic.c`, `print.c`.
+18. The Compound Document reader gives the MIME types, and does not print the
+    properties that a description lists: the dates, the counts, the names of
+    the application and the list of a `Thumbs.db`. Source: `readcdf.c`,
+    `cdf.c` and `cdf_time.c`.
+19. The reason that libmagic prints after "Composite Document File V2
+    Document" depends on `errno` from an earlier step. A stream of length 0
+    sets no `errno`, so the reason can come from the step before it. The port
+    does not copy this. It changes no MIME type. Source: `cdf_read_long_sector_chain`
+    and `file_trycdf`.
+20. The ELF reader changes the mode, and prints nothing. The description of an
+    ELF file needs the rest of `readelf.c`.
+21. The oracle keeps one cookie for all questions. libmagic keeps the value
+    of the last rule and the levels of continuation in the cookie, and a
+    string compare reads past the end of a string. So an answer of libmagic
+    can depend on the question before it. The port starts each detection
+    from zero. No test has found a difference. Source: `ms_value` and `c.li`
+    in `file.h`.
+22. `File` of the port knows a regular file, an empty file, a directory and a
+    file that it cannot read. libmagic also names devices, links, sockets and
+    pipes. Source: `fsmagic.c`.
+23. The port does not look inside compressed data (D27, D28). Source:
+    `compress.c`.
+24. No test measures the bytes that the port adds to a program (D38). The
+    plan wants one from the first code on.
+
 ## The binary walker
 
 The maintainers want magic to do the work of binwalk too: walk a binary file,

@@ -30,8 +30,8 @@ var outputs = []struct {
 // TestCgoPackageMatchesTheOracle is the gate of phase 1 (docs/PLAN.md). The cgo
 // package of today and the oracle, built for glibc, must give the same output
 // for every input of the corpus and every output flag. It proves that the
-// harness works before the port exists, and it is the comparison that the
-// port takes over.
+// harness works, and TestPortMatchesTheOracle asks the port the same
+// questions.
 //
 // On Linux it passes with gcc, which links glibc, and with zig, which links
 // musl, because the archives carry their own regex engine (D43). Before D43, a

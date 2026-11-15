@@ -219,7 +219,7 @@ func setTestType(start, e *Entry) {
 // text_chars of encoding.c.
 var textChars = func() [256]bool {
 	var t [256]bool
-	for _, c := range []byte{7, 8, 9, 10, 11, 12, 13, 27, 0x85} {
+	for _, c := range []byte{7, 8, 9, 10, 11, 12, 13, 26, 27, 0x85} {
 		t[c] = true
 	}
 	for c := 0x20; c < 0x7f; c++ {

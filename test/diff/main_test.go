@@ -1,6 +1,6 @@
 // Package diff compares the code under test with the oracle of D30, on the
-// corpus. Before the port exists, the code under test is the cgo package of
-// today. The port takes its place in phase 2 (docs/PLAN.md).
+// corpus. It tests the cgo package of today, which is the gate of phase 1,
+// and the port, which is the gate of phase 2 (docs/PLAN.md).
 package diff
 
 import (

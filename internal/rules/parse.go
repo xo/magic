@@ -273,7 +273,7 @@ func (p *parser) parse(line []byte) (again bool, err error) {
 	}
 
 	if at(line, l) == '~' {
-		if !e.Type.isString() {
+		if !e.Type.IsString() {
 			e.MaskOp |= OpInverse
 		}
 		l++
@@ -283,7 +283,7 @@ func (p *parser) parse(line []byte) (again bool, err error) {
 		e.setStrFlags(PString1LE)
 	}
 	if op, ok := getOp(at(line, l)); ok {
-		if e.Type.isString() {
+		if e.Type.IsString() {
 			if op != OpDivide {
 				return false, p.fail("invalid string or indirect op %q", at(line, l))
 			}

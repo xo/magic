@@ -6,12 +6,13 @@ decisions are in [`decisions/`](decisions/README.md), one file each (D23).
 [`UPSTREAM.md`](UPSTREAM.md) holds the rules for following upstream, and
 [`API.md`](API.md) holds the design of the new API.
 
-No code of the port exists. The plan and the rules come first (D24), and the
-plan is ready when its open questions are answered or deferred.
+The plan and the rules came first (D24). Phase 0 ended when the questions of
+the port were answered or deferred, and the code of the port started in
+phase 1.
 
 ## Status
 
-On 2026-11-15 magic is a cgo wrapper of libmagic, at `v0.4.0`:
+On 2026-11-15 magic is a cgo wrapper of libmagic, at `v0.4.1`:
 
 1. It wraps libmagic 5.48 from file 5.48, and links it with zlib 1.4, bzip2
    1.0.8, xz 5.8.4 and zstd 1.5.7. The Windows archives also hold libgnurx
@@ -36,12 +37,26 @@ questions on 1,544 inputs. D30 lists the parts. The harness also found that
 the cgo package crashed when it was linked with glibc, and D43 fixed it: the
 gate now passes with gcc and glibc, and with zig and musl.
 
-Phase 2 has started. `internal/rules` compiles the rules (D35): it reads the
-356 files that the build of file compiles, and gives an array of entries that
-is the same as the `magic.mgc` of the oracle, byte for byte: 24,985 entries
-in 4,213 rules, with each field, strength and place in the order.
-`TestCompilerMatchesMagicMgc` in the test module holds it. The engine that
-matches the entries is next.
+Phase 2 has its code, and its gate holds on the build host.
+`internal/rules` compiles the rules (D35): it reads the 356 files that the
+build of file compiles, and gives an array of entries that is the same as the
+`magic.mgc` of the oracle, byte for byte: 24,985 entries in 4,213 rules.
+`TestCompilerMatchesMagicMgc` in the test module holds it.
+
+`internal/engine` runs the compiled rules and the detectors, in pure Go. It
+holds the matcher of `softmagic.c`, the text encodings, the readers of tar,
+JSON, CSV, SIMH tapes and Compound Documents, and the part of the ELF reader
+that changes the mode of a file. Regular expressions go through a translator
+for Go's `regexp` (D44). `TestPortMatchesTheOracle` asks the port and the
+oracle the same 9,918 questions: the MIME type, the MIME encoding, both, the
+Apple type, the extension, and the MIME type with every result, for each of
+the 1,544 inputs, as a buffer and as a file. Each answer is the same. The
+gate passes with glibc and with musl.
+
+Two checks outside the gate found no difference either: 4,469 more damaged
+inputs, and 7,500 files of the build host, read as files. Phase 3 brings the
+descriptions, which are what the port does not print yet. `docs/BACKLOG.md`
+lists what it needs.
 
 The tags `v0.1.0` (`7b14d3f`), `v0.2.0` (`dedf132`) and `v0.2.1` (`a629036`)
 held the archives in the root module. `v0.3.0` gave each target a module

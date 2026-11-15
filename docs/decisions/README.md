@@ -64,3 +64,4 @@ D32 set the project up as a port of libmagic.
 | D41 | [The module requires Go 1.27](D041-the-module-requires-go-1-27.md) | Decided. Amends D18 |
 | D42 | [The API takes one walk, no Detector, a context, a generic Source and a slice of matches](D042-the-api-takes-one-walk-no-detector-a-context-a-generic-source-and-a-slice-of-matches.md) | Decided. Amends D40 |
 | D43 | [The Linux archives carry their own regex engine](D043-the-linux-archives-carry-their-own-regex-engine.md) | Decided. Amends D4 |
+| D44 | [The port translates each regular expression for Go](D044-the-port-translates-each-regular-expression-for-go.md) | Decided |

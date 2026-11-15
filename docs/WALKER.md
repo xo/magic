@@ -170,6 +170,9 @@ func Walk(ctx context.Context, r io.ReaderAt, size int64, opts ...Option) iter.S
 // WalkFile opens name and walks it.
 func WalkFile(ctx context.Context, name string, opts ...Option) iter.Seq2[*Entry, error]
 
+// WalkBytes walks data, which the caller holds.
+func WalkBytes(ctx context.Context, data []byte, opts ...Option) iter.Seq2[*Entry, error]
+
 // Entry is one match.
 type Entry struct {
 	Format      string     // the name of the signature, as binwalk names it, such as "squashfs"
@@ -224,10 +227,9 @@ for e, err := range walk.WalkFile(ctx, "firmware.bin", walk.WithDepth(8)) {
 parent. A caller that stops the loop stops the walk, and a caller that calls
 `SkipMembers` skips one subtree, as `fs.SkipDir` does for `fs.WalkDir`.
 
-A match with no known size ends at the next match, as in binwalk. The walker
-holds back one entry until it finds the next match of medium or high
-confidence, or the end of the input. It then sets the size and yields the
-entry. This keeps the results in order without a second pass.
+A match with no known size ends at the next match, as in binwalk. So the
+walker scans the whole input first. It then removes the overlaps and sets the
+sizes, as binwalk does after its scan, and yields the entries in order.
 
 ### The options
 
@@ -237,8 +239,8 @@ entry. This keeps the results in order without a second pass.
 | `WithFormats(names...)` | looks only for these formats | `-y` |
 | `WithoutFormats(names...)` | looks for every format but these | `-x` |
 | `WithSearchAll()` | tries the short signatures at every offset | `-a` |
-| `WithDescribe()` | adds the `magic.Result` of the engine of the port to each entry | none |
-| `WithLimits(l)` | sets the limits below | none |
+| `WithMaxInput(n)` | the most bytes that `Walk` reads into memory | none |
+| `WithMaxOutput(n)` | the most bytes that one extraction writes | none |
 
 The gaps between matches (`-c`) and the entropy graph (`-E`) are not options.
 A caller finds the gaps from the offsets and sizes of the entries. Entropy is
@@ -259,43 +261,69 @@ import (
 ```
 
 `walk/format/all` imports every format. A format that needs another module
-is a module of its own, as `compress/xz` is (D45). A format implements a
-small interface:
+is a module of its own, as `compress/xz` is (D45). A format is a
+`walk.Signature`, as a signature of binwalk is a struct of its fields and a
+parser:
 
 ```go
-// Format finds and parses one kind of embedded file.
-type Format interface {
-	Name() string
-	Magic() []Magic // the fixed bytes, and their offset from the start of the file
-	Short() bool    // true when the magic matches too often to try at every offset
-	Parse(ctx context.Context, src *Source, off int64) (Match, error)
+// Signature is one format that the walker finds, as a signature of binwalk.
+type Signature struct {
+	Name        string   // the name of binwalk, such as "png"
+	Short       bool     // true when the magic matches too often to try past offset 0
+	Magic       [][]byte // the fixed bytes that start a candidate
+	MagicOffset int      // the offset of the magic of a short signature
+	Description string   // the text of the format, for a list of formats
+
+	// Parse accepts or rejects the candidate whose magic is at off in data.
+	Parse func(data []byte, off int) (Match, error)
 }
 
-// Unpacker is a Format whose matches have members.
-type Unpacker interface {
-	Members(ctx context.Context, src *Source, m Match) iter.Seq2[*Member, error]
-}
-
-func Register(f Format)
+func Register(sigs ...*Signature)
 ```
 
-`Source` wraps the `io.ReaderAt` with a cache of the window around the
-offset. A parser reads the bytes that it needs from it and does not read the
-whole file. A parser returns an error to reject a candidate.
+The formats build only on a system where an `int` has 64 bits, because
+binwalk refuses to build on any other system. On a system of 32 bits, the
+package `walk` builds and finds no format. A parser gets the whole input and
+the offset of the magic, as a parser of binwalk does, and returns `walk.ErrNoMatch` to reject the candidate. The
+walker sorts the signatures in the order of `src/magic.rs` of binwalk,
+whatever the order of the imports, because that order decides which
+candidate the scan tries first. Phase W2 adds the unpacker of a format, which
+gives its members.
+
+### How a format is ported
+
+1. A Go file translates the Rust files of one format: the signature, the
+   structure and the dry run of the extractor that the parser calls. It opens
+   with the notice of binwalk and names those files (D49).
+2. The magic, the short flag, the confidence, the size, the offset and the
+   text of the description are the same as in binwalk. The gate compares
+   them as text.
+3. Where binwalk would panic, for a slice out of range or an unwrap of
+   nothing, the parser rejects the candidate, and a comment says so. A panic
+   stops binwalk on that file, so the gate skips an input where binwalk
+   panics.
+4. A format that the corpus does not hold gets crafted samples in
+   `test/corpus/testdata/walk/`, made for this repository.
 
 ### The engine of the port
 
-The walker uses the engine of the port in two places:
+The walker does not import the engine of the port, so a program that walks
+does not carry the compiled rules, about 980 KB (D38). A caller that wants
+the answer of libmagic for a match runs it on the section of the match:
 
-1. With `WithDescribe`, it runs `magic.DetectReaderAt` on the section of each
-   match. A caller gets the description and the MIME type of libmagic beside
-   those of binwalk. The API of the port needs no change for this.
-2. The decoders of `compress/` decode the compressed formats. A decoder of
-   that registry takes a whole buffer and does not say how many bytes of
-   input it read. The walker needs that number, because it is the size of the
-   match. The registry needs a second kind of decoder that reads from an
-   `io.Reader` and counts the bytes of input. This is a choice in the engine
-   that makes the walker harder, which D31 asks to record.
+```go
+r, err := magic.DetectReaderAt(ctx, e.Section(), e.Size)
+```
+
+The decoders of `compress/` decode xz, lzma and zstd for the walker. A
+decoder of that registry takes a whole buffer and does not say how many bytes
+it read, and the walker needs that number, because it is the size of the
+match. So the registry has a second kind of decoder, `compress.Stream`, which
+decodes the first stream of a buffer and returns its size. `compress/xz` and
+`compress/zstd` register one. gzip, zlib and bzip2 need no registry: the
+walker decodes them with copies of the inflater and of the bzip2 decoder of
+the Go standard library, changed to decode as miniz_oxide and libbz2, the
+libraries of binwalk, decode.
 
 The rules of libmagic do not serve as the signatures of the walker. A rule
 names a whole file from its first bytes, and it does not give the size of the
@@ -303,15 +331,21 @@ file. The signatures of binwalk find a file inside another, and give its size.
 
 ### Reading and memory
 
-binwalk reads the whole file into memory. The walker reads from an
-`io.ReaderAt` in windows of 1 MiB. Each window overlaps the next by the length
-of the longest magic, minus one byte, so that no match falls between two
-windows. A firmware image of several gigabytes then needs only a few MiB.
+binwalk reads the whole file into memory, and each parser indexes it as one
+slice of bytes. The walker does the same, so that each parser can be a
+translation, line by line:
 
-The members of a match are streams. To walk a member, the walker needs an
-`io.ReaderAt`. It keeps a member in memory up to a limit, and writes a larger
-member to a temporary file. Without a temporary folder, it skips a member
-over the limit and reports an error for it.
+1. `WalkFile` maps the file into memory on the systems that have
+   `syscall.Mmap`, so the system reads only the pages that the scan and the
+   parsers touch. On the other systems it reads the file.
+2. `Walk` reads the bytes of its `io.ReaderAt`, and `WalkBytes` takes a slice
+   that the caller already holds.
+3. `WithMaxInput` limits what the walker reads into memory, 4 GiB by default.
+   A mapped file has no such limit.
+
+The members of a match, in phase W2, are streams. To walk a member, the
+walker needs it in memory, up to a limit. A member over the limit is skipped,
+and the walker reports an error for it.
 
 ### Safety
 
@@ -333,19 +367,49 @@ time of the system. The limits hold from the first release:
 
 ### How it is tested
 
-The port follows libmagic and compares itself with libmagic. The walker can
-follow binwalk 3 in the same way:
+The walker follows binwalk 3 as the port follows libmagic (D49):
 
-1. Add binwalk to `docs/upstream/upstreams.tsv`, with a ledger of its commits
-   (D25, D26). The walker gives the result of binwalk at the commit of the
-   ledger.
-2. Build binwalk at that commit in the test module, as the oracle of libmagic
-   is built. Run it with `-l`, and compare its JSON with the entries of
-   `Walk`: the offset, the name, the size and the confidence of each match.
-3. Collect a corpus of firmware images whose licenses allow a copy in the
-   repository, and damaged copies of them.
-4. Fuzz each parser. A parser reads hostile bytes, and must not panic or read
-   past its limits.
+1. `docs/upstream/upstreams.tsv` names the commit of binwalk, and
+   `docs/upstream/binwalk.tsv` is the ledger of the commits after it (D25,
+   D26). The checkout is in `upstream/binwalk/`.
+2. `test/oracle/build-binwalk.sh` builds binwalk at that commit into
+   `test/.binwalk/`, with cargo. It needs the toolchain of Rust.
+3. `TestWalkMatchesBinwalk` in `test/diff` runs binwalk on each input with
+   `-l -` and `--include=` with the formats that the walker has. It compares
+   the offset, the size, the name, the confidence and the description of each
+   match with the entries of `WalkBytes`.
+4. `TestWalkExtractsAsBinwalk` runs binwalk with `-e`, and compares the
+   folder of each match with the members of the walker: the path, the type,
+   the bytes, the target of a link and the bit of execution. It covers the
+   formats that binwalk extracts with its own code. binwalk extracts the
+   others with programs, so `TestWalkDecodes` and the tests of
+   `walk/format/archive` check them against data that Go makes.
+5. `TestWalkRecursesAsBinwalk` walks each input with `WithDepth`, and
+   compares the matches of each file inside an extraction with binwalk.
+6. The corpus, from `corpus.Walk`, holds the files of the gates of the port,
+   the test inputs of binwalk, the samples in `test/corpus/testdata/walk/`,
+   damaged copies of them, and 200 images. An image holds several of the
+   files at random offsets between random bytes, from a fixed seed.
+7. Each parser is fuzzed, in a later step. A parser reads hostile bytes, and
+   must not panic or read past its limits.
+
+Five things of binwalk need care in the gates:
+
+1. binwalk sorts its matches by offset and then by a random identifier. Of two
+   matches of the same confidence at one offset, it keeps a random one. When
+   the answers differ, the gate asks binwalk again, up to three times.
+2. Under load, binwalk can close its list of JSON before its worker logs the
+   result, and print only "]". The client runs it again, up to five times.
+3. The option `-y` takes many values, and takes the path of the file as one
+   more. The client passes the list as `--include=` with an equals sign.
+4. binwalk can exit before its worker starts, and then it analyzes and
+   extracts nothing. The client logs the JSON to a file, and runs binwalk
+   again when the log holds no analysis.
+5. The main loop of `-M` exits when its last job ends within the sleep of
+   the loop, before it reads the result of that job. So it loses the analysis
+   of a small last file, and of the files in it. The client runs binwalk
+   with `-e` on one file at a time, and walks the extractions itself, as
+   `main.rs` does.
 
 binwalk extracts many formats with outside programs, so the oracle compares
 the matches, and not the extracted files, for those formats.

@@ -59,6 +59,10 @@ func Originals() ([]Input, error) {
 	slices.Sort(paths)
 	var out []Input
 	for _, p := range paths {
+		// test/corpus/testdata/walk holds the samples of the walker.
+		if fi, err := os.Stat(p); err == nil && fi.IsDir() {
+			continue
+		}
 		b, err := os.ReadFile(p)
 		if err != nil {
 			return nil, fmt.Errorf("reading %s: %w", p, err)

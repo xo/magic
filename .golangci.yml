@@ -30,3 +30,10 @@ linters:
         - -ST1020
         - -ST1021
         - -ST1022
+  exclusions:
+    paths:
+      # Copies of compress/bzip2 and of the inflater of compress/flate of the
+      # Go standard library, changed in a few places for the walker. They
+      # keep the style of the standard library.
+      - walk/internal/bzip2
+      - walk/internal/flate

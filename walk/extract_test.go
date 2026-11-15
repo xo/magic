@@ -1,0 +1,205 @@
+package walk
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"slices"
+	"testing"
+)
+
+// TestOutputPath holds the cleaning of paths of binwalk.
+func TestOutputPath(t *testing.T) {
+	t.Parallel()
+	o := newOutput(newMemSink(), 1<<20)
+	for name, exp := range map[string]string{
+		"a/b":              "a/b",
+		"/abs/x":           "abs/x",
+		"a/../b":           "b",
+		"../../etc/passwd": "etc/passwd",
+		"a//b/./c":         "a/b/c",
+		"./x/./":           "x",
+		"":                 "",
+	} {
+		if got := o.path(name); got != exp {
+			t.Errorf("%q: expected %q, got: %q", name, exp, got)
+		}
+	}
+}
+
+// TestOutputSymlink holds the links of binwalk: relative, and inside the
+// output.
+func TestOutputSymlink(t *testing.T) {
+	t.Parallel()
+	s := newMemSink()
+	o := newOutput(s, 1<<20)
+	if !o.CreateDirectory("usr/sbin") {
+		t.Fatalf("expected the folder to be made")
+	}
+	for _, l := range [][3]string{
+		{"usr/sbin/ls", "/bin/busybox", "../../bin/busybox"},
+		{"link", "x", "./x"},
+		{"usr/up", "../../../../etc/passwd", "../etc/passwd"},
+	} {
+		if !o.CreateSymlink(l[0], l[1]) {
+			t.Fatalf("%s: expected the link to be made", l[0])
+		}
+		if got := s.members[l[0]].Link; got != l[2] {
+			t.Errorf("%s -> %s: expected %q, got: %q", l[0], l[1], l[2], got)
+		}
+	}
+}
+
+// TestOutputLimit holds that an output stops at its limit.
+func TestOutputLimit(t *testing.T) {
+	t.Parallel()
+	o := newOutput(newMemSink(), 10)
+	if !o.AppendFile("a", make([]byte, 6)) || o.AppendFile("a", make([]byte, 6)) || o.CreateFile("a", nil) {
+		t.Errorf("expected 6 bytes to pass, then the limit and the existing file to fail")
+	}
+}
+
+// extractSig returns a signature whose extractor writes a folder, a file
+// that holds the match, a device and a link.
+func extractSig(name, magic string) *Signature {
+	s := sigAt(name, magic, High)
+	s.Extract = func(data []byte, off int, out *Output) Extraction {
+		if out == nil {
+			return Extraction{OK: true, Size: 4, HasSize: true}
+		}
+		ok := out.CreateDirectory("d") &&
+			out.CarveFile("d/inner.bin", data, off, 4) &&
+			out.CreateCharDevice("dev", 1, 3) &&
+			out.CreateSymlink("d/link", "/dev")
+		return Extraction{OK: ok, Size: 4, HasSize: true}
+	}
+	return s
+}
+
+// TestMembersAndExtract extracts a match into memory and onto disk.
+func TestMembersAndExtract(t *testing.T) {
+	t.Parallel()
+	Register(extractSig("extract_test", "XTRT"))
+	data := []byte("..XTRT..")
+	var e *Entry
+	for got, err := range WalkBytes(context.Background(), data, WithFormats("extract_test")) {
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		e = got
+	}
+	if e == nil || !e.Extractable() {
+		t.Fatalf("expected an extractable entry, got: %v", e)
+	}
+	var got []string
+	for m, err := range e.Members(context.Background()) {
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		desc := fmt.Sprintf("%s %v", m.Name, m.Mode.Type())
+		if m.Mode.IsRegular() {
+			r, _ := m.Open()
+			b, _ := io.ReadAll(r)
+			desc += " " + string(b)
+		}
+		if m.Link != "" {
+			desc += " -> " + m.Link
+		}
+		got = append(got, desc)
+	}
+	exp := []string{"d d---------", "d/inner.bin ---------- XTRT", "dev ---------- c 1 3", "d/link L--------- -> ../dev"}
+	if !slices.Equal(got, exp) {
+		t.Errorf("expected %q, got: %q", exp, got)
+	}
+
+	dir := t.TempDir()
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	defer func() { _ = root.Close() }()
+	if err := Extract(context.Background(), root, e); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "d", "inner.bin"))
+	if err != nil || string(b) != "XTRT" {
+		t.Errorf("expected %q, got: %q, %v", "XTRT", b, err)
+	}
+	if l, err := os.Readlink(filepath.Join(dir, "d", "link")); err != nil || l != "../dev" {
+		t.Errorf("expected %q, got: %q, %v", "../dev", l, err)
+	}
+	// A second extraction finds the files there, fails, and removes what it
+	// wrote.
+	if err := Extract(context.Background(), root, e); !errors.Is(err, ErrNotExtracted) {
+		t.Errorf("expected %v, got: %v", ErrNotExtracted, err)
+	}
+}
+
+// TestWalkDepth walks the members of a match: a match inside the file that
+// an extraction writes.
+func TestWalkDepth(t *testing.T) {
+	t.Parallel()
+	outer := sigAt("depth_outer", "OUTR", High)
+	outer.Extract = func(_ []byte, _ int, out *Output) Extraction {
+		if out == nil {
+			return Extraction{OK: true}
+		}
+		return Extraction{OK: out.CreateFile("inner", []byte("..INNR....")) && out.CreateFile("empty", nil)}
+	}
+	Register(outer, sigAt("depth_inner", "INNR", High))
+	data := []byte("OUTR....")
+	for depth, exp := range map[int][]string{
+		0: {"0 depth_outer 0 "},
+		1: {"0 depth_outer 0 ", "1 depth_inner 2 inner"},
+	} {
+		var got []string
+		for e, err := range WalkBytes(context.Background(), data, WithFormats("depth_outer", "depth_inner"), WithDepth(depth)) {
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			got = append(got, fmt.Sprintf("%d %s %d %s", e.Depth, e.Format, e.Offset, e.Member))
+		}
+		if !slices.Equal(got, exp) {
+			t.Errorf("depth %d: expected %q, got: %q", depth, exp, got)
+		}
+	}
+}
+
+// TestModes holds the modes of the members.
+func TestModes(t *testing.T) {
+	t.Parallel()
+	s := newMemSink()
+	o := newOutput(s, 100)
+	if !o.CreateFile("x", []byte("1")) || !o.MakeExecutable("x") {
+		t.Fatalf("expected the file to be made executable")
+	}
+	if m := s.members["x"].Mode; m != 0o645 {
+		t.Errorf("expected %v, got: %v", fs.FileMode(0o645), m)
+	}
+}
+
+// TestOutputSub holds that the links of a sub-output are relative to its
+// folder, as with a second Chroot of binwalk.
+func TestOutputSub(t *testing.T) {
+	t.Parallel()
+	s := newMemSink()
+	o := newOutput(s, 100)
+	sub := o.Sub("vol")
+	ok := o.CreateDirectory("vol/links/bin") &&
+		sub.CreateDirectory("bin") &&
+		sub.CreateFile("bin/busybox", []byte("x")) &&
+		sub.CreateSymlink("links/bin/sh", "/bin/busybox")
+	if !ok {
+		t.Fatalf("expected the files and the link to be made")
+	}
+	if got := s.members["vol/links/bin/sh"].Link; got != "../../bin/busybox" {
+		t.Errorf("expected %q, got: %q", "../../bin/busybox", got)
+	}
+	if _, ok := s.members["vol/bin/busybox"]; !ok {
+		t.Errorf("expected vol/bin/busybox to exist")
+	}
+}

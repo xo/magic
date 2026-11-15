@@ -137,6 +137,14 @@ jobs:
       - name: Build the oracle
         run: test/oracle/build.sh
 
+      # The oracle of the walker is binwalk 3, built with cargo, which the
+      # runner has (D49).
+      - name: Check out binwalk
+        run: git clone --filter=blob:none https://github.com/ReFirmLabs/binwalk.git upstream/binwalk
+
+      - name: Build the oracle of the walker
+        run: test/oracle/build-binwalk.sh
+
       # The oracle is a program of its own, built with cgo. The test module is
       # pure Go.
       - name: Vet the test module

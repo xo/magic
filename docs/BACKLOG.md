@@ -111,10 +111,30 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
 The maintainers want magic to do the work of binwalk too: walk a binary file,
 such as a firmware image, find the files that are embedded in it at any
 offset, and extract them. It comes after the port of libmagic is finished
-(D31). `docs/WALKER.md` is its design, with the formats of binwalk 3. On
-2026-11-15 the three models of the plan said this about it.
+(D31). `docs/WALKER.md` is its design, with the formats of binwalk 3.
 
-How it works:
+Phases W1 and W2 of D52 ported 90 signatures and 31 extractors of binwalk's
+own code, in the packages under `walk/format/`, with `Entry.Members`,
+`Extract` and `WithDepth`. The three gates in `test/diff` give the same
+matches, files and walks as binwalk on 1509 inputs. These are left:
+
+1. No parser is fuzzed yet (`docs/WALKER.md`, How it is tested).
+2. binwalk decrypts an MH01 image with the 16 keys of the crate `delink`
+   before it carves its parts, and the walker only carves them. The keys
+   come with the decrypting formats of W5 (D51).
+3. `walk/format/vendor` holds a private copy of the parser of the JBOOT ARM
+   header, which `walk/format/firmware` holds too.
+4. A stream of lzma of unknown size makes the decoder of `compress/xz`
+   allocate the whole dictionary that the header names, up to 512 MiB,
+   where liblzma maps the memory and touches only what it uses.
+5. binwalk extracts zip, cpio, lzma and zstd with 7-Zip or zstd, and tar
+   with tar. The walker writes what those programs write, with the
+   differences that `walk/format/archive` lists, and no oracle checks them.
+6. The rest of the formats: the file systems of W3 and W4, and the
+   decrypting formats of W5.
+
+Before the work started, on 2026-11-15, the three models of the plan said
+this:
 
 1. Do not run the whole rule engine at every byte. Collect the fixed bytes of
    each signature into one matcher for many patterns, such as Aho-Corasick,

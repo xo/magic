@@ -17,3 +17,6 @@ src/
 
 # The oracle that test/oracle/build.sh builds. See D30.
 /test/.oracle/
+
+# The oracle that test/oracle/build-binwalk.sh builds. See D49.
+/test/.binwalk/

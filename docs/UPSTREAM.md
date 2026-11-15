@@ -22,8 +22,13 @@ these columns, separated by a tab:
 | `base` | the full hash of the base commit |
 | `matched` | the full hash of the last commit that magic matches, or empty before the base port is done |
 
-There is one upstream, file. The compression libraries are not upstreams of
-the port, because magic replaces them (D27).
+There are two upstreams. file is the upstream of the port of libmagic, and
+binwalk is the upstream of the walker (D49). The compression libraries are not
+upstreams, because magic replaces them (D27). The rules below name file. They
+hold for binwalk in the same way, with its checkout in `upstream/binwalk/`,
+its ledger in `docs/upstream/binwalk.tsv`, and its oracle built by
+`test/oracle/build-binwalk.sh`. `docs/WALKER.md` says how a format of binwalk
+is ported.
 
 ## The checkout
 
@@ -35,6 +40,7 @@ If the checkout is missing, make it in the root of the repository:
 
 ```bash
 git clone https://github.com/file/file.git upstream/file
+git clone https://github.com/ReFirmLabs/binwalk.git upstream/binwalk
 ```
 
 Before you port anything, make sure that the checkout is clean. This command

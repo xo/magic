@@ -11,6 +11,10 @@ followed upstream to its newest commit (D48). New upstream commits are ported
 as `docs/UPSTREAM.md` says. The API is in `magic.go` and `options.go`, and
 the design is in `docs/API.md`.
 
+The binary walker, package `walk`, is the work now (D31, D49 to D52). It
+gives the matches of binwalk 3 at the commit that the ledger names. Its
+design is in `docs/WALKER.md`.
+
 ## Standing rules
 
 These rules hold in every `xo` repository, for every coding agent (dbmeta
@@ -47,7 +51,7 @@ of `docs/PLAN.md`. Ask a maintainer.
 | looking for work that is known and not done | `docs/BACKLOG.md` |
 | working on the port of libmagic | D22 to D48, then `docs/PLAN.md` and `docs/BACKLOG.md`, under The port |
 | following upstream, or adding to the ledger | `docs/UPSTREAM.md`, D25, D26 and D48. After `matched` moves, run `test/oracle/build.sh` and `go generate` in `internal/table` |
-| the binary walker | D31 and D49 to D52, then `docs/WALKER.md`, and `docs/BACKLOG.md` under The binary walker. It is the next work |
+| the binary walker, or porting a format of binwalk | D31 and D49 to D52, then `docs/WALKER.md`, under How a format is ported |
 | writing a document, a code comment, an error message or a commit message | the `simple-english` skill. Load it first |
 | writing or reviewing Go code | the `go-pedantry` skill, then Go conventions below |
 | adding or updating an agent skill | `CONTRIBUTING.md`, under Agent skills, and D15 |
@@ -104,8 +108,9 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `magic_test.go`, `example_test.go` | the tests and the examples of the API |
 | `skills_test.go`, `docs_test.go`, `ledger_test.go` | the tests of the agent setup, the documents and the ledger, in package `magic_test` |
 | `go.mod` | the root module. It has no `require` line |
-| `LICENSE`, `LICENSE.file` | the MIT license of the code of magic, and the license of file, which the port translates (D29). Each package that holds a translation has a `LICENSE` too |
+| `LICENSE`, `LICENSE.file`, `LICENSE.binwalk` | the MIT license of the code of magic, the license of file, which the port translates (D29), and the license of binwalk, which the walker translates (D49). Each package that holds a translation has a `LICENSE` too |
 | `cmd/file/` | an example program that prints the type of each file that it gets |
+| `cmd/walk/` | an example program that prints the files embedded in each file that it gets, as binwalk does |
 | `internal/rules/` | the port: the compiler of the rules, which gives the entries of `magic.mgc` (D35) |
 | `internal/engine/` | the port: the engine that runs the compiled rules, and the detectors of the formats that rules cannot read. It translates each regular expression for Go (D44) |
 | `internal/table/` | the rules of file, at the commit that the ledger names (D48), as the port embeds them, `rules.flate`, and `gen/`, which writes it from `upstream/file` with `go generate` (D35). Do not edit `rules.flate` |
@@ -120,9 +125,13 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `docs/upstream/` | the list of upstreams, and the ledger of the commits of file (D26) |
 | `docs/BACKLOG.md` | the work that is known and not done |
 | `docs/logo/` | the logo of the project, `magic.svg`, which `README.md` shows, with `magic.png`, and `gen_magic.py`, which makes the SVG from the letters in `magic_letters.json` |
-| `upstream/file/` | the checkout of file, the reference for the port. git ignores it. Do not edit it (D25) |
-| `test/` | the test module, with its own `go.mod` (D30): the oracle program in `test/cmd/oracle`, its client and the tests of file in `test/oracle`, the corpus in `test/corpus`, the tests of the compiler and the table in `test/rules`, and the gates of the port in `test/diff` |
-| `test/.oracle/` | what `test/oracle/build.sh` builds. git ignores it |
+| `walk/` | the binary walker (D50): the scan of binwalk, the API, the output of extractors, and `internal/binwalk`, the helpers that the parsers share |
+| `walk/internal/flate`, `walk/internal/bzip2` | copies of the inflater and the bzip2 decoder of the Go standard library, changed to decode as the libraries of binwalk. Each has the BSD `LICENSE` of Go. golangci-lint skips them |
+| `walk/format/` | the formats of the walker, one package for each group, `internal/zipsig`, the ZIP parser that two groups share, and `all`, which imports every one |
+| `upstream/file/`, `upstream/binwalk/` | the checkouts of file and of binwalk, the references for the port and the walker. git ignores them. Do not edit them (D25) |
+| `test/` | the test module, with its own `go.mod` (D30): the oracle program in `test/cmd/oracle`, its client and the tests of file in `test/oracle`, the corpus in `test/corpus`, the tests of the compiler and the table in `test/rules`, and the gates of the port and of the walker in `test/diff` |
+| `test/.oracle/`, `test/.binwalk/` | what `test/oracle/build.sh` and `test/oracle/build-binwalk.sh` build. git ignores them |
+| `test/corpus/testdata/walk/` | the samples of the formats of the walker, made for this repository |
 | `test/corpus/testdata/` | compressed files and Office documents that the corpus adds to the files of file and of `testdata/` |
 | `test/size/` | `TestPortSize`, which measures the bytes that the port adds to a program (D38) |
 
@@ -157,8 +166,13 @@ Build the oracle, then run the test module:
 
 ```bash
 test/oracle/build.sh
+test/oracle/build-binwalk.sh
 cd test && go test ./...
 ```
+
+`test/oracle/build-binwalk.sh` needs the checkout of binwalk and the
+toolchain of Rust. Without its build, the gate of the walker,
+`TestWalkMatchesBinwalk`, skips.
 
 After a change of the compiler of the rules, or of the commit of file that
 the port follows, write the table again. `TestTableMatchesTheCompiler` fails

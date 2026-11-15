@@ -204,5 +204,10 @@ is under the MIT license, in `LICENSE`. The port translates `file`, which is
 under its own BSD license, in `LICENSE.file`. Each translated Go file opens
 with the notice of the file of `file` that it translates, and the compiled
 rules carry the notices of `file` and of its rule files, in
-`internal/table/LICENSE`. A program that ships magic must reproduce these
-notices in its documentation.
+`internal/table/LICENSE`. The binary walker in `walk/`, which is not done
+yet, translates binwalk, which is under the MIT license, in `LICENSE.binwalk`,
+and holds copies of two decoders of the Go standard library, under the BSD
+license of Go, in `walk/internal/flate/LICENSE` and
+`walk/internal/bzip2/LICENSE`.
+A program that ships magic must reproduce these notices in its
+documentation.

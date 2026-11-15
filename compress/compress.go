@@ -17,6 +17,7 @@ package compress
 
 import (
 	"fmt"
+	"io"
 	"sync"
 )
 
@@ -71,4 +72,34 @@ func Lookup(m Method) (string, Decoder, bool) {
 	defer mu.RUnlock()
 	e, ok := decoders[m]
 	return e.name, e.decoder, ok
+}
+
+// Stream decodes the first stream at the start of src, as the library of C
+// decodes it, and writes its data to w. It returns the bytes of src that
+// the stream takes, and stops at the end of the stream, before any data that
+// follows it. The binary walker uses it to find where a stream ends (D52).
+type Stream func(src []byte, w io.Writer) (int, error)
+
+var streams = map[Method]Stream{}
+
+// RegisterStream makes s the stream decoder of m. It panics when m has one,
+// or when s is nil.
+func RegisterStream(m Method, s Stream) {
+	mu.Lock()
+	defer mu.Unlock()
+	if s == nil {
+		panic(fmt.Sprintf("compress: RegisterStream of method %d with a nil decoder", m))
+	}
+	if _, ok := streams[m]; ok {
+		panic(fmt.Sprintf("compress: RegisterStream called twice for method %d", m))
+	}
+	streams[m] = s
+}
+
+// LookupStream returns the stream decoder of m, and false when m has none.
+func LookupStream(m Method) (Stream, bool) {
+	mu.RLock()
+	defer mu.RUnlock()
+	s, ok := streams[m]
+	return s, ok
 }

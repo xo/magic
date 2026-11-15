@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -38,9 +39,10 @@ var (
 	isoDate   = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 )
 
-// TestTheLedgerIsComplete holds D26. The ledger of file has one line for each
-// upstream commit after the base commit, in the order of upstream, with no
-// gap. Each line has a status, and a ported line names the magic commit.
+// TestTheLedgerIsComplete holds D26. The ledger of each upstream has one line
+// for each upstream commit after the base commit, in the order of upstream,
+// with no gap. Each line has a status, and a ported line names the magic
+// commit.
 //
 // A gap in the ledger is a change of upstream that nobody looked at. The
 // checkout is needed to find one, so that part runs only where the checkout
@@ -49,16 +51,29 @@ func TestTheLedgerIsComplete(t *testing.T) {
 	t.Parallel()
 	ups := readTSV(t, filepath.Join(upstreamDir, "upstreams.tsv"),
 		[]string{"repository", "url", "checkout", "ports", "magic", "policy", "base", "matched"})
-	if len(ups) != 1 || ups[0][0] != "file" {
-		t.Fatalf("expected one upstream, file, in %s. See D26", filepath.Join(upstreamDir, "upstreams.tsv"))
+	names := make([]string, 0, len(ups))
+	for _, up := range ups {
+		names = append(names, up[0])
 	}
-	up := ups[0]
-	checkout, base, matched := up[2], up[6], up[7]
-	if !fullHash.MatchString(base) {
-		t.Errorf("the base commit of file is %q, not a full hash. See D26", base)
+	if want := []string{"file", "binwalk"}; !slices.Equal(names, want) {
+		t.Fatalf("expected the upstreams %q in %s, got: %q. See D26 and D49", want, filepath.Join(upstreamDir, "upstreams.tsv"), names)
 	}
+	for _, up := range ups {
+		t.Run(up[0], func(t *testing.T) {
+			t.Parallel()
+			checkLedger(t, up)
+		})
+	}
+}
 
-	path := filepath.Join(upstreamDir, "file.tsv")
+// checkLedger checks the ledger of one upstream, the row up of
+// upstreams.tsv.
+func checkLedger(t *testing.T, up []string) {
+	name, checkout, base, matched := up[0], up[2], up[6], up[7]
+	if !fullHash.MatchString(base) {
+		t.Errorf("the base commit of %s is %q, not a full hash. See D26", name, base)
+	}
+	path := filepath.Join(upstreamDir, name+".tsv")
 	rows := readTSV(t, path, []string{"upstream", "date", "status", "magic", "note"})
 	status := map[string]bool{"ported": true, "not-applicable": true, "pending": true}
 	seen := make(map[string]bool)

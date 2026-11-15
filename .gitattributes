@@ -1,1 +1,3 @@
 * text=auto eol=lf
+# The samples of the walker are bytes, and git must not change their line ends.
+test/corpus/testdata/walk/** binary

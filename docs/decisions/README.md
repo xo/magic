@@ -50,7 +50,7 @@ D32 set the project up as a port of libmagic.
 | D27 | [Each part of file has a policy: port, replace or none](D027-each-part-of-file-has-a-policy-port-replace-or-none.md) | Decided. Amended by D36. Amended by D35 |
 | D28 | [xz and zstd come from other repositories when they are needed](D028-xz-and-zstd-come-from-other-repositories-when-they-are-needed.md) | Decided. Amends D14. Amended by D45 |
 | D29 | [The port keeps the license of file](D029-the-port-keeps-the-license-of-file.md) | Decided |
-| D30 | [The test module holds the oracle](D030-the-test-module-holds-the-oracle.md) | Decided. Amended by D33 |
+| D30 | [The test module holds the oracle](D030-the-test-module-holds-the-oracle.md) | Decided. Amended by D33. Amended by D58 |
 | D31 | [The binary walker comes after the port](D031-the-binary-walker-comes-after-the-port.md) | Decided |
 | D32 | [The documents name no maintainer](D032-the-documents-name-no-maintainer.md) | Decided |
 | D33 | [The reference is libmagic 5.48 built against glibc](D033-the-reference-is-libmagic-5-48-built-against-glibc.md) | Decided. Amends D30. Amended by D48 |
@@ -68,8 +68,8 @@ D32 set the project up as a port of libmagic.
 | D45 | [A program chooses its decoders with a blank import](D045-a-program-chooses-its-decoders-with-a-blank-import.md) | Decided. Amends D28. Amends D38 |
 | D46 | [The port runs one walk for each form of a result](D046-the-port-runs-one-walk-for-each-form-of-a-result.md) | Decided. Amends D42 |
 | D47 | [The switch removes the cgo package and its archives](D047-the-switch-removes-the-cgo-package-and-its-archives.md) | Decided. Amends D1. Amends D2. Amends D3. Amends D5. Amends D7. Amends D9. Amends D10. Amends D12. Amends D13. Amends D16. Amends D17. Amends D18. Amends D19. Amends D20. Amends D21. Amends D43 |
-| D48 | [The port follows the commit of the ledger, and its bugs](D048-the-port-follows-the-commit-of-the-ledger-and-its-bugs.md) | Decided. Amends D11. Amends D33 |
-| D49 | [The walker follows binwalk 3, and its names](D049-the-walker-follows-binwalk-3-and-its-names.md) | Decided |
+| D48 | [The port follows the commit of the ledger, and its bugs](D048-the-port-follows-the-commit-of-the-ledger-and-its-bugs.md) | Decided. Amends D11. Amends D33. Amended by D58 |
+| D49 | [The walker follows binwalk 3, and its names](D049-the-walker-follows-binwalk-3-and-its-names.md) | Decided. Amended by D58 |
 | D50 | [The walker is the package walk, and returns an iterator](D050-the-walker-is-the-package-walk-and-returns-an-iterator.md) | Decided |
 | D51 | [The walker carries the keys of binwalk](D051-the-walker-carries-the-keys-of-binwalk.md) | Decided |
 | D52 | [The walker is built in five phases](D052-the-walker-is-built-in-five-phases.md) | Decided |
@@ -78,3 +78,4 @@ D32 set the project up as a port of libmagic.
 | D55 | [The test data of mimetype stays as it is](D055-the-test-data-of-mimetype-stays-as-it-is.md) | Decided |
 | D56 | [CI runs golangci-lint](D056-ci-runs-golangci-lint.md) | Decided. Amends D12 |
 | D57 | [CI passes before a tag](D057-ci-passes-before-a-tag.md) | Decided |
+| D58 | [CI runs no oracle](D058-ci-runs-no-oracle.md) | Decided. Amends D30. Amends D48. Amends D49 |

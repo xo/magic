@@ -131,8 +131,9 @@ one magic commit for each upstream commit (D26):
    commit.
 6. Move `matched` in `upstreams.tsv` to this commit, if no earlier commit is
    still `pending`. Then `test/oracle/build.sh` and `go generate` in
-   `internal/table` use it without `ORACLE_COMMIT` or `-commit`, and CI checks
-   that the table is current.
+   `internal/table` use it without `ORACLE_COMMIT` or `-commit`, and
+   `TestTableMatchesTheCompiler` in the test module checks that the table is
+   current. CI runs no oracle (D58), so run the test module.
 
 The commit message of magic names the upstream commit: its short hash and its
 subject.

@@ -454,7 +454,7 @@ were questions 17 to 22 of `docs/PLAN.md`.
 
 | Question | Answer | Decision |
 | --- | --- | --- |
-| 17. Does the walker follow binwalk 3, with a ledger and an oracle? | Yes. CI builds binwalk with Rust for the test module | D49 |
+| 17. Does the walker follow binwalk 3, with a ledger and an oracle? | Yes. The test module builds binwalk with Rust. CI does not run it (D58) | D49, D58 |
 | 18. Is the walker a package of this module? | Yes, `github.com/xo/magic/walk` | D50 |
 | 19. Does the walker take the names and descriptions of binwalk? | Yes, as they are, so that the oracle compares them as text | D49 |
 | 20. Is the API an iterator with `SkipMembers`? | Yes, as this document gives it | D50 |

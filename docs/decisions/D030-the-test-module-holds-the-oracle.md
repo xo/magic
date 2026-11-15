@@ -1,6 +1,6 @@
 # D30. The test module holds the oracle
 
-Status: Decided. Amended by D33.
+Status: Decided. Amended by D33. Amended by D58.
 
 An oracle is a second program that gives the right answer for a test. The
 oracle of the port is libmagic itself, built from the checkout at the base

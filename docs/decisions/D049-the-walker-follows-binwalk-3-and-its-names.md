@@ -1,6 +1,6 @@
 # D49. The walker follows binwalk 3, and its names
 
-Status: Decided.
+Status: Decided. Amended by D58.
 
 The maintainers decided on 2026-11-15 that the binary walker follows binwalk
 3, as the port follows file. This answers questions 17 and 19 of

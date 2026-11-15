@@ -183,8 +183,9 @@ cd internal/table && go generate
 ```
 
 `gofmt -l .` prints nothing when every file is formatted. CI runs the other
-commands on every runner, builds for the targets that have no runner, and
-runs the test module against the oracle (D12, D47). On linux/amd64, CI also
+commands on every runner, and builds for the targets that have no runner
+(D12, D47). It runs no oracle (D58): run the test module before you push a
+change of the port or the walker. On linux/amd64, CI also
 fails on a file that gofmt would change (D54), and runs golangci-lint with
 `.golangci.yml` (D56). Run it before you push:
 

@@ -76,8 +76,8 @@ Tag only when a maintainer says so. The root module has a plain semver tag.
    commit before any tag (D57).
 2. Tag the root, such as `git tag v0.5.0`, and push the tag.
 3. In `compress/xz/go.mod` and `compress/zstd/go.mod`, require the new
-   version of the root. In `test/go.mod`, require it too, or `go vet` stops
-   in the oracle job. Push that commit, and wait for CI again.
+   version of the root. In `test/go.mod`, require it too. Push that commit,
+   and wait for CI again.
 4. Tag the two modules with the same version, and push the tags.
 
 Never move a tag that is published, because the module proxy caches it. The

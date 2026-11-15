@@ -1,6 +1,6 @@
 # D48. The port follows the commit of the ledger, and its bugs
 
-Status: Decided. Amends D11. Amends D33.
+Status: Decided. Amends D11. Amends D33. Amended by D58.
 
 The maintainers decided on 2026-11-15, with phase 5, that the port gives the
 output of file at the commit that the ledger names, and not of the release

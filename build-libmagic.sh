@@ -454,6 +454,18 @@ build_libmagic() {
       ;;
   esac
 
+  # A function that the C library of zig has, and the C library of a user may
+  # not, must not be found by configure. zig 0.17 has strndup in its MinGW, and
+  # the MinGW gcc of the GitHub runner does not, so v0.3.1 did not link there.
+  # zig 0.17 builds macOS against the SDK of macOS 27, which has pipe2. Without
+  # these, file uses its own strndup in softmagic.c and pipe() in funcs.c, as
+  # v0.3.0 did. Compare the undefined symbols of each new archive with the last
+  # release to find the next one. See docs/BACKLOG.md.
+  case "$os" in
+    macos)   cache+=(ac_cv_func_pipe2=no) ;;
+    windows) cache+=(ac_cv_func_strndup=no) ;;
+  esac
+
   ( cd "$build"
     ./configure --host="$host" "${CONFIGURE_BUILD[@]}" --prefix="$prefix" \
       --enable-static --disable-shared \

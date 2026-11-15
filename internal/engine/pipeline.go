@@ -189,7 +189,7 @@ func (st *state) done(m, rv int, codeMime string) int {
 
 // checkDone is checkdone of funcs.c: a result ends the search, unless the
 // flags ask for every result.
-func (st *state) checkDone(rv *int) bool {
+func (st *state) checkDone(_ *int) bool {
 	if st.flags&Continue == 0 {
 		return true
 	}

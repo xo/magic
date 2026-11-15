@@ -60,20 +60,20 @@ const (
 )
 
 // decodeXZ is uncompressxzlib of compress.c on xz data: one call of
-// lzma_code, which gives what it can decode, at most max bytes.
-func decodeXZ(src []byte, max int) ([]byte, error) {
+// lzma_code, which gives what it can decode, at most limit bytes.
+func decodeXZ(src []byte, limit int) ([]byte, error) {
 	r, err := xz.NewReader(bytes.NewReader(src))
 	if err != nil {
 		return nil, lzmaError(err, lzmaFormatError)
 	}
-	out, err := read(r, max)
+	out, err := read(r, limit)
 	if err != nil || len(out) > 0 {
 		return out, err
 	}
 	// The reader of xz gives nothing until it read a whole block, where
 	// liblzma gives what it decoded of a cut block. So decode the LZMA2 data
 	// of the first block alone.
-	if part, ok := firstBlock(src, max); ok {
+	if part, ok := firstBlock(src, limit); ok {
 		return part, nil
 	}
 	return out, nil
@@ -81,7 +81,7 @@ func decodeXZ(src []byte, max int) ([]byte, error) {
 
 // firstBlock decodes the LZMA2 data of the first block of an xz stream, as
 // far as the data goes. It returns false when the block is not plain LZMA2.
-func firstBlock(src []byte, max int) ([]byte, bool) {
+func firstBlock(src []byte, limit int) ([]byte, bool) {
 	const streamHeader = 12
 	if len(src) <= streamHeader {
 		return nil, false
@@ -124,13 +124,13 @@ func firstBlock(src []byte, max int) ([]byte, bool) {
 	if dictProp < 40 {
 		dictCap = (2 | int(dictProp&1)) << (dictProp/2 + 11)
 	}
-	return firstChunk(src[p+size:], uint32(dictCap), max)
+	return firstChunk(src[p+size:], uint32(dictCap), limit)
 }
 
 // firstChunk decodes the first LZMA2 chunk of a block, as far as the data
 // goes. The LZMA2 reader drops a cut chunk, but the first chunk is LZMA data
 // with its properties, which the reader of .lzma decodes as far as it goes.
-func firstChunk(d []byte, dictCap uint32, max int) ([]byte, bool) {
+func firstChunk(d []byte, dictCap uint32, limit int) ([]byte, bool) {
 	if len(d) == 0 {
 		return nil, true
 	}
@@ -143,7 +143,7 @@ func firstChunk(d []byte, dictCap uint32, max int) ([]byte, bool) {
 		}
 		n := int(d[1])<<8 | int(d[2]) + 1
 		data := d[3:]
-		return data[:min(n, len(data), max)], true
+		return data[:min(n, len(data), limit)], true
 	case control < 0xe0:
 		return nil, false
 	}
@@ -159,7 +159,7 @@ func firstChunk(d []byte, dictCap uint32, max int) ([]byte, bool) {
 	if err != nil {
 		return nil, true
 	}
-	out, err := read(r, max)
+	out, err := read(r, limit)
 	if err != nil {
 		return nil, false
 	}
@@ -167,12 +167,12 @@ func firstChunk(d []byte, dictCap uint32, max int) ([]byte, bool) {
 }
 
 // decodeLZMA is uncompressxzlib of compress.c on lzma data.
-func decodeLZMA(src []byte, max int) ([]byte, error) {
+func decodeLZMA(src []byte, limit int) ([]byte, error) {
 	r, err := lzma.NewReader(bytes.NewReader(src))
 	if err != nil {
 		return nil, lzmaError(err, lzmaOptionsError)
 	}
-	return read(r, max)
+	return read(r, limit)
 }
 
 // lzmaError gives the error of liblzma for err. Data that is cut short is
@@ -184,14 +184,14 @@ func lzmaError(err error, code int) error {
 	return fmt.Errorf("unxz error %d", code)
 }
 
-func read(r io.Reader, max int) ([]byte, error) {
+func read(r io.Reader, limit int) ([]byte, error) {
 	var out []byte
 	buf := make([]byte, 32*1024)
 	cut := false
-	for len(out) < max {
-		n, err := r.Read(buf[:min(len(buf), max-len(out))])
+	for len(out) < limit {
+		n, err := r.Read(buf[:min(len(buf), limit-len(out))])
 		out = append(out, buf[:n]...)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

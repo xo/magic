@@ -1,0 +1,32 @@
+version: "2"
+
+# The linters of the go-pedantry skill, for golangci-lint 2 (D56). gosimple is
+# part of staticcheck in version 2, and usetesting takes the place of tenv.
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gocritic
+    - revive
+    - errorlint
+    - nilerr
+    - wrapcheck
+    - prealloc
+    - unconvert
+    - usetesting
+  settings:
+    staticcheck:
+      checks:
+        - all
+        # The engine keeps each condition of libmagic as C writes it (D34).
+        - -QF1001
+        # The defaults of staticcheck leave these out.
+        - -ST1000
+        - -ST1003
+        - -ST1016
+        - -ST1020
+        - -ST1021
+        - -ST1022

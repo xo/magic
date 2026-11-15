@@ -4,7 +4,7 @@ import "testing"
 
 func TestRegister(t *testing.T) {
 	t.Parallel()
-	d := func(src []byte, max int) ([]byte, error) { return src, nil }
+	d := func(src []byte, _ int) ([]byte, error) { return src, nil }
 	Register(LZMA, "xzlib", d)
 	name, got, ok := Lookup(LZMA)
 	if !ok || name != "xzlib" || got == nil {

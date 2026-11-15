@@ -17,73 +17,56 @@ walker is next (D31).
 
 ## CI
 
-1. The `macos-13` job never gets a runner, and GitHub cancels it after 24
-   hours. On 2026-11-15 the `macos-14` job was cancelled before it started
-   too, so no macOS target has CI. Source: runs 34652233745, 34732334420 and
-   43657823492 of the `test` workflow. Open question 3 in `docs/PLAN.md`.
-2. CI does not run `gofmt`. `dedf132` removed the step. Source: D12. Open
-   question 4 in `docs/PLAN.md`.
-3. The repository has no `.golangci.yml`, and CI runs no linter. Source:
-   found while this setup was written. Open question 7 in `docs/PLAN.md`.
-4. The `cross` job builds the targets that have no runner, such as
+1. The `cross` job builds the targets that have no runner, such as
    freebsd/amd64 and linux/arm, and runs nothing on them. Source: D47.
-5. A rule for CI before a tag is not decided. resvg tagged before CI finished.
-   For `v0.3.0`, the tags waited for CI. Source: open question 8 in
-   `docs/PLAN.md`.
 
 ## The package
 
-6. The text of an error of the engine is the text of libmagic, which is not
+2. The text of an error of the engine is the text of libmagic, which is not
    in the gerund form that `go-pedantry` asks for. The maintainers have not
    decided which one wins. Source: the switch, D47.
-7. Add a test that reads the `go.mod` files and fails on a `require` line for
+3. Add a test that reads the `go.mod` files and fails on a `require` line for
    a module that the maintainers did not approve, as dburl does. D28 and D45
    approve `github.com/ulikunitz/xz` and `github.com/klauspost/compress` for
    the decoder modules only. Source: D14, D28 and D45.
-8. A `Result` comes from one walk of the engine for each of its forms (D46).
+4. A `Result` comes from one walk of the engine for each of its forms (D46).
    One walk that records every form would be about four times faster, and
    must give the same answers to `TestAPIMatchesTheOracle`.
-9. `DetectFile` leaves out the extension and the Apple code of a file that is
+5. `DetectFile` leaves out the extension and the Apple code of a file that is
    not regular. libmagic, asked for them, reads a link as the file it points
    to, and fails on a directory. Source: `ExampleDetectFile`, D47.
 
-10. A `sync.Pool` that reuses the buffers of a detection, as D42 expects. A
-    file of 7 MiB takes a new buffer of that size on each call. Source:
-    `docs/API.md`.
+6. A `sync.Pool` that reuses the buffers of a detection, as D42 expects. A
+   file of 7 MiB takes a new buffer of that size on each call. Source:
+   `docs/API.md`.
 
-11. The engine is about as fast as libmagic on most files, and slower on
-    text. Measured on 2026-11-15 on linux/amd64, one walk for the MIME type
-    took, with the cgo package of `v0.4.1` and with the port: 5.1 µs and
-    4.3 µs for a Word document, 20 µs and 26 µs for a GIF image, 35 µs and
-    37 µs for an XLSX file, 252 µs and 334 µs for random bytes, and 334 µs and
-    1.24 ms for UTF-8 text. Most of the time on text is in Go's `regexp`.
-    The port now converts the bytes at each offset to Latin-1 once for a
-    detection, not once for each rule (D44), which made text 13.5% faster, to
-    1.09 ms. The rest is the matching of `regexp` itself. Source: a benchmark
-    of both packages, D46.
+7. The engine is about as fast as libmagic on most files, and slower on
+   text. Measured on 2026-11-15 on linux/amd64, one walk for the MIME type
+   took, with the cgo package of `v0.4.1` and with the port: 5.1 µs and
+   4.3 µs for a Word document, 20 µs and 26 µs for a GIF image, 35 µs and
+   37 µs for an XLSX file, 252 µs and 334 µs for random bytes, and 334 µs and
+   1.24 ms for UTF-8 text. Most of the time on text is in Go's `regexp`.
+   The port now converts the bytes at each offset to Latin-1 once for a
+   detection, not once for each rule (D44), which made text 13.5% faster, to
+   1.09 ms. The rest is the matching of `regexp` itself. Source: a benchmark
+   of both packages, D46.
 
 ## The tests
 
-12. The case names and 16 of the 21 files in `testdata/` came from the tests
-    of `github.com/gabriel-vasile/mimetype`, which is under the MIT license.
-    The repository does not carry its copyright notice. Two case names, "json
-    issue#239" and "jar in zip #639", cite issues of mimetype and do not name
-    it. Source: `magic_test.go` and `testdata/`, compared with mimetype
-    v1.4.15. Open question 5 in `docs/PLAN.md`.
-13. Some cases in `mimeTests` repeat. "kml 2.2" and "ogg" are each the
-    name of two cases, so `go test` reports the second one as `ogg#01`.
-    "rpm" has the same input as "rpm 1". "svg with comment prefix" has the
-    same input as "svg no xml header" and holds no comment. Source:
-    `magic_test.go`.
-14. Three items of the testing plan of `docs/PLAN.md` are not done. Source:
-    the testing plan, items 4 to 6.
-    - A test made for each feature of the rule format, so that every type,
-      relation and modifier runs at least once.
-    - Go fuzzing of the reader of the rules, the engine and each parser, for
-      panics and for limits on memory and time.
-    - A report of the coverage of statements for each package.
+8. Some cases in `mimeTests` repeat. "kml 2.2" and "ogg" are each the
+   name of two cases, so `go test` reports the second one as `ogg#01`.
+   "rpm" has the same input as "rpm 1". "svg with comment prefix" has the
+   same input as "svg no xml header" and holds no comment. Source:
+   `magic_test.go`.
+9. Three items of the testing plan of `docs/PLAN.md` are not done. Source:
+   the testing plan, items 4 to 6.
+   - A test made for each feature of the rule format, so that every type,
+     relation and modifier runs at least once.
+   - Go fuzzing of the reader of the rules, the engine and each parser, for
+     panics and for limits on memory and time.
+   - A report of the coverage of statements for each package.
 
-15. `TestOracle` compares MIME types only with the `file` on `PATH`. The test
+10. `TestOracle` compares MIME types only with the `file` on `PATH`. The test
     module compares every output with the oracle, so this is a quick check,
     and not the gate.
 
@@ -91,32 +74,32 @@ walker is next (D31).
 
 Phases 2 to 4 found these. None of them changes an answer of the gates.
 
-16. The decoders of Go do not name each fault of damaged compressed data as
+11. The decoders of Go do not name each fault of damaged compressed data as
     the libraries of C do. zlib prints "invalid distance too far back" where
     the port prints "data error", and libzstd and liblzma give other codes
     for some damaged frames. `TestPortMatchesTheOracle` lists these answers
     apart. A port of the error checks of inflate would close the zlib part.
     Source: `inftrees.c` and `inflate.c` of zlib.
-17. The reason that libmagic prints after "Composite Document File V2
+12. The reason that libmagic prints after "Composite Document File V2
     Document" can come from `errno` of an earlier step, because a stream of
     length 0 sets no `errno`. The port does not copy this. Source:
     `cdf_read_long_sector_chain` and `file_trycdf`.
-18. The oracle keeps one cookie for all questions. libmagic keeps the value
+13. The oracle keeps one cookie for all questions. libmagic keeps the value
     of the last rule and the levels of continuation in the cookie, and a
     string compare reads past the end of a string. So an answer of libmagic
     can depend on the question before it. The port starts each detection
     from zero. No test has found a difference. Source: `ms_value` and `c.li`
     in `file.h`.
-19. The decoded table holds every entry as a struct of 432 bytes, so a
+14. The decoded table holds every entry as a struct of 432 bytes, so a
     program holds about 10.8 MB of rules in memory, as libmagic does. A
     smaller form in memory would cost a change of the engine.
-20. The xz decoder gives the data of the first block of a cut stream, where
+15. The xz decoder gives the data of the first block of a cut stream, where
     liblzma gives the data of every block that it reached.
-21. With `MAGIC_NO_COMPRESS_FORK`, file 5.48 refuses its libraries and still
+16. With `MAGIC_NO_COMPRESS_FORK`, file 5.48 refuses its libraries and still
     runs outside programs. The port copies the first part and never runs a
     program (D36, D45).
 
-22. Report two bugs of file to upstream (D48). Since `bcbb6064`,
+17. Report two bugs of file to upstream (D48). Since `bcbb6064`,
     `cdf_read_property_info` checks the length of a section against its copy
     of the header on the stack, so on Linux it reads no property of a Compound
     Document. Since `7fdb7bf9`, `file_fsmagic` prints the name of each flag of
@@ -128,7 +111,8 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
 The maintainers want magic to do the work of binwalk too: walk a binary file,
 such as a firmware image, find the files that are embedded in it at any
 offset, and extract them. It comes after the port of libmagic is finished
-(D31). On 2026-11-15 the three models of the plan said this about it.
+(D31). `docs/WALKER.md` is its design, with the formats of binwalk 3. On
+2026-11-15 the three models of the plan said this about it.
 
 How it works:
 
@@ -140,9 +124,9 @@ How it works:
    file, and the signatures of binwalk find a file inside another. Gemini Pro
    suggests translating the signatures of binwalk 2 into the rule format, so
    that one engine reads both. Gemini Pro also said that binwalk 2 uses
-   libmagic inside. That is not checked, and neither is the claim that
-   binwalk 3 is a rewrite in Rust. Check both, and the license of the
-   signatures, before any are copied.
+   libmagic inside. That is wrong: binwalk 2 replaces libmagic with code of
+   its own. binwalk 3 is a rewrite in Rust under the MIT license, and its
+   signatures are code, not rules. `docs/WALKER.md` gives the details.
 3. Keep three steps apart: find a candidate, find where it ends, and extract
    it. A match does not say how long the embedded file is, so each format needs
    code that finds its end.
@@ -172,11 +156,7 @@ port:
 | OpenAI Pro | 36 to 76, of which the firmware file systems are 18 to 40 |
 | The plan | 23 to 48: scanning 5 to 9, common extraction 5 to 8, SquashFS 3 to 6, CramFS, JFFS2 and UBIFS 10 to 25 |
 
-Before the work starts, the maintainers decide:
-
-1. Which formats, and in which order. SquashFS first is the advice of all
-   three models.
-2. Whether the signatures of binwalk can be translated, after a check of their
-   license.
-3. Whether the walker is a package of this module, such as `walk`, or a module
-   of its own.
+The maintainers answered the questions of the design with D49 to D52: the
+walker follows binwalk 3 with an oracle, it is the package `walk`, it carries
+the keys of binwalk, and it is built in the phases W1 to W5. The license of
+binwalk is MIT, so its signatures are translated with its notice.

@@ -32,7 +32,7 @@ D32 set the project up as a port of libmagic.
 | D9 | [A handle is safe to share across goroutines](D009-a-handle-is-safe-to-share-across-goroutines.md) | Decided. Amends D6. Amended by D47 |
 | D10 | [A lookup can use other flags and leave the flags of the handle alone](D010-a-lookup-can-use-other-flags-and-leave-the-flags-of-the-handle-alone.md) | Decided. Amended by D47 |
 | D11 | [The tests expect what libmagic 5.48 reports, and file(1) is the reference](D011-the-tests-expect-what-libmagic-5-48-reports-and-file-1-is-the-reference.md) | Decided. Amended by D48 |
-| D12 | [CI builds and tests only on hosted runners](D012-ci-builds-and-tests-only-on-hosted-runners.md) | Decided. Amended by D16. Amended by D47 |
+| D12 | [CI builds and tests only on hosted runners](D012-ci-builds-and-tests-only-on-hosted-runners.md) | Decided. Amended by D16. Amended by D47. Amended by D53. Amended by D54. Amended by D56 |
 | D13 | [The script builds against the newest stable release of each dependency](D013-the-script-builds-against-the-newest-stable-release-of-each-dependency.md) | Decided. Amended by D47 |
 | D14 | [The module has no Go dependencies](D014-the-module-has-no-go-dependencies.md) | Proposed. Amended by D28 |
 | D15 | [magic is set up for coding agents as every xo repository is](D015-magic-is-set-up-for-coding-agents-as-every-xo-repository-is.md) | Decided. Amended by D23 |
@@ -69,3 +69,12 @@ D32 set the project up as a port of libmagic.
 | D46 | [The port runs one walk for each form of a result](D046-the-port-runs-one-walk-for-each-form-of-a-result.md) | Decided. Amends D42 |
 | D47 | [The switch removes the cgo package and its archives](D047-the-switch-removes-the-cgo-package-and-its-archives.md) | Decided. Amends D1. Amends D2. Amends D3. Amends D5. Amends D7. Amends D9. Amends D10. Amends D12. Amends D13. Amends D16. Amends D17. Amends D18. Amends D19. Amends D20. Amends D21. Amends D43 |
 | D48 | [The port follows the commit of the ledger, and its bugs](D048-the-port-follows-the-commit-of-the-ledger-and-its-bugs.md) | Decided. Amends D11. Amends D33 |
+| D49 | [The walker follows binwalk 3, and its names](D049-the-walker-follows-binwalk-3-and-its-names.md) | Decided |
+| D50 | [The walker is the package walk, and returns an iterator](D050-the-walker-is-the-package-walk-and-returns-an-iterator.md) | Decided |
+| D51 | [The walker carries the keys of binwalk](D051-the-walker-carries-the-keys-of-binwalk.md) | Decided |
+| D52 | [The walker is built in five phases](D052-the-walker-is-built-in-five-phases.md) | Decided |
+| D53 | [CI runs on the current macOS runners](D053-ci-runs-on-the-current-macos-runners.md) | Decided. Amends D12 |
+| D54 | [CI checks the format with gofmt](D054-ci-checks-the-format-with-gofmt.md) | Decided. Amends D12 |
+| D55 | [The test data of mimetype stays as it is](D055-the-test-data-of-mimetype-stays-as-it-is.md) | Decided |
+| D56 | [CI runs golangci-lint](D056-ci-runs-golangci-lint.md) | Decided. Amends D12 |
+| D57 | [CI passes before a tag](D057-ci-passes-before-a-tag.md) | Decided |

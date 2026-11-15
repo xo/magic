@@ -89,7 +89,8 @@ func (e *Engine) FileContext(ctx context.Context, path string, c Call) (string, 
 		}
 		return st.result(1)
 	}
-	defer f.Close()
+	// The file is only read, so an error of Close changes nothing.
+	defer func() { _ = f.Close() }()
 	fi, err := f.Stat()
 	if err != nil {
 		return st.result(1)
@@ -100,7 +101,7 @@ func (e *Engine) FileContext(ctx context.Context, path string, c Call) (string, 
 	}
 	data := make([]byte, size)
 	n, err := io.ReadFull(f, data)
-	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
 		st.errorf("cannot read `%s' (%s)", path, strerror(err))
 		return st.result(-1)
 	}

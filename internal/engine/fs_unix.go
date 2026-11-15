@@ -59,8 +59,8 @@ func rdev(fi fs.FileInfo) string {
 	if !ok {
 		return ""
 	}
-	maj, min := devNumbers(uint64(sys.Rdev))
-	return fmt.Sprintf(" (%d/%d)", maj, min)
+	major, minor := devNumbers(uint64(sys.Rdev)) //nolint:unconvert // Rdev is not a uint64 on every system
+	return fmt.Sprintf(" (%d/%d)", major, minor)
 }
 
 // devNumbers splits a device number as major and minor of the C library.

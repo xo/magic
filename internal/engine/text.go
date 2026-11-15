@@ -376,7 +376,6 @@ func (st *state) ascmagicWithEncoding(b *buffer, ubuf []rune, code, typ string, 
 	if nbytes <= 1 {
 		return 0
 	}
-	rv := -1
 	needSep := false
 	if len(ubuf) > 0 && st.flags&NoCheckSoft == 0 {
 		// Run the rules for text on the text as UTF-8.
@@ -385,7 +384,8 @@ func (st *state) ascmagicWithEncoding(b *buffer, ubuf []rune, code, typ string, 
 			return 0
 		}
 		bb := &buffer{data: u, file: b.file}
-		if rv = st.softmagic(bb, rules.FlagTextTest, text); rv == 0 {
+		rv := st.softmagic(bb, rules.FlagTextTest, text)
+		if rv == 0 {
 			rv = -1
 		} else {
 			needSep = true

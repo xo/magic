@@ -79,7 +79,7 @@ func checkFormat(e *Entry) error {
 	}
 	rest, err := checkFormatType(desc[i+1:], e.Type)
 	if err != nil {
-		return fmt.Errorf("printf format is %v for type %v in description %q", err, e.Type, desc)
+		return fmt.Errorf("printf format is %w for type %v in description %q", err, e.Type, desc)
 	}
 	if bytes.IndexByte(rest, '%') >= 0 {
 		return fmt.Errorf("too many format strings for %v with description %q", e.Type, desc)

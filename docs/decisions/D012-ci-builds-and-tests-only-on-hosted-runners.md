@@ -1,6 +1,6 @@
 # D12. CI builds and tests only on hosted runners
 
-Status: Decided. Amended by D16. Amended by D47.
+Status: Decided. Amended by D16. Amended by D47. Amended by D53. Amended by D54. Amended by D56.
 
 Commit `dbcd068` (2026-09-12) added `.github/workflows/test.yml`. Commit
 `dedf132` (2026-09-12) removed two parts of it.

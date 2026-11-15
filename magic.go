@@ -192,7 +192,8 @@ func DetectFile(ctx context.Context, name string, opts ...Option) (Result, error
 		if err != nil {
 			return Result{}, fmt.Errorf("magic: %w", err)
 		}
-		f.Close()
+		// The file is only read, so an error of Close changes nothing.
+		_ = f.Close()
 	}
 	e, err := load()
 	if err != nil {

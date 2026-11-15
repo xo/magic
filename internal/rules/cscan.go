@@ -29,8 +29,6 @@ func isAlnum(c byte) bool { return isDigit(c) || isAlpha(c) }
 
 func isUpper(c byte) bool { return c >= 'A' && c <= 'Z' }
 
-func isPrint(c byte) bool { return c >= 0x20 && c <= 0x7e }
-
 func lower(c byte) byte {
 	if isUpper(c) {
 		return c + 'a' - 'A'

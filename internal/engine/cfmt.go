@@ -218,11 +218,12 @@ func (sp *spec) format(out []byte, conv byte, bits int, a carg) []byte {
 		v := sext(true, bits, a.i)
 		prefix := ""
 		u := uint64(v)
-		if v < 0 {
+		switch {
+		case v < 0:
 			prefix, u = "-", -uint64(v)
-		} else if sp.plus {
+		case sp.plus:
 			prefix = "+"
-		} else if sp.space {
+		case sp.space:
 			prefix = " "
 		}
 		return sp.integer(out, prefix, u, 10, false)
@@ -284,12 +285,13 @@ func (sp *spec) integer(out []byte, prefix string, u uint64, base int, upper boo
 func (sp *spec) float(out []byte, conv byte, v float64) []byte {
 	upper := conv == 'E' || conv == 'F' || conv == 'G'
 	prefix := ""
-	if math.Signbit(v) {
+	switch {
+	case math.Signbit(v):
 		prefix = "-"
 		v = -v
-	} else if sp.plus {
+	case sp.plus:
 		prefix = "+"
-	} else if sp.space {
+	case sp.space:
 		prefix = " "
 	}
 	if math.IsInf(v, 0) || math.IsNaN(v) {
@@ -404,7 +406,7 @@ func fmtNextFromPrecision(f string, p int) (int, int) {
 		return p, fcUnknown
 	}
 	c := f[p]
-	any := sh || lg || quad || ld
+	sized := sh || lg || quad || ld
 	switch {
 	case strings.IndexByte("diouxX", c) >= 0:
 		switch {
@@ -429,7 +431,7 @@ func fmtNextFromPrecision(f string, p int) (int, int) {
 		}
 		return p, fcIntPointer
 	case strings.IndexByte("DOU", c) >= 0:
-		if any {
+		if sized {
 			return p, fcUnknown
 		}
 		return p, fcLong
@@ -442,17 +444,17 @@ func fmtNextFromPrecision(f string, p int) (int, int) {
 		}
 		return p, fcDouble
 	case c == 'c':
-		if any {
+		if sized {
 			return p, fcUnknown
 		}
 		return p, fcInt
 	case c == 's':
-		if any {
+		if sized {
 			return p, fcUnknown
 		}
 		return p, fcString
 	case c == 'p':
-		if any {
+		if sized {
 			return p, fcUnknown
 		}
 		return p, fcLong

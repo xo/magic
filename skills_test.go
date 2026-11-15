@@ -2,6 +2,7 @@ package magic_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"maps"
 	"os"
@@ -92,7 +93,7 @@ func skillFiles(t *testing.T, dir string) map[string]string {
 		case d.Type().IsRegular():
 			body, err := fs.ReadFile(os.DirFS(dir), path)
 			if err != nil {
-				return err
+				return fmt.Errorf("reading %s: %w", path, err)
 			}
 			out[path] = string(body)
 		}

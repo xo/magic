@@ -319,20 +319,7 @@ The numbers do not repeat. Question 1 was answered by D28, question 9 by D43,
 and questions 10 to 16 by D33 to D39. `docs/API.md` has the API, which D42
 settled. Questions 2 and 6 were about the archives, which D47 removed: the
 `cross` job of CI now builds linux/arm with the other targets that have no
-runner, and no archive holds libgnurx. The next question is question 17.
-
-3. The `macos-13` job never gets a runner, and on 2026-11-15 the `macos-14`
-   job was cancelled before it started, so macOS has no CI. `actionlint`
-   lists `macos-15-intel` and `macos-15` as current runners. Do the macOS jobs
-   move to them?
-4. `dedf132` removed the `gofmt` step from CI. Is it wanted back?
-5. The test data and the case names came from gabriel-vasile/mimetype, which
-   is under the MIT license (D11). Does the repository carry the copyright
-   notice of mimetype, and name mimetype in the two case names that cite its
-   issues?
-7. The repository has no `.golangci.yml`, and CI runs no linter. Is one
-   wanted?
-8. resvg tagged its modules before CI finished on the commit, and no rule
-   requires CI to pass first. Is there a rule that CI passes before any tag?
-   `v0.3.1` was tagged while CI was down, and CI found its Windows fault four
-   days later.
+runner, and no archive holds libgnurx. Question 3 was answered by D53,
+questions 4, 5, 7 and 8 by D54 to D57, and questions 17 to 22, about the
+binary walker, by D49 to D52. No question is open. The next question is
+question 23.

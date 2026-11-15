@@ -167,7 +167,7 @@ func TestAll(t *testing.T) {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 	exp := []string{"JSON text data", ", ASCII text, with no line terminators"}
-	var got []string
+	got := make([]string, 0, len(r.Matches))
 	for _, m := range r.Matches {
 		got = append(got, m.Description)
 	}
@@ -180,8 +180,12 @@ func TestDecompress(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
-	w.Write([]byte("hello world\n"))
-	w.Close()
+	if _, err := w.Write([]byte("hello world\n")); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
 	r, err := Detect(context.Background(), buf.Bytes(), WithDecompress())
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)

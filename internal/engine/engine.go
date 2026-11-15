@@ -334,7 +334,7 @@ func (e *Engine) ReaderAtContext(ctx context.Context, r io.ReaderAt, size int64,
 func (st *state) result(rv int) (string, error) {
 	if st.ctx != nil {
 		if err := st.ctx.Err(); err != nil {
-			return "", err
+			return "", err //nolint:wrapcheck // magic.go wraps it with ErrStopped
 		}
 	}
 	if st.err != nil {

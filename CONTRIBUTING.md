@@ -19,7 +19,10 @@ gofmt -l .
 `-race` needs cgo. Without a C compiler, run the tests with
 `CGO_ENABLED=0 go test ./...`. `gofmt -l .` prints nothing when every file is
 formatted. CI runs the build, `go vet` and the tests on Linux, macOS and
-Windows, and builds the package for the targets that have no runner.
+Windows, and builds the package for the targets that have no runner. On
+linux/amd64, CI also fails on a file that is not formatted (D54), and runs
+golangci-lint with `.golangci.yml` (D56). Run `golangci-lint run ./...` before
+you push. A `nolint` comment gives its reason on the same line.
 
 If `file` 5.48 is on your `PATH`, `TestOracle` compares the MIME types of the
 package with it.
@@ -69,10 +72,12 @@ Tag only when a maintainer says so. The root module has a plain semver tag.
 `compress/xz` and `compress/zstd` are modules of their own, tagged
 `compress/xz/vX.Y.Z` and `compress/zstd/vX.Y.Z`.
 
-1. Push the commit to `main`, and wait for CI.
+1. Push the commit to `main`, and wait for CI. Every job must pass on the
+   commit before any tag (D57).
 2. Tag the root, such as `git tag v0.5.0`, and push the tag.
 3. In `compress/xz/go.mod` and `compress/zstd/go.mod`, require the new
-   version of the root. Push that commit.
+   version of the root. In `test/go.mod`, require it too, or `go vet` stops
+   in the oracle job. Push that commit, and wait for CI again.
 4. Tag the two modules with the same version, and push the tags.
 
 Never move a tag that is published, because the module proxy caches it. The

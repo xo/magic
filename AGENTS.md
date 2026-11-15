@@ -42,12 +42,12 @@ of `docs/PLAN.md`. Ask a maintainer.
 | changing an expected value in a test | D11 and D48. The test module checks the value against the oracle |
 | changing a decoder of compressed data, or its dependency | D27, D28 and D45, then the package in `compress/` |
 | translating a file of libmagic | D29: the Go file opens with the notice of the C file, and names it |
-| tagging a release | D39 and D47, then `CONTRIBUTING.md`, under Release. Tag only when a maintainer says so |
+| tagging a release | D39, D47 and D57, then `CONTRIBUTING.md`, under Release. Tag only when a maintainer says so, and only after CI passes on the commit |
 | changing CI | D12, then `.github/workflows/test.yml` |
 | looking for work that is known and not done | `docs/BACKLOG.md` |
 | working on the port of libmagic | D22 to D48, then `docs/PLAN.md` and `docs/BACKLOG.md`, under The port |
 | following upstream, or adding to the ledger | `docs/UPSTREAM.md`, D25, D26 and D48. After `matched` moves, run `test/oracle/build.sh` and `go generate` in `internal/table` |
-| the binary walker | D31, then `docs/BACKLOG.md`, under The binary walker. It is the next work |
+| the binary walker | D31 and D49 to D52, then `docs/WALKER.md`, and `docs/BACKLOG.md` under The binary walker. It is the next work |
 | writing a document, a code comment, an error message or a commit message | the `simple-english` skill. Load it first |
 | writing or reviewing Go code | the `go-pedantry` skill, then Go conventions below |
 | adding or updating an agent skill | `CONTRIBUTING.md`, under Agent skills, and D15 |
@@ -114,6 +114,7 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `.github/workflows/test.yml` | CI |
 | `docs/PLAN.md` | the plan of the port, the reviews and the open questions |
 | `docs/API.md` | the design of the new API, with its reviews and the answers of D42 |
+| `docs/WALKER.md` | the design of the binary walker, the formats of binwalk 3, and the answers of D49 to D52 |
 | `docs/decisions/` | every decision, one file each, and the index in `README.md` (D23) |
 | `docs/UPSTREAM.md` | the rules for following upstream |
 | `docs/upstream/` | the list of upstreams, and the ledger of the commits of file (D26) |
@@ -169,8 +170,15 @@ cd internal/table && go generate
 
 `gofmt -l .` prints nothing when every file is formatted. CI runs the other
 commands on every runner, builds for the targets that have no runner, and
-runs the test module against the oracle (D12, D47). The repository has no
-`.golangci.yml`, and CI runs no linter.
+runs the test module against the oracle (D12, D47). On linux/amd64, CI also
+fails on a file that gofmt would change (D54), and runs golangci-lint with
+`.golangci.yml` (D56). Run it before you push:
+
+```bash
+golangci-lint run ./...
+```
+
+A `nolint` comment gives its reason on the same line.
 
 `TestOracle` runs only when `file` 5.48 is on `PATH`, and compares MIME types
 with it. Otherwise it skips.

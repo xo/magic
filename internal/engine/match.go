@@ -140,7 +140,7 @@ func (st *state) match(t *table, start, n int, b *buffer, o uint64, mode rules.F
 	if found == nil {
 		found = &found0
 	}
-	print := st.flags&NoDesc == 0
+	show := st.flags&NoDesc == 0
 	contLevel := 0
 	st.checkMem(contLevel)
 
@@ -213,7 +213,7 @@ func (st *state) match(t *table, start, n int, b *buffer, o uint64, mode rules.F
 
 		if m.Desc[0] != 0 {
 			*found = true
-			if print {
+			if show {
 				*returnval = 1
 				mv.needSep = true
 				mv.printed = true
@@ -283,7 +283,9 @@ func (st *state) match(t *table, start, n int, b *buffer, o uint64, mode rules.F
 				return -1
 			case 0:
 			default:
-				if m.Type == rules.Clear {
+				// The break below leaves the outer switch, as in C, so
+				// this chain is not a switch of its own.
+				if m.Type == rules.Clear { //nolint:gocritic // see above
 					st.li[contLevel].gotMatch = false
 				} else if st.li[contLevel].gotMatch {
 					if m.Type == rules.Default {
@@ -304,7 +306,7 @@ func (st *state) match(t *table, start, n int, b *buffer, o uint64, mode rules.F
 				if m.Desc[0] != 0 {
 					*found = true
 				}
-				if print && m.Desc[0] != 0 {
+				if show && m.Desc[0] != 0 {
 					*returnval = 1
 					if !mv.printed {
 						mv.printed = true
@@ -987,7 +989,8 @@ func cvtNum(m *rules.Entry, v uint64, bits int) (uint64, bool) {
 			if mt == 0 {
 				return 0, false
 			}
-			if signed {
+			switch {
+			case signed:
 				a, d := ext(trunc(v)), ext(mt)
 				if bits >= 32 && d == -1 && a == sext(true, bits, 1<<(bits-1)) {
 					return 0, false
@@ -997,9 +1000,9 @@ func cvtNum(m *rules.Entry, v uint64, bits int) (uint64, bool) {
 				} else {
 					v = uint64(a % d)
 				}
-			} else if m.MaskOp&rules.OpMask == rules.OpDivide {
+			case m.MaskOp&rules.OpMask == rules.OpDivide:
 				v = trunc(v) / mt
-			} else {
+			default:
 				v = trunc(v) % mt
 			}
 		}
@@ -1098,9 +1101,9 @@ func (st *state) convert(m *rules.Entry, flip bool) bool {
 		if !ok {
 			return false
 		}
-		max := uint64(len(p) - sz)
-		if l >= max {
-			l = max
+		room := uint64(len(p) - sz)
+		if l >= room {
+			l = room
 		}
 		copy(p[:l], p[sz:uint64(sz)+l])
 		p[l] = 0

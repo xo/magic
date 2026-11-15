@@ -57,12 +57,12 @@ const (
 	fcomment = 1 << 4
 )
 
-var errTooShort = errors.New("File too short")
+var errTooShort = errors.New("File too short") //nolint:staticcheck // the text of libmagic
 
 // gzipped is uncompressgzipped of compress.c: it skips the header of gzip
 // and inflates the deflate data after it. libmagic ignores the checksum at
 // the end.
-func gzipped(src []byte, max int) ([]byte, error) {
+func gzipped(src []byte, limit int) ([]byte, error) {
 	n := len(src)
 	if n < 4 {
 		return nil, errTooShort
@@ -93,27 +93,27 @@ func gzipped(src []byte, max int) ([]byte, error) {
 	if start >= n {
 		return nil, errTooShort
 	}
-	return inflate(flate.NewReader(bytes.NewReader(src[start:])), max)
+	return inflate(flate.NewReader(bytes.NewReader(src[start:])), limit)
 }
 
 // zlibData is uncompresszlib of compress.c with the header of zlib, which
 // checks the Adler-32 at the end.
-func zlibData(src []byte, max int) ([]byte, error) {
+func zlibData(src []byte, limit int) ([]byte, error) {
 	r, err := zlib.NewReader(bytes.NewReader(src))
 	switch {
 	case errors.Is(err, zlib.ErrDictionary):
 		return nil, errors.New("need dictionary")
 	case err != nil:
 		// The header is cut, and inflate waits for more.
-		return nil, nil
+		return nil, nil //nolint:nilerr // zlib gives no output and no error
 	}
-	return inflate(r, max)
+	return inflate(r, limit)
 }
 
-// inflate is one call of inflate of zlib: what it can decode, at most max
+// inflate is one call of inflate of zlib: what it can decode, at most limit
 // bytes. Data that is cut short is not an error.
-func inflate(r io.Reader, max int) ([]byte, error) {
-	out, err := readMax(r, max)
+func inflate(r io.Reader, limit int) ([]byte, error) {
+	out, err := readMax(r, limit)
 	var ce flate.CorruptInputError
 	switch {
 	case err == nil || errors.Is(err, io.ErrUnexpectedEOF):
@@ -128,18 +128,18 @@ func inflate(r io.Reader, max int) ([]byte, error) {
 	return nil, err
 }
 
-// readMax reads r to its end or to max bytes.
-func readMax(r io.Reader, max int) ([]byte, error) {
+// readMax reads r to its end or to limit bytes.
+func readMax(r io.Reader, limit int) ([]byte, error) {
 	var out []byte
 	buf := make([]byte, 32*1024)
-	for len(out) < max {
-		n, err := r.Read(buf[:min(len(buf), max-len(out))])
+	for len(out) < limit {
+		n, err := r.Read(buf[:min(len(buf), limit-len(out))])
 		out = append(out, buf[:n]...)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return out, nil
 		}
 		if err != nil {
-			return out, err
+			return out, err //nolint:wrapcheck // inflate names the error by its kind
 		}
 	}
 	return out, nil

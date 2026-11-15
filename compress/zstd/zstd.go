@@ -64,8 +64,8 @@ const (
 const maxWindow = 1 << 27
 
 // decode is uncompresszstd of compress.c: one call of
-// ZSTD_decompressStream, which gives what it can decode, at most max bytes.
-func decode(src []byte, max int) ([]byte, error) {
+// ZSTD_decompressStream, which gives what it can decode, at most limit bytes.
+func decode(src []byte, limit int) ([]byte, error) {
 	// libzstd reads nothing until it holds the whole header of the frame,
 	// and only then checks it.
 	if len(src) < headerSize(src) {
@@ -79,10 +79,10 @@ func decode(src []byte, max int) ([]byte, error) {
 	defer d.Close()
 	var out []byte
 	buf := make([]byte, 32*1024)
-	for len(out) < max {
-		n, err := d.Read(buf[:min(len(buf), max-len(out))])
+	for len(out) < limit {
+		n, err := d.Read(buf[:min(len(buf), limit-len(out))])
 		out = append(out, buf[:n]...)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

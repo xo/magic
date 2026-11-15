@@ -175,6 +175,7 @@ A file that cannot be opened is an error now, where libmagic gave the text
 | `AGENTS.md` | the rules for a coding agent. `CLAUDE.md` imports it |
 | `docs/PLAN.md` | the plan of the port and its phases |
 | `docs/API.md` | the design of the API |
+| `docs/WALKER.md` | the design of the binary walker, and the formats of binwalk |
 | `docs/decisions/` | every decision, one file each, with an index |
 | `docs/UPSTREAM.md` | the rules for following `file`, the upstream of the port |
 | `docs/BACKLOG.md` | the work that is known and not done, and the binary walker |

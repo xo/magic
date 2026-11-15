@@ -33,11 +33,11 @@ const (
 	Zstd
 )
 
-// Decoder decompresses src. It returns at most max bytes, and as much of the
+// Decoder decompresses src. It returns at most limit bytes, and as much of the
 // data as it can decode when src is cut short. The text of its error is the
 // text that libmagic prints for the error of its library, such as
 // "bunzip error -4".
-type Decoder func(src []byte, max int) ([]byte, error)
+type Decoder func(src []byte, limit int) ([]byte, error)
 
 type entry struct {
 	name    string

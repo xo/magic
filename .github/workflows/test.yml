@@ -49,6 +49,21 @@ jobs:
       - name: Build
         run: go build ./...
 
+      # gofmt and the linters give the same answer on every runner, so one
+      # runner runs them (D54, D56).
+      - name: Check the format
+        if: ${{ matrix.name == 'linux/amd64' }}
+        run: |
+          test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Lint
+        if: ${{ matrix.name == 'linux/amd64' }}
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+          golangci-lint run ./...
+          (cd compress/xz && golangci-lint run ./...)
+          (cd compress/zstd && golangci-lint run ./...)
+
       - name: Vet
         run: go vet ./...
 

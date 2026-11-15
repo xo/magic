@@ -56,15 +56,15 @@ const (
 )
 
 // decode is uncompressbzlib of compress.c: one call of BZ2_bzDecompress,
-// which gives the blocks that it can decode, at most max bytes.
-func decode(src []byte, max int) ([]byte, error) {
+// which gives the blocks that it can decode, at most limit bytes.
+func decode(src []byte, limit int) ([]byte, error) {
 	r := bzip2.NewReader(bytes.NewReader(src))
 	var out []byte
 	buf := make([]byte, 32*1024)
-	for len(out) < max {
-		n, err := r.Read(buf[:min(len(buf), max-len(out))])
+	for len(out) < limit {
+		n, err := r.Read(buf[:min(len(buf), limit-len(out))])
 		out = append(out, buf[:n]...)
-		if err == io.EOF || errors.Is(err, io.ErrUnexpectedEOF) {
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 			break
 		}
 		if err != nil {

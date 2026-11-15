@@ -1,6 +1,31 @@
-<p align="center">
-  <img src="docs/logo/magic.svg" alt="magic" width="480">
-</p>
+<div align="center">
+  <img src="docs/logo/magic.svg" alt="magic" width="480"/>
+  <br/>
+  <a href="#install" title="Install">Install</a> |
+  <a href="#use" title="Use">Use</a> |
+  <a href="#versions" title="Versions">Versions</a> |
+  <a href="#documents" title="Documents">Documents</a> |
+  <a href="#related-projects" title="Related Projects">Related Projects</a> |
+  <a href="https://pkg.go.dev/github.com/xo/magic" title="Go Reference">Reference</a> |
+  <a href="https://github.com/xo/magic/releases" title="Releases">Releases</a> |
+  <a href="CONTRIBUTING.md" title="Contributing">Contributing</a>
+</div>
+
+<br/>
+
+[![Unit Tests][magic-ci-status]][magic-ci]
+[![Go Reference][goref-magic-status]][goref-magic]
+[![Releases][release-status]][releases]
+[![Discord Discussion][discord-status]][discord]
+
+[magic-ci]: https://github.com/xo/magic/actions/workflows/test.yml "Test CI"
+[magic-ci-status]: https://github.com/xo/magic/actions/workflows/test.yml/badge.svg "Test CI"
+[goref-magic]: https://pkg.go.dev/github.com/xo/magic "Go Reference"
+[goref-magic-status]: https://pkg.go.dev/badge/github.com/xo/magic.svg "Go Reference"
+[release-status]: https://img.shields.io/github/v/release/xo/magic?display_name=tag "Latest Release"
+[releases]: https://github.com/xo/magic/releases "Releases"
+[discord]: https://discord.gg/WDWAgXwJqN "Discord Discussion"
+[discord-status]: https://img.shields.io/discord/829150509658013727.svg?label=Discord&logo=Discord&colorB=7289da&style=flat-square "Discord Discussion"
 
 # magic
 
@@ -153,6 +178,23 @@ A file that cannot be opened is an error now, where libmagic gave the text
 | `docs/decisions/` | every decision, one file each, with an index |
 | `docs/UPSTREAM.md` | the rules for following `file`, the upstream of the port |
 | `docs/BACKLOG.md` | the work that is known and not done, and the binary walker |
+
+## Related projects
+
+`magic` is one of the `xo` projects. Several of them, as `magic` does, port a
+library of C or Rust to pure Go. Each one is a separate repository:
+
+| Project | What it is |
+| --- | --- |
+| [okage](https://github.com/xo/okage) | A Go port of tiny-skia and resvg, which draws 2D graphics and SVG images |
+| [transit](https://github.com/xo/transit) | A Go port of tree-sitter, a parser of source code |
+| [rline](https://github.com/xo/rline) | A readline package for Go, which reads a line of text that a person edits. It started as a port of isocline |
+| [zuzu](https://github.com/xo/zuzu) | Draws DOT graphs, Mermaid diagrams, and Vega and Vega-Lite charts |
+| [ox](https://github.com/xo/ox) | Parses the flags and arguments of a command line |
+| [usql](https://github.com/xo/usql) | A command line client for SQL and NoSQL databases |
+
+[iv](https://github.com/kenshaw/iv), an image viewer for the terminal, uses
+`magic` to find the type of each file that it shows.
 
 ## License
 

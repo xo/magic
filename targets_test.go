@@ -70,7 +70,9 @@ func TestEveryTargetIsWired(t *testing.T) {
 			t.Errorf("%s/go.mod has no go directive. See D18", dir)
 		}
 		want := slices.Clone(archives)
-		if strings.HasPrefix(name, "windows_") {
+		// Windows has no POSIX regex, and on Linux the archives carry their
+		// own, so that glibc and musl give the same answer (D43).
+		if strings.HasPrefix(name, "windows_") || strings.HasPrefix(name, "linux_") {
 			want = append(want, "libgnurx.a")
 		}
 		for _, a := range want {

@@ -6,9 +6,9 @@ require (
 	github.com/xo/magic/libmagic/darwin_amd64/v5 v5.48.2
 	github.com/xo/magic/libmagic/darwin_arm64/v5 v5.48.2
 	github.com/xo/magic/libmagic/freebsd_amd64/v5 v5.48.1
-	github.com/xo/magic/libmagic/linux_amd64/v5 v5.48.1
-	github.com/xo/magic/libmagic/linux_arm/v5 v5.48.1
-	github.com/xo/magic/libmagic/linux_arm64/v5 v5.48.1
+	github.com/xo/magic/libmagic/linux_amd64/v5 v5.48.2
+	github.com/xo/magic/libmagic/linux_arm/v5 v5.48.2
+	github.com/xo/magic/libmagic/linux_arm64/v5 v5.48.2
 	github.com/xo/magic/libmagic/windows_amd64/v5 v5.48.2
 	github.com/xo/magic/libmagic/windows_arm64/v5 v5.48.2
 )

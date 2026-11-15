@@ -12,3 +12,6 @@ src/
 
 # The checkout of file, the reference for the port. See D25.
 /upstream/
+
+# The oracle that test/oracle/build.sh builds. See D30.
+/test/.oracle/

@@ -24,9 +24,17 @@ On 2026-11-15 magic is a cgo wrapper of libmagic, at `v0.4.0`:
 4. CI tests linux/amd64, linux/arm64, windows/amd64 and windows/arm64. macOS
    has no CI, and freebsd/amd64 has no runner.
 
-The port has not started. Phase 0, this plan, is open. On 2026-11-15 the
-maintainers answered questions 10 to 16 (D33 to D39), set the new API and its
-entry `magic.Detect` (D40), and moved the module to Go 1.27 (D41).
+On 2026-11-15 the maintainers answered questions 10 to 16 (D33 to D39), set the
+new API and its entry `magic.Detect` (D40, D42), moved the module to Go 1.27
+(D41), and started phase 1, which closes phase 0. Questions 2 to 9 concern
+the cgo package, not the port, and wait.
+
+Phase 1 has its code, and its gate holds on the build host. The oracle gives
+each of the 88 expected results of the tests of file, and the cgo package,
+built for musl, gives the same answer as the oracle to each of 11,571
+questions on 1,544 inputs. D30 lists the parts. The harness also found that
+the cgo package crashed when it was linked with glibc, and D43 fixed it: the
+gate now passes with gcc and glibc, and with zig and musl.
 
 The tags `v0.1.0` (`7b14d3f`), `v0.2.0` (`dedf132`) and `v0.2.1` (`a629036`)
 held the archives in the root module. `v0.3.0` gave each target a module
@@ -62,7 +70,7 @@ The numbers are for file 5.48, the base commit (D26), measured on 2026-11-15.
 | Rules that print a float with `%g`, `%f` or `%e` | 31 |
 | Lines that use `indirect` | 65 |
 | Lines that use `name` or `use`, which are subroutines | 2,149 |
-| The tests in `tests/` | 83 input files and 93 expected results |
+| The tests in `tests/` | 88 test files and 100 expected results at the tag. The release tarball has 83 and 93 |
 
 Upstream has 90 commits after the base commit (D26). At its newest commit the
 tests have 113 input files and 125 expected results. The ledger in
@@ -156,13 +164,13 @@ coverage of lines does not prove the same output. The maintainers deferred it
 (D37): the aim is to pass the great majority of the tests of file, and to
 judge the rest when the port is close. The plan has these gates:
 
-1. The count of the 93 expected results of file that pass goes up and never
-   down, and each one that fails has a reason (D37). All tests of this
+1. The count of the 88 tests of file that pass goes up and never down, and
+   each one that fails has a reason (D37). All tests of this
    repository pass.
 2. The differential test of D30: the oracle and the port read the same bytes
    with the same flags, and any difference fails.
 3. A corpus of real files, cut and damaged copies of them, and the files that
-   the maintainers approve, through the differential test. The 83 test files
+   the maintainers approve, through the differential test. The 88 test files
    of file are a gate, and they are far too few to be the whole check.
 4. A test for each feature of the rule format, made for the purpose, so that
    every type, relation and modifier runs at least once.
@@ -286,9 +294,9 @@ All three:
 
 ## Open questions
 
-The numbers do not repeat. Question 1 was answered by D28, and questions 10 to
-16 by D33 to D39. `docs/API.md` has the API, which D42 settled. The next
-question is question 17.
+The numbers do not repeat. Question 1 was answered by D28, question 9 by D43,
+and questions 10 to 16 by D33 to D39. `docs/API.md` has the API, which D42
+settled. The next question is question 17.
 
 2. Is linux/armv7 still a supported target? `magic.go` declares it and the
    script builds it, but no CI job built it after `dedf132` removed the
@@ -311,7 +319,3 @@ question is question 17.
    requires CI to pass first. Is there a rule that CI passes before any tag?
    `v0.3.1` was tagged while CI was down, and CI found its Windows fault four
    days later.
-9. A program that links the Linux archives with glibc gets wrong descriptions
-   (`docs/BACKLOG.md`). The port ends the fault at phase 4. Until then, does
-   magic add glibc builds and musl modules, as resvg has, or does it document
-   the fault and wait for the port?

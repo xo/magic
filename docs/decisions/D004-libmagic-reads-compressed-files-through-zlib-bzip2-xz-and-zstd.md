@@ -1,6 +1,6 @@
 # D4. libmagic reads compressed files through zlib, bzip2, xz and zstd
 
-Status: Decided.
+Status: Decided. Amended by D43.
 
 Commit `7b14d3f` (2026-09-04). Commit `dbcd068` (2026-09-12) added
 `-lshlwapi` to the Windows line.

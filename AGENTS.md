@@ -120,6 +120,8 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `docs/upstream/` | the list of upstreams, and the ledger of the commits of file (D26) |
 | `docs/BACKLOG.md` | the work that is known and not done |
 | `upstream/file/` | the checkout of file, the reference for the port. git ignores it. Do not edit it (D25) |
+| `test/` | the test module, with its own `go.mod` (D30): the oracle program in `test/cmd/oracle`, its client and the tests of file in `test/oracle`, the corpus in `test/corpus`, and the differential test in `test/diff` |
+| `test/.oracle/` | what `test/oracle/build.sh` builds. git ignores it |
 
 `build-libmagic.sh` writes its downloads and build folders to `src/`,
 `.build/`, `.native/`, `.toolchains/` and `.zig-cache/`. `.gitignore` ignores
@@ -140,6 +142,18 @@ go run ./cmd/file testdata/gif.gif testdata/utf8.txt testdata/xlsx.xlsx
 
 `./build-libmagic.sh modules` rewrites the generated module files and builds
 nothing.
+
+The harness of the port is in the test module (D30). It needs the checkout
+of file, the autotools and zig. Build the oracle, then run the test module
+with the C compiler that the archives were built for:
+
+```bash
+test/oracle/build.sh
+cd test && CC="zig cc -target x86_64-linux-musl" go test ./...
+```
+
+The gate also passes with gcc, which links glibc, because the Linux archives
+carry their own regex engine (D43).
 
 `gofmt -l .` prints nothing when every file is formatted. CI runs the other
 four commands on every platform (D12). The repository has no `.golangci.yml`,

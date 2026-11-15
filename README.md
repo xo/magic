@@ -75,13 +75,14 @@ Each platform is a Go module of its own, such as
 platform and no other when it builds. `go get` and `go mod tidy` fetch every
 platform once, because they read the imports for all platforms.
 
-The Linux archives are built for musl. A program that links them with musl,
-such as one built with `zig cc -target x86_64-linux-musl`, gives the same
-descriptions as `file`. A program that links them with glibc, which is the
-default on most Linux systems, builds and runs, and its MIME types are right.
-On linux/amd64, the description of the Netpbm files (`.pbm`, `.pgm` and `.ppm`)
-is wrong with glibc, and no other sample file differed. `docs/BACKLOG.md` has
-the item.
+The Linux archives link with glibc, which is what `gcc` uses on most Linux
+systems, and with musl. They carry their own regex engine, so the output is the
+same either way.
+
+Releases up to `v0.4.0` do not have that engine. Built with `gcc` on Linux,
+they give wrong descriptions for some files, and they can crash with a
+segmentation fault, as on a script that starts with `#! /usr/bin/cmd1`. Use
+`v0.4.1` or later.
 
 The archives for freebsd/amd64 link into a program, and nothing has run them
 yet, because GitHub has no hosted FreeBSD runner. The tests run in CI on
@@ -103,5 +104,5 @@ windows/arm64, with clang from llvm-mingw as the C compiler.
 ## License
 
 The code is under the MIT license. See `LICENSE`. The archives hold libmagic,
-zlib, bzip2, xz and zstd, each under its own license. The Windows archives
-also hold libgnurx, which is under LGPL 2.1.
+zlib, bzip2, xz and zstd, each under its own license. The Windows and Linux
+archives also hold libgnurx, which is under LGPL 2.1.

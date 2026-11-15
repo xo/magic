@@ -98,3 +98,57 @@ jobs:
 
       - name: Smoke test cmd/file
         run: go run ./cmd/file testdata/gif.gif testdata/utf8.txt testdata/xlsx.xlsx
+
+  # The harness of the port (D30, docs/PLAN.md): the oracle is libmagic 5.48
+  # built from file at FILE5_48 against glibc (D33), and the test module
+  # compares the code under test with it. Until the port exists, the code under
+  # test is the cgo package.
+  oracle:
+    name: oracle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.1
+
+      - name: Install the tools that build file
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake libtool make \
+            zlib1g-dev libbz2-dev liblzma-dev libzstd-dev
+
+      - name: Check out file
+        run: git clone --filter=blob:none https://github.com/file/file.git upstream/file
+
+      - name: Build the oracle
+        run: test/oracle/build.sh
+
+      - name: Vet the test module
+        working-directory: test
+        env:
+          CC: zig cc -target x86_64-linux-musl
+        run: go vet ./...
+
+      # The gate runs linked with musl and with glibc. The Linux archives carry
+      # their own regex engine, so both must give the answers of the oracle
+      # (D43).
+      - name: Test the oracle and the gate of phase 1, with musl
+        working-directory: test
+        env:
+          CC: zig cc -target x86_64-linux-musl
+        run: go test -count=1 -v ./...
+
+      - name: Test the gate of phase 1, with glibc
+        working-directory: test
+        run: go test -count=1 -v ./diff
+
+      - name: Test the ledger against upstream
+        run: go test -count=1 -run TestTheLedgerIsComplete -v .

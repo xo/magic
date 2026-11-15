@@ -5,6 +5,6 @@
 package archive
 
 /*
-#cgo LDFLAGS: -L${SRCDIR} -lmagic -lz -lbz2 -llzma -lzstd
+#cgo LDFLAGS: -L${SRCDIR} -lmagic -lgnurx -lz -lbz2 -llzma -lzstd
 */
 import "C"

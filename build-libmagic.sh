@@ -29,7 +29,7 @@
 #   libmagic/magic.mgc.sha256           (the hash of the database before it is compressed)
 #   libmagic/<target>/libmagic.a
 #   libmagic/<target>/libz.a  libbz2.a  liblzma.a  libzstd.a
-#   libmagic/<target>/libgnurx.a        (windows only)
+#   libmagic/<target>/libgnurx.a        (windows and linux only)
 #   libmagic/<target>/go.mod            (each target is a Go module of its own)
 #   libmagic/<target>/link.go           (the #cgo line that links the archives)
 #
@@ -393,8 +393,18 @@ build_bzip2() {
   )
 }
 
+# On Linux, libmagic also uses libgnurx, with the four POSIX names renamed, so
+# that it never calls the regex functions of the C library. The archives are
+# compiled once, and a program links them with glibc or with musl. The two
+# lay out regmatch_t differently: musl uses 8-byte offsets and glibc 4-byte
+# ones. An archive compiled against one and linked with the other reads the
+# offsets of a match wrongly, gives wrong text, and can crash. With the engine
+# and its regex.h inside the archive, the C library does not matter. See D43.
+REGEX_RENAME="-Dregcomp=magic_regcomp -Dregexec=magic_regexec -Dregfree=magic_regfree -Dregerror=magic_regerror"
+
 build_gnurx() {
-  local prefix="$1" build="$2"
+  local prefix="$1" build="$2" os="$3" rename=""
+  if [ "$os" = linux ]; then rename="$REGEX_RENAME"; fi
   fetch_any "mingw-libgnurx-$GNURX_VER" "${GNURX_URLS[@]}" \
     || { echo "       Set GNURX_URL=<working mirror> and re-run." >&2; return 1; }
   rm -rf "$build"; cp -rp "$SRC/mingw-libgnurx-$GNURX_VER" "$build"
@@ -404,7 +414,8 @@ build_gnurx() {
     # separately or you'll get duplicate symbols. Compiling by hand also
     # sidesteps the upstream Makefile, which is built around producing a DLL
     # plus import library.
-    "$CC" -O2 -I. -c regex.c -o regex.o
+    # shellcheck disable=SC2086
+    "$CC" -O2 -I. $rename -c regex.c -o regex.o
     "$AR" rcs libgnurx.a regex.o
     "$RANLIB" libgnurx.a
     inst libgnurx.a "$prefix/lib/libgnurx.a"
@@ -466,13 +477,21 @@ build_libmagic() {
     windows) cache+=(ac_cv_func_strndup=no) ;;
   esac
 
+  # On Linux, the regex of libgnurx under its renamed names (see build_gnurx).
+  local cppflags="-I$prefix/include" libs=""
+  if [ "$os" = linux ]; then
+    cppflags="$cppflags $REGEX_RENAME"
+    libs="-lgnurx"
+  fi
+
   ( cd "$build"
     ./configure --host="$host" "${CONFIGURE_BUILD[@]}" --prefix="$prefix" \
       --enable-static --disable-shared \
       --enable-zlib --enable-bzlib --enable-xzlib --enable-zstdlib \
       --disable-lzlib --disable-libseccomp \
-      CPPFLAGS="-I$prefix/include" \
+      CPPFLAGS="$cppflags" \
       LDFLAGS="-L$prefix/lib" \
+      LIBS="$libs" \
       "${cache[@]}"
     make -j"$JOBS" FILE_COMPILE="$file_compile"
     make install FILE_COMPILE="$file_compile"
@@ -503,6 +522,9 @@ stage_out() {
 write_module() {
   local name="$1" os="$2" libs="-lmagic -lz -lbz2 -llzma -lzstd"
   local major="v${FILE_VER%%.*}"
+  if [ "$os" = linux ]; then
+    libs="-lmagic -lgnurx -lz -lbz2 -llzma -lzstd"
+  fi
   if [ "$os" = windows ]; then
     libs="-lmagic -lgnurx -lz -lbz2 -llzma -lzstd -lshlwapi"
   fi
@@ -596,8 +618,8 @@ for entry in "${TARGETS[@]}"; do
   build_bzip2    "$prefix" "$build/bzip2"
   build_xz       "$prefix" "$build/xz"    "$host"
   build_zstd     "$prefix" "$build/zstd"
-  if [ "$os" = windows ]; then
-    build_gnurx  "$prefix" "$build/gnurx"
+  if [ "$os" = windows ] || [ "$os" = linux ]; then
+    build_gnurx  "$prefix" "$build/gnurx" "$os"
   fi
   build_libmagic "$prefix" "$build/file"  "$host" "$os" "$FILE_COMPILE"
 

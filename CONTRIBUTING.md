@@ -84,6 +84,19 @@ checkout of file in `upstream/file/`, which git ignores. Make it with:
 git clone https://github.com/file/file.git upstream/file
 ```
 
+The test module in `test/` holds the harness (D30). It builds libmagic 5.48
+from the checkout as the oracle, and compares the code under test with it. It
+needs the autotools, the headers of zlib, bzip2, xz and zstd, and zig. Run
+these commands in the root of the repository:
+
+```bash
+test/oracle/build.sh
+```
+
+```bash
+cd test && CC="zig cc -target x86_64-linux-musl" go test ./...
+```
+
 ## Agent skills
 
 The repository carries two agent skills. A skill is a set of instructions

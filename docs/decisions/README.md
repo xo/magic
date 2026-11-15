@@ -24,7 +24,7 @@ D32 set the project up as a port of libmagic.
 | D1 | [The package links static libmagic archives that the repository carries](D001-the-package-links-static-libmagic-archives-that-the-repository-carries.md) | Decided. Amended by D16. Amended by D17. Amended by D19. Amended by D22 |
 | D2 | [build-libmagic.sh cross-compiles the archives with zig cc](D002-build-libmagic-sh-cross-compiles-the-archives-with-zig-cc.md) | Decided. Amended by D16. Amended by D17. Amended by D22 |
 | D3 | [The magic database is embedded, and one copy serves every target](D003-the-magic-database-is-embedded-and-one-copy-serves-every-target.md) | Decided. Amended by D20. Amended by D21 |
-| D4 | [libmagic reads compressed files through zlib, bzip2, xz and zstd](D004-libmagic-reads-compressed-files-through-zlib-bzip2-xz-and-zstd.md) | Decided |
+| D4 | [libmagic reads compressed files through zlib, bzip2, xz and zstd](D004-libmagic-reads-compressed-files-through-zlib-bzip2-xz-and-zstd.md) | Decided. Amended by D43 |
 | D5 | [The API follows the libmagic C API](D005-the-api-follows-the-libmagic-c-api.md) | Decided. Amended by D39 |
 | D6 | [A handle is not safe for concurrent use](D006-a-handle-is-not-safe-for-concurrent-use.md) | Decided. Amended by D9 |
 | D7 | [A closed handle reports an error and never reaches C](D007-a-closed-handle-reports-an-error-and-never-reaches-c.md) | Decided |
@@ -50,7 +50,7 @@ D32 set the project up as a port of libmagic.
 | D27 | [Each part of file has a policy: port, replace or none](D027-each-part-of-file-has-a-policy-port-replace-or-none.md) | Decided. Amended by D36. Amended by D35 |
 | D28 | [xz and zstd come from other repositories when they are needed](D028-xz-and-zstd-come-from-other-repositories-when-they-are-needed.md) | Decided. Amends D14 |
 | D29 | [The port keeps the license of file](D029-the-port-keeps-the-license-of-file.md) | Proposed |
-| D30 | [The test module holds the oracle](D030-the-test-module-holds-the-oracle.md) | Proposed. Amended by D33 |
+| D30 | [The test module holds the oracle](D030-the-test-module-holds-the-oracle.md) | Decided. Amended by D33 |
 | D31 | [The binary walker comes after the port](D031-the-binary-walker-comes-after-the-port.md) | Decided |
 | D32 | [The documents name no maintainer](D032-the-documents-name-no-maintainer.md) | Decided |
 | D33 | [The reference is libmagic 5.48 built against glibc](D033-the-reference-is-libmagic-5-48-built-against-glibc.md) | Decided. Amends D30 |
@@ -63,3 +63,4 @@ D32 set the project up as a port of libmagic.
 | D40 | [The API is new, and `magic.Detect` is its entry](D040-the-api-is-new-and-magic-detect-is-its-entry.md) | Decided. Amended by D42 |
 | D41 | [The module requires Go 1.27](D041-the-module-requires-go-1-27.md) | Decided. Amends D18 |
 | D42 | [The API takes one walk, no Detector, a context, a generic Source and a slice of matches](D042-the-api-takes-one-walk-no-detector-a-context-a-generic-source-and-a-slice-of-matches.md) | Decided. Amends D40 |
+| D43 | [The Linux archives carry their own regex engine](D043-the-linux-archives-carry-their-own-regex-engine.md) | Decided. Amends D4 |

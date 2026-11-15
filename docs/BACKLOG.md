@@ -56,24 +56,22 @@ A check against this kind of fault: compare the undefined symbols of each new
 archive with those of the last release, as was done to find those two. Make
 it a step of the build script, so that no one has to remember it.
 
-8. A program that links the Linux archives with glibc gets a wrong description
-   for Netpbm files. On linux/amd64, a musl link matches `file` on all 21
-   sample files, and a glibc link differs on `pbm.pbm`, `pgm.pgm` and
-   `ppm.ppm`. The cause, found on 2026-11-15: `regmatch_t` is 16 bytes in musl
-   and 8 bytes in glibc, because the offsets are 8 bytes in musl and 4 in
-   glibc. The archives are compiled against musl, so under glibc libmagic reads
-   the match positions wrongly. Every rule that prints a part of a regex match
-   is affected. glibc writes fewer bytes than musl reserves, so memory outside
-   the buffer is not written. Source: found when the zlib 1.4 rebuild was
-   checked. Open question 9 in `docs/PLAN.md`.
-9. `TestOracle` compares MIME types only, so it did not see item 8. Compare
-    the full description with `file` as well. Source: the same check.
-10. On Windows, file 5.48 passes `&ts.tv_sec` where `readcdf.c` wants a
+8. `TestOracle` compares MIME types only, so it did not see the fault of
+    D43. Compare the full description with `file` as well. Source: the same
+    check.
+9. On Windows, file 5.48 passes `&ts.tv_sec` where `readcdf.c` wants a
     `const time_t *`, and the sizes differ. The build keeps the old behavior
     with `-Wno-incompatible-pointer-types`. No sample file reaches the code, so
     no one knows whether the timestamps in a Windows description are wrong.
     Check a newer release of file, and a Compound File with a time property.
     Source: D13, 2026-11-12.
+
+10. A program for linux/arm (32-bit) cannot link the archives with glibc. They
+   are built for musl, and they call the names that musl gives to its 64-bit
+   time functions, such as `__stat_time64`, which glibc does not have. Every
+   release has this. linux/arm64 links with glibc 2.37 and 2.38, and needs
+   `strlcpy`, which glibc has from 2.38, and zig at its default glibc lacks.
+   Source: the glibc links checked for D43, 2026-11-15.
 
 ## The build script
 

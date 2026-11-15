@@ -27,8 +27,9 @@ jobs:
           # Hosted arm64 Linux. Free for public repos; private repos need a
           # paid plan, in which case drop this entry.
           - {name: linux/arm64, os: ubuntu-24.04-arm}
-          - {name: macos/amd64, os: macos-13}
-          - {name: macos/arm64, os: macos-14}
+          # GitHub retired macos-13 and macos-14.
+          - {name: macos/amd64, os: macos-15-intel}
+          - {name: macos/arm64, os: macos-latest}
           - {name: windows/amd64, os: windows-latest}
           # Go does not support -race on windows/arm64.
           - {name: windows/arm64, os: windows-11-arm, norace: true}

@@ -3,7 +3,8 @@
 // Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
 //
 // This file translates src/signatures/ext.rs and src/structures/ext.rs of
-// binwalk.
+// binwalk. binwalk extracts EXT with tsk_recover of The Sleuth Kit, and
+// extractEXT in exttsk.go writes the files that it writes.
 
 package disk
 
@@ -29,6 +30,7 @@ var EXT = &walk.Signature{
 	},
 	Description: "EXT filesystem",
 	Parse:       parseEXT,
+	Extract:     extractEXT,
 }
 
 // parseEXT is ext_parser. The description puts the free blocks after "block

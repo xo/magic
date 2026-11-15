@@ -12,9 +12,8 @@ replace (
 
 require (
 	github.com/klauspost/compress v1.20.3
+	github.com/ulikunitz/xz v0.5.17
 	github.com/xo/magic v0.5.0
 	github.com/xo/magic/compress/xz v0.0.0-00010101000000-000000000000
 	github.com/xo/magic/compress/zstd v0.0.0-00010101000000-000000000000
 )
-
-require github.com/ulikunitz/xz v0.5.17 // indirect

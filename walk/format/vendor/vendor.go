@@ -6,8 +6,9 @@
 // known encrypted firmware, D-Link encrpted_img, D-Link TLV, DLKE, SHRS and
 // DKBS.
 //
-// The walker does not decrypt the data yet. It extracts the formats that
-// binwalk extracts without a key.
+// The package carries no key. It extracts the formats that binwalk extracts
+// without a key. The package encrypted adds the decryption of the others,
+// with the keys of binwalk (D51).
 package vendor
 
 import "github.com/xo/magic/walk"

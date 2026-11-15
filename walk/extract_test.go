@@ -129,7 +129,7 @@ func TestMembersAndExtract(t *testing.T) {
 	if err != nil || string(b) != "XTRT" {
 		t.Errorf("expected %q, got: %q, %v", "XTRT", b, err)
 	}
-	if l, err := os.Readlink(filepath.Join(dir, "d", "link")); err != nil || l != "../dev" {
+	if l, err := os.Readlink(filepath.Join(dir, "d", "link")); err != nil || filepath.ToSlash(l) != "../dev" {
 		t.Errorf("expected %q, got: %q, %v", "../dev", l, err)
 	}
 	// A second extraction finds the files there, fails, and removes what it

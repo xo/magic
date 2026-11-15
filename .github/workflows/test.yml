@@ -124,12 +124,16 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # The tools that make file systems, and 7-Zip, are the oracles of the
+      # files that binwalk extracts with programs (docs/WALKER.md).
       - name: Install the tools that build file
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             autoconf automake libtool make \
-            zlib1g-dev libbz2-dev liblzma-dev libzstd-dev
+            zlib1g-dev libbz2-dev liblzma-dev libzstd-dev \
+            squashfs-tools util-linux-extra xorriso genisoimage \
+            dosfstools mtools e2fsprogs 7zip
 
       - name: Check out file
         run: git clone --filter=blob:none https://github.com/file/file.git upstream/file

@@ -386,11 +386,20 @@ The walker follows binwalk 3 as the port follows libmagic (D49):
    `walk/format/archive` check them against data that Go makes.
 5. `TestWalkRecursesAsBinwalk` walks each input with `WithDepth`, and
    compares the matches of each file inside an extraction with binwalk.
-6. The corpus, from `corpus.Walk`, holds the files of the gates of the port,
+6. `TestWalkSquashFS` makes SquashFS images with mksquashfs, with each
+   compression, and compares the files of the walker with what unsquashfs
+   writes. binwalk extracts SquashFS with sasquatch, a version of
+   unsquashfs. `TestWalkCramFS`, `TestWalkISO9660`, `TestWalkFAT` and
+   `TestWalkEXT` make images with mkfs.cramfs, xorrisofs, mkisofs, mkfs.vfat
+   and mkfs.ext4, and compare the files with the tree, and with 7-Zip where
+   it is installed. `TestWalkJFFS2`, `TestWalkYAFFS` and `TestWalkUBI` write
+   their images themselves, because no tool to make them is installed. Each
+   test skips when its tool is missing.
+7. The corpus, from `corpus.Walk`, holds the files of the gates of the port,
    the test inputs of binwalk, the samples in `test/corpus/testdata/walk/`,
    damaged copies of them, and 200 images. An image holds several of the
    files at random offsets between random bytes, from a fixed seed.
-7. Each parser is fuzzed, in a later step. A parser reads hostile bytes, and
+8. Each parser is fuzzed, in a later step. A parser reads hostile bytes, and
    must not panic or read past its limits.
 
 Five things of binwalk need care in the gates:

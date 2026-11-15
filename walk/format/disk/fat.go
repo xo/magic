@@ -3,7 +3,8 @@
 // Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
 //
 // This file translates src/signatures/fat.rs and src/structures/fat.rs of
-// binwalk.
+// binwalk. binwalk extracts FAT with tsk_recover of The Sleuth Kit, and
+// extractFAT in fattsk.go writes the files that it writes.
 
 package disk
 
@@ -26,6 +27,7 @@ var FAT = &walk.Signature{
 	MagicOffset: fatMagicOffset,
 	Description: "FAT file system",
 	Parse:       parseFAT,
+	Extract:     extractFAT,
 }
 
 // parseFAT is fat_parser.

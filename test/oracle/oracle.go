@@ -39,7 +39,7 @@ const (
 
 // Question is one question for the oracle. Op is "buffer", which reads Data,
 // or "file", which reads the file at Path. Magic names the rule files to load,
-// joined by ':', or is empty for the database of file 5.48.
+// joined by ':', or is empty for the database of the oracle.
 type Question struct {
 	Op    string `json:"op"`
 	Flags int    `json:"flags"`

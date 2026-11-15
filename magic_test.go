@@ -229,8 +229,8 @@ func TestConcurrent(t *testing.T) {
 	wg.Wait()
 }
 
-// mimeTest is one case: the MIME type that libmagic 5.48 reports for s
-// (D11). Some values are less exact than the type that the input "is": a bare
+// mimeTest is one case: the MIME type that libmagic reports for s, at the
+// commit of file that the ledger names (D11, D48). Some values are less exact than the type that the input "is": a bare
 // "PK\x03\x04" is application/octet-stream, not application/zip, because
 // libmagic needs more than the first bytes of a format. That is what libmagic
 // does, and the port copies it.

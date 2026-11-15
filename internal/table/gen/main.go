@@ -13,19 +13,49 @@ import (
 	"os/exec"
 	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/xo/magic/internal/rules"
 )
 
 func main() {
 	repo := flag.String("git", "", "the checkout of file")
-	commit := flag.String("commit", "", "the commit of file")
+	commit := flag.String("commit", "", "the commit of file, which overrides the ledger")
+	ledger := flag.String("ledger", "", "upstreams.tsv, whose column matched, or base, names the commit")
 	out := flag.String("o", "rules.flate", "the file to write")
 	flag.Parse()
+	if *commit == "" && *ledger != "" {
+		c, err := ledgerCommit(*ledger)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "gen: %v\n", err)
+			os.Exit(1)
+		}
+		*commit = c
+	}
 	if err := run(*repo, *commit, *out); err != nil {
 		fmt.Fprintf(os.Stderr, "gen: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// ledgerCommit returns the commit that the port follows: the column matched
+// of the line of file in upstreams.tsv, or base when matched is empty.
+func ledgerCommit(path string) (string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("reading the ledger: %w", err)
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		f := strings.Split(line, "\t")
+		if len(f) < 7 || f[0] != "file" {
+			continue
+		}
+		if len(f) >= 8 && f[7] != "" {
+			return f[7], nil
+		}
+		return f[6], nil
+	}
+	return "", fmt.Errorf("reading the ledger: no line for file in %s", path)
 }
 
 // show returns a file of the checkout at the commit.

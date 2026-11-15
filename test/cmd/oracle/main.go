@@ -1,7 +1,8 @@
 //go:build oracle
 
 // Command oracle answers questions with the reference libmagic of D33: file
-// 5.48 built from the checkout against the C library of the host. The tests
+// at the commit that the ledger names (D48), built from the checkout against
+// the C library of the host. The tests
 // of the test module start it and talk to it, one JSON object a line on
 // standard input and output. test/oracle/build.sh builds it.
 //

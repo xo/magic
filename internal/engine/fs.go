@@ -49,7 +49,8 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 //
-// This file translates src/fsmagic.c, src/magic.c of file 5.48 to Go (D29).
+// This file translates src/fsmagic.c, src/magic.c of file to Go, at the commit
+// that docs/upstream/upstreams.tsv names (D29, D48).
 
 package engine
 
@@ -195,14 +196,15 @@ func (st *state) fsmagic(fn string) int {
 	m := fi.Mode()
 	ret := 1
 	if mime == 0 && !silent {
-		if m&fs.ModeSetuid != 0 {
-			st.printf("%ssetuid", comma())
-		}
-		if m&fs.ModeSetgid != 0 {
-			st.printf("%ssetgid", comma())
-		}
-		if m&fs.ModeSticky != 0 {
-			st.printf("%ssticky", comma())
+		// pr_flags of fsmagic.c prints each name before its comma, so two
+		// flags print as "setuidsetgid, ".
+		for _, f := range []struct {
+			mode fs.FileMode
+			name string
+		}{{fs.ModeSetuid, "setuid"}, {fs.ModeSetgid, "setgid"}, {fs.ModeSticky, "sticky"}} {
+			if m&f.mode != 0 {
+				st.printf("%s%s", f.name, comma())
+			}
 		}
 	}
 	say := func(sub, desc string) {

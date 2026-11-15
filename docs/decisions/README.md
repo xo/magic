@@ -31,7 +31,7 @@ D32 set the project up as a port of libmagic.
 | D8 | [The code is under the MIT license](D008-the-code-is-under-the-mit-license.md) | Decided |
 | D9 | [A handle is safe to share across goroutines](D009-a-handle-is-safe-to-share-across-goroutines.md) | Decided. Amends D6. Amended by D47 |
 | D10 | [A lookup can use other flags and leave the flags of the handle alone](D010-a-lookup-can-use-other-flags-and-leave-the-flags-of-the-handle-alone.md) | Decided. Amended by D47 |
-| D11 | [The tests expect what libmagic 5.48 reports, and file(1) is the reference](D011-the-tests-expect-what-libmagic-5-48-reports-and-file-1-is-the-reference.md) | Decided |
+| D11 | [The tests expect what libmagic 5.48 reports, and file(1) is the reference](D011-the-tests-expect-what-libmagic-5-48-reports-and-file-1-is-the-reference.md) | Decided. Amended by D48 |
 | D12 | [CI builds and tests only on hosted runners](D012-ci-builds-and-tests-only-on-hosted-runners.md) | Decided. Amended by D16. Amended by D47 |
 | D13 | [The script builds against the newest stable release of each dependency](D013-the-script-builds-against-the-newest-stable-release-of-each-dependency.md) | Decided. Amended by D47 |
 | D14 | [The module has no Go dependencies](D014-the-module-has-no-go-dependencies.md) | Proposed. Amended by D28 |
@@ -53,7 +53,7 @@ D32 set the project up as a port of libmagic.
 | D30 | [The test module holds the oracle](D030-the-test-module-holds-the-oracle.md) | Decided. Amended by D33 |
 | D31 | [The binary walker comes after the port](D031-the-binary-walker-comes-after-the-port.md) | Decided |
 | D32 | [The documents name no maintainer](D032-the-documents-name-no-maintainer.md) | Decided |
-| D33 | [The reference is libmagic 5.48 built against glibc](D033-the-reference-is-libmagic-5-48-built-against-glibc.md) | Decided. Amends D30 |
+| D33 | [The reference is libmagic 5.48 built against glibc](D033-the-reference-is-libmagic-5-48-built-against-glibc.md) | Decided. Amends D30. Amended by D48 |
 | D34 | [The port copies the behavior of libmagic, not its code](D034-the-port-copies-the-behavior-of-libmagic-not-its-code.md) | Decided. Amends D22. Amends D26 |
 | D35 | [The rules are compiled into tables when the package is built](D035-the-rules-are-compiled-into-tables-when-the-package-is-built.md) | Decided. Amends D27 |
 | D36 | [magic runs no outside program](D036-magic-runs-no-outside-program.md) | Decided. Amends D27 |
@@ -68,3 +68,4 @@ D32 set the project up as a port of libmagic.
 | D45 | [A program chooses its decoders with a blank import](D045-a-program-chooses-its-decoders-with-a-blank-import.md) | Decided. Amends D28. Amends D38 |
 | D46 | [The port runs one walk for each form of a result](D046-the-port-runs-one-walk-for-each-form-of-a-result.md) | Decided. Amends D42 |
 | D47 | [The switch removes the cgo package and its archives](D047-the-switch-removes-the-cgo-package-and-its-archives.md) | Decided. Amends D1. Amends D2. Amends D3. Amends D5. Amends D7. Amends D9. Amends D10. Amends D12. Amends D13. Amends D16. Amends D17. Amends D18. Amends D19. Amends D20. Amends D21. Amends D43 |
+| D48 | [The port follows the commit of the ledger, and its bugs](D048-the-port-follows-the-commit-of-the-ledger-and-its-bugs.md) | Decided. Amends D11. Amends D33 |

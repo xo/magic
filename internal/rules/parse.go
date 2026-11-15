@@ -24,7 +24,8 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 //
-// This file translates src/apprentice.c of file 5.48 to Go (D29).
+// This file translates src/apprentice.c of file to Go, at the commit that
+// docs/upstream/upstreams.tsv names (D29, D48).
 
 package rules
 

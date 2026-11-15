@@ -1,6 +1,6 @@
 # D33. The reference is libmagic 5.48 built against glibc
 
-Status: Decided. Amends D30.
+Status: Decided. Amends D30. Amended by D48.
 
 The maintainers decided on 2026-11-15 that the reference for the output of the
 port is libmagic 5.48, built from the checkout at `FILE5_48` (D25, D26)

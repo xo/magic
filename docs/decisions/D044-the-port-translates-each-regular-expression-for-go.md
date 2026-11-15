@@ -19,7 +19,9 @@ gap in four ways:
    `REG_NEWLINE` says.
 4. With `REG_ICASE`, only the ASCII letters fold, as in the C locale.
 
-It also takes the longest match that starts first, as POSIX does.
+It also takes the longest match that starts first, as POSIX does. A
+detection converts the bytes at an offset of a buffer to Latin-1 once, and
+keeps them for each rule that reads there, in `internal/engine/latin1.go`.
 
 The translator was compared with glibc and with
 `github.com/oneregex/revera/go`, a POSIX engine in Go, on the 368 regular

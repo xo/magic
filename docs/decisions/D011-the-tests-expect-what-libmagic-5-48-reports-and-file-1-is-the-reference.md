@@ -1,6 +1,6 @@
 # D11. The tests expect what libmagic 5.48 reports, and file(1) is the reference
 
-Status: Decided.
+Status: Decided. Amended by D48.
 
 Commit `dbcd068` (2026-09-12). Commit `a629036` (2026-09-13) added the note
 about new file releases to the script.

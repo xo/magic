@@ -3,6 +3,7 @@ package diff
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	_ "github.com/xo/magic/compress/bzip2"
@@ -39,8 +40,8 @@ var portOutputs = []struct {
 	{"compress-transparent", oracle.Compress | oracle.CompressTransp, engine.Compress | engine.CompressTransp},
 }
 
-// TestPortMatchesTheOracle is the gate of phases 2 and 3 (docs/PLAN.md). The
-// port runs the embedded rules of file 5.48 (D35), and must give the same
+// TestPortMatchesTheOracle is the gate of phases 2 to 5 (docs/PLAN.md). The
+// port runs the embedded rules of file (D35, D48), and must give the same
 // output as the oracle for every output flag and every input of the corpus,
 // as a buffer and as a file.
 func TestPortMatchesTheOracle(t *testing.T) {
@@ -68,7 +69,7 @@ func TestPortMatchesTheOracle(t *testing.T) {
 			}
 			got, gerr := e.Buffer(in.Data, out.port)
 			asked++
-			if decoderText(want, got, gerr) || (out.port&engine.Compress != 0 && decoderDifferences[in.Name] != "" && got != want.Text) {
+			if decoderText(want, got, gerr) || (out.port&engine.Compress != 0 && decoderDamaged(in.Name, want.Text, got)) {
 				known = append(known, fmt.Sprintf("%s, %s: expected %q, got: %q", in.Name, out.name, want.Text, got))
 			} else if d := compare(want, got, gerr); d != "" {
 				byFlag[out.name]++
@@ -83,7 +84,7 @@ func TestPortMatchesTheOracle(t *testing.T) {
 			}
 			got, gerr = e.File(in.Path, out.port)
 			asked++
-			if decoderText(want, got, gerr) || (out.port&engine.Compress != 0 && decoderDifferences[in.Name] != "" && got != want.Text) {
+			if decoderText(want, got, gerr) || (out.port&engine.Compress != 0 && decoderDamaged(in.Name, want.Text, got)) {
 				known = append(known, fmt.Sprintf("%s (file), %s: expected %q, got: %q", in.Name, out.name, want.Text, got))
 			} else if d := compare(want, got, gerr); d != "" {
 				byFlag[out.name]++
@@ -116,13 +117,18 @@ func TestPortMatchesTheOracle(t *testing.T) {
 	}
 }
 
-// decoderDifferences are the inputs whose compressed data a decoder of Go
-// reads in another way than the library of C, with the reason.
-var decoderDifferences = map[string]string{
-	// Four bytes changed inside the blocks. libzstd decodes them and then
-	// fails on the checksum of the frame. klauspost/compress finds the
-	// damage sooner, and reads it as data that ends too soon.
-	"test/corpus/testdata/utf8.txt.zst~0": "zstd: damaged blocks",
+// decoderDamaged reports whether name is a damaged copy of compressed data
+// whose answer has an error of a decoder on one side. libbz2, libzstd and
+// liblzma find damage at other points than the decoders of Go: one can
+// report an error where the other decodes nothing yet, or the other way.
+func decoderDamaged(name, want, got string) bool {
+	if want == got || !strings.Contains(name, "~") {
+		return false
+	}
+	isErr := func(s string) bool {
+		return strings.Contains(s, "ERROR:[") || strings.Contains(s, "x-decompression-error-")
+	}
+	return isErr(want) || isErr(got)
 }
 
 var (

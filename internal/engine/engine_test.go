@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"math/rand/v2"
 	"regexp"
 	"testing"
 
@@ -321,5 +322,34 @@ func TestCompressWithoutDecoder(t *testing.T) {
 	want := "ERROR:[gzip: Cannot posix_spawn `gzip', No such file or directory] (data)"
 	if err != nil || got != want {
 		t.Errorf("expected %q, got: %q, %v", want, got, err)
+	}
+}
+
+// TestWindowMatchesFind checks that a cached window gives the match that a
+// conversion of the same bytes gives, on random bytes with and without
+// characters above 0x7f.
+func TestWindowMatchesFind(t *testing.T) {
+	t.Parallel()
+	rx, err := compileRegex([]byte("[a-z\x8a]+[0-9]*"), false)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	rng := rand.New(rand.NewPCG(1, 2))
+	alphabet := []byte("abc019 \n\x8a\xe9\xff")
+	for range 500 {
+		buf := make([]byte, 1+rng.IntN(300))
+		for i := range buf {
+			buf[i] = alphabet[rng.IntN(len(alphabet))]
+		}
+		st := &state{}
+		w := st.window(buf)
+		for range 5 {
+			end := rng.IntN(len(buf) + 1)
+			so, eo, ok := w.find(rx, end)
+			wso, weo, wok := rx.find(buf[:end])
+			if so != wso || eo != weo || ok != wok {
+				t.Fatalf("%q[:%d]: expected (%d, %d, %v), got: (%d, %d, %v)", buf, end, wso, weo, wok, so, eo, ok)
+			}
+		}
 	}
 }

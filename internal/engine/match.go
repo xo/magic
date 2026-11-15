@@ -24,7 +24,8 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 //
-// This file translates src/softmagic.c, src/apprentice.c of file 5.48 to Go (D29).
+// This file translates src/softmagic.c, src/apprentice.c of file to Go, at the
+// commit that docs/upstream/upstreams.tsv names (D29, D48).
 
 package engine
 
@@ -892,12 +893,7 @@ func (st *state) mget(t *table, idx int, b, bb *buffer, o uint64, contLevel int,
 					return -1
 				}
 			}
-			if inner == nil {
-				// Nothing was printed, so the buffer is NULL, and glibc
-				// prints "(null)" for it.
-				inner = []byte("(null)")
-			}
-			if st.printf("%s", inner) == -1 {
+			if inner != nil && st.printf("%s", inner) == -1 {
 				return -1
 			}
 		}
@@ -1363,12 +1359,16 @@ func (st *state) check(t *table, idx int) int {
 			return -1
 		}
 		l = 0
-		var text []byte
+		var so, eo int
+		var ok bool
 		if n := st.search.sLen; n != 0 {
-			// libmagic copies the region and puts a NUL on its last byte.
-			text = cstr(st.search.s[:n-1])
+			// libmagic copies the region and puts a NUL on its last byte,
+			// and the C string ends at the first NUL.
+			w := st.window(st.search.s)
+			so, eo, ok = w.find(rx, min(int(n-1), w.nul))
+		} else {
+			so, eo, ok = rx.find(nil)
 		}
-		so, eo, ok := rx.find(text)
 		if !ok {
 			v = 1
 			break

@@ -1,6 +1,6 @@
 // Package corpus holds the inputs of the differential test of D30: the test
-// files of file 5.48, the sample files of this repository, and cut and
-// damaged copies of each.
+// files of file at the commit of the oracle, the sample files of this
+// repository, and cut and damaged copies of each.
 //
 // The copies come from a fixed seed, so each run tests the same bytes, and a
 // failure names the input that a person can rebuild.

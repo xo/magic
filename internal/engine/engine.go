@@ -23,7 +23,8 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 //
-// This file translates src/magic.c, src/funcs.c of file 5.48 to Go (D29).
+// This file translates src/magic.c, src/funcs.c of file to Go, at the commit
+// that docs/upstream/upstreams.tsv names (D29, D48).
 
 // Package engine is the port of the engine of libmagic 5.48: it runs the
 // compiled rules and the detectors on a buffer or a file, and gives the text
@@ -163,9 +164,11 @@ type state struct {
 		offset uint64
 		rmLen  uint64
 	}
-	val  value
-	li   []levelInfo
-	line uint32 // the line of the rule that runs, for an error
+	val value
+	li  []levelInfo
+	// windows holds the bytes that regular expressions read, as Latin-1.
+	windows windows
+	line    uint32 // the line of the rule that runs, for an error
 }
 
 // printf appends to the output, as file_printf does. After an error it

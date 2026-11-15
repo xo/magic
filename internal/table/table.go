@@ -1,9 +1,9 @@
-// Package table holds the compiled rules of file 5.48, as the port embeds
-// them (D35). The generator in gen/ writes rules.flate from a checkout of
+// Package table holds the compiled rules of file, at the commit that the
+// port follows (D26), as the port embeds them (D35). The generator in gen/ writes rules.flate from a checkout of
 // file, and TestTableMatchesTheCompiler in the test module checks it.
 package table
 
-//go:generate go run ./gen -git ../../upstream/file -commit FILE5_48 -o rules.flate
+//go:generate go run ./gen -git ../../upstream/file -ledger ../../docs/upstream/upstreams.tsv -o rules.flate
 
 import (
 	"bytes"

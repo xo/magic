@@ -1,6 +1,7 @@
 // Package magic identifies the type of a file or of bytes, as the file
 // command does. It is a port of libmagic, the library of file, to pure Go
-// (D22). It gives the output of libmagic 5.48, and needs no C compiler.
+// (D22). It gives the output of libmagic 5.48 and the commits of file after
+// it (D48), and needs no C compiler.
 //
 //	r, err := magic.Detect(ctx, buf)
 //	if err != nil {
@@ -22,13 +23,16 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"unsafe"
 
 	"github.com/xo/magic/internal/engine"
 	"github.com/xo/magic/internal/table"
 )
 
-// FileVersion is the release of file whose behavior the package copies.
+// FileVersion is the version of file whose behavior the package copies. The
+// package follows the commits of file after the release, to the commit that
+// docs/upstream/upstreams.tsv names (D48), and file still calls that 5.48.
 const FileVersion = "5.48"
 
 // Source is the content that Detect reads: bytes, or a string of bytes.
@@ -89,14 +93,16 @@ func (r Result) String() string {
 	return r.Description
 }
 
-// load returns the engine with the compiled rules.
-func load() (*engine.Engine, error) {
+// load returns the engine with the compiled rules. It builds the engine
+// once, because the engine holds about 10 MB of rules and the regular
+// expressions that it compiles as it meets them. The engine is safe to share.
+var load = sync.OnceValues(func() (*engine.Engine, error) {
 	db, err := table.Load()
 	if err != nil {
 		return nil, fmt.Errorf("magic: loading the rules: %w", err)
 	}
 	return engine.New(db), nil
-}
+})
 
 // bytesOf returns the bytes of src without a copy. The engine reads them
 // and does not change them.

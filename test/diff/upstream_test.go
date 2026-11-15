@@ -12,7 +12,8 @@ import (
 )
 
 // TestPortPassesTheTestsOfFile is the gate of phase 3 (docs/PLAN.md, D37).
-// The port runs each test of file 5.48 as the test program of file does,
+// The port runs each test of file at the commit of the oracle (D48) as the
+// test program of file does,
 // and must give the result that file expects.
 func TestPortPassesTheTestsOfFile(t *testing.T) {
 	cases, err := oracle.UpstreamCases()

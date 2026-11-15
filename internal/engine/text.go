@@ -24,7 +24,8 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 //
-// This file translates src/encoding.c, src/ascmagic.c of file 5.48 to Go (D29).
+// This file translates src/encoding.c, src/ascmagic.c of file to Go, at the
+// commit that docs/upstream/upstreams.tsv names (D29, D48).
 
 package engine
 
@@ -46,7 +47,7 @@ const (
 // textChars is text_chars of encoding.c.
 var textChars = func() [256]uint8 {
 	var t [256]uint8
-	for _, c := range []byte{7, 8, 9, 10, 11, 12, 13, 26, 27} {
+	for _, c := range []byte{7, 8, 9, 10, 11, 12, 13, 14, 15, 26, 27} {
 		t[c] = charT
 	}
 	for c := 0x20; c < 0x7f; c++ {
@@ -238,6 +239,12 @@ func utf8Result(ctrl, gotone bool) int {
 	return 1
 }
 
+// notText is NOTTEXT of encoding.c: an ASCII character that is not text. A
+// NUL counts as text in UTF-16 and UTF-32.
+func notText(c uint32) bool {
+	return c < 128 && textChars[c] != charT && c != 0
+}
+
 // looksUCS16 is looks_ucs16: 1 for UTF-16 little-endian, 2 for big-endian,
 // with a byte order mark, and 0 for neither.
 func looksUCS16(bf []byte, ubuf *[]rune) int {
@@ -271,7 +278,7 @@ func looksUCS16(bf []byte, ubuf *[]rune) int {
 			uc = 0x10000 + 0x400*(hi-1) + (uc - 0xdc00)
 			hi = 0
 		}
-		if uc < 128 && textChars[uc] != charT {
+		if notText(uc) {
 			return 0
 		}
 		*ubuf = append(*ubuf, rune(uc))
@@ -307,10 +314,7 @@ func looksUCS32(bf []byte, ubuf *[]rune) int {
 			u = uint32(bf[i]) | uint32(bf[i+1])<<8 | uint32(bf[i+2])<<16 | uint32(bf[i+3])<<24
 		}
 		*ubuf = append(*ubuf, rune(u))
-		if u == 0xfffe {
-			return 0
-		}
-		if u < 128 && textChars[u] != charT {
+		if u == 0xfffe || notText(u) {
 			return 0
 		}
 	}

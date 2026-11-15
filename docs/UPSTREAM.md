@@ -2,8 +2,9 @@
 
 This document holds the rules for porting libmagic to magic, and for porting
 each change that upstream makes after that. The rules were written on
-2026-11-15, before any code of the port existed (D24). Each rule names the
-decision that it comes from.
+2026-11-15, before any code of the port existed (D24), and phase 5 followed
+them to the newest commit of upstream (D48). Each rule names the decision
+that it comes from.
 
 ## The upstream
 
@@ -54,8 +55,10 @@ find upstream -name '*.go'
 
 The base commit is the tag `FILE5_48`, commit
 `eb754ace19fed5481d8142426543100a2d6bae4e` (D26). It is the release that the
-cgo package wraps. The base port is made from this commit, and the column
-`matched` stays empty until it is done.
+cgo package wrapped, and the base port was made from it. The column `matched`
+names the commit that the port follows. `test/oracle/build.sh` and
+`go generate` in `internal/table` read it, or `base` while it is empty
+(D48).
 
 ## Where each upstream path goes
 
@@ -66,7 +69,7 @@ paths that it changes: Port, then Review, then Not applicable.
 | --- | --- | --- |
 | `src/*.c`, `src/*.h`, except the ones below | the root package and `internal/`, as the plan maps them | Port |
 | `magic/Magdir/*` | the rule tables, compiled when the package is built (D35) | Port |
-| `tests/*.testfile`, `tests/*.result`, `tests/*.magic`, `tests/*.flags` | `testdata/upstream/` | Port |
+| `tests/*.testfile`, `tests/*.result`, `tests/*.magic`, `tests/*.flags` | none. The test module reads them from the tree that `test/oracle/build.sh` exports (D30) | Port |
 | `src/file.c`, `src/file_opts.h` | none. `cmd/file` is an example, not a port (D27) | Review: a change to the meaning of a flag can change the library |
 | `src/seccomp.c` | none. The port runs no system calls that it limits | Not applicable |
 | `configure.ac`, `Makefile.am`, `src/Makefile.am` | none | Review: a new source file or a new feature test can change what the library does |
@@ -109,12 +112,21 @@ one magic commit for each upstream commit (D26):
 2. Find how the commit changes what libmagic does, and change the Go code to
    do the same. The Go code is not a copy of the C code (D34), so the change
    can look different.
-3. If the commit changes `tests/`, port the test data, and run the tests.
-4. If the commit changes the rules, rebuild the rule tables, and run the
-   differential test (D30).
-5. Set the status to `ported` and the column `magic` to the new commit.
+3. Build the oracle at the commit with
+   `ORACLE_COMMIT=<hash> test/oracle/build.sh`, and the table with
+   `go run ./gen -git ../../upstream/file -commit <hash> -o rules.flate` in
+   `internal/table`. The test module then reads the tests of file at the
+   commit, and compares the port with the oracle (D30).
+4. The port copies what the commit does on the reference, glibc on Linux,
+   faults included (D33, D48). A fault that is worth a report to upstream
+   goes in `docs/BACKLOG.md`.
+5. Set the status to `ported` and the column `magic` to the magic commit.
+   A commit cannot hold its own hash, so the ledger follows in the next
+   commit.
 6. Move `matched` in `upstreams.tsv` to this commit, if no earlier commit is
-   still `pending`.
+   still `pending`. Then `test/oracle/build.sh` and `go generate` in
+   `internal/table` use it without `ORACLE_COMMIT` or `-commit`, and CI checks
+   that the table is current.
 
 The commit message of magic names the upstream commit: its short hash and its
 subject.

@@ -22,9 +22,13 @@ libmagic itself runs once for each flag:
 
 One walk that records every form would have to copy each of these paths at
 once. `TestPortMatchesTheOracle` checks each form against the oracle, so the
-walk for each form is proven. A walk of a typical file takes far less than a
-millisecond, so five walks cost little. Merging the walks is in
-`docs/BACKLOG.md`.
+walk for each form is proven.
+
+The walks cost time. Measured on 2026-11-15 on linux/amd64, `Detect` took
+74 µs for a Word document, 151 µs for a GIF image and 5.4 ms for UTF-8 text,
+where one walk for the MIME type took 4 µs, 25 µs and 1.1 ms. A walk for the
+extension or the Apple code goes through every rule when no rule names one.
+Merging the walks is in `docs/BACKLOG.md`.
 
 Each entry of `Matches` holds one line of the description that `WithAll`
 prints. libmagic prints a MIME type, an extension or an Apple code only for a

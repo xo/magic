@@ -21,7 +21,8 @@ type Case struct {
 	Magic string
 }
 
-// UpstreamCases returns the tests of file 5.48, in the order of their names.
+// UpstreamCases returns the tests of file at the commit of the oracle, in the
+// order of their names.
 // It copies what tests/Makefile.am does: the flag -e always, the letters of a
 // file <name>.flags, and the rule files <name>*.magic in place of the
 // database.

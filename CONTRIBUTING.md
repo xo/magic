@@ -21,7 +21,8 @@ gofmt -l .
 formatted. CI runs the build, `go vet` and the tests on Linux, macOS and
 Windows, and builds the package for the targets that have no runner.
 
-If `file` 5.48 is on your `PATH`, `TestOracle` compares the package with it.
+If `file` 5.48 is on your `PATH`, `TestOracle` compares the MIME types of the
+package with it.
 Otherwise the test skips.
 
 ## The harness

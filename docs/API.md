@@ -2,7 +2,7 @@
 
 This document holds the design of the API of the pure Go port (D22). Phase 4
 built it, in `magic.go` and `options.go` (D47). The code differs from the
-proposal below in four places:
+proposal below in five places:
 
 1. A `Result` comes from one walk of the engine for each form, not from one
    walk (D46).
@@ -11,6 +11,8 @@ proposal below in four places:
 3. `WithDecompress` decodes the formats whose decoder the program imports
    from `compress/` (D45).
 4. `ErrStopped` is the error of a detection whose context is done.
+5. No `sync.Pool` reuses buffers yet, which answer 2 below expects.
+   `docs/BACKLOG.md` holds the item.
 
 The maintainers decided on 2026-11-15 (D40) that:
 
@@ -188,16 +190,15 @@ const FileVersion = "5.48"
 3. A reader and a file have functions of their own. A constraint cannot hold
    `io.Reader` beside `[]byte` (D41), and a file has more to say than its
    bytes: it can be a directory, a link or a device.
-4. One `Result` with every form. libmagic runs once for each flag. The port
-   can find the forms in one walk, because a rule carries its text, its MIME
-   type and its extensions together. Whether one walk gives the same answer as
-   libmagic for each flag is open question 1.
+4. One `Result` with every form. libmagic runs once for each flag. The
+   draft hoped to find the forms in one walk, because a rule carries its
+   text, its MIME type and its extensions together. The code runs one walk
+   for each form, which gives the answer of libmagic for each (D46).
 5. A file that cannot be opened is an error, not a description. libmagic
    prints "cannot open" unless `MAGIC_ERROR` is set. Go returns an error.
-6. `context.Context` is first in each call. The port checks it between the
-   top-level rules and between reads, so a caller can stop a detection that
-   runs long on hostile bytes. A check is one load, a few thousand times a
-   call. It cannot interrupt a `Read` that blocks, and the port starts no
+6. `context.Context` is first in each call. The port checks it once for
+   every 64 rules at the top level, so a caller can stop a detection that
+   runs long on hostile bytes. It cannot interrupt a `Read` that blocks, and the port starts no
    goroutine to hide one.
 7. The flags that only debug libmagic, `MAGIC_DEBUG` and `MAGIC_CHECK`, have no
    option. `MAGIC_PRESERVE_ATIME` has none: Go has no way to set the access

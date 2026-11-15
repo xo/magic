@@ -8,10 +8,12 @@
 the `file` command does. It is a port of
 [libmagic](https://astron.com/pub/file/), the library of `file`, to pure Go.
 
-It gives the output of libmagic 5.48: the same description, MIME type,
-charset, extensions and Apple code. The rules of `file` are compiled into the
-package. You need only Go 1.27 or later. You do not need a C compiler or
-libmagic, and a program that imports magic builds for every target of Go.
+It gives the output of libmagic 5.48, with the commits of `file` after the
+release, to the commit in `docs/upstream/upstreams.tsv`: the same
+description, MIME type, charset, extensions and Apple code. The rules of
+`file` are compiled into the package. You need only Go 1.27 or later. You do
+not need a C compiler or libmagic, and a program that imports magic builds
+for every target of Go.
 
 ## Install
 
@@ -33,6 +35,17 @@ fmt.Println(r.MIME)          // image/gif
 fmt.Println(r.ContentType()) // image/gif; charset=binary
 fmt.Println(r.Extensions)    // [gif]
 ```
+
+A `Result` holds every form of the answer at once:
+
+| Field | What it holds |
+| --- | --- |
+| `Description` | the text that `file` prints |
+| `MIME` | the MIME type, such as `image/gif` |
+| `Charset` | the MIME encoding, such as `binary` or `utf-8` |
+| `Extensions` | the usual extensions, without the dot, or nil |
+| `Apple` | the creator and type code of classic Mac OS, or "" |
+| `Matches` | each match, when `WithAll` is set, and else the one match |
 
 `DetectFile` identifies a file. A directory, a link, a pipe or a device is
 named by its kind, as `file` names it. A file that cannot be found or opened
@@ -88,24 +101,45 @@ library and finds no program that decodes it. magic never runs a program.
 
 ## Size
 
-A program that prints the MIME type of a file grows by about 990 KB with
+A program that prints the MIME type of a file grows by about 980 KB with
 magic, stripped, on linux/amd64. Most of it is the compiled rules. The
 decoders add 45 KB for `zlib`, 74 KB for `bzip2`, 442 KB for `xz` and 594 KB
 for `zstd`.
 
 ## How it is tested
 
-The test module builds libmagic 5.48 from the source of `file` and compares
-the package with it, on 2,071 files and damaged copies of them, with 14
-combinations of flags, as bytes and as files. Every answer is the same,
-except 50 where a decoder of Go reads damaged compressed data in another way
-than the library of C. All 88 tests of `file` 5.48 pass. `CONTRIBUTING.md` says how to run the tests.
+The test module builds libmagic from the source of `file`, at the commit
+that the port follows, and compares the package with it, on 2,471 files and
+damaged copies of them, with 14 combinations of flags, as bytes and as files.
+Every answer is the same, except 50 where a decoder of Go reads damaged
+compressed data in another way than the library of C. All 113 tests of
+`file` pass. `CONTRIBUTING.md` says how to run the tests.
 
 ## Versions
 
 Up to `v0.4.1`, magic wrapped libmagic with cgo, and carried static archives
-of it for eight targets. The API changed with the port. `docs/API.md` gives
-the reasons.
+of it for eight targets. The port is the next minor version, and its API is
+new (D39). `docs/API.md` gives the reasons.
+
+To move from `v0.4.1`:
+
+| `v0.4.1` | The port |
+| --- | --- |
+| `m, err := magic.New(magic.MimeType)`, then `m.Buffer(buf)` | `r, err := magic.Detect(ctx, buf)`, then `r.MIME` |
+| `m.File(name)` | `magic.DetectFile(ctx, name)` |
+| `magic.None` | `r.Description` |
+| `magic.MimeEncoding` | `r.Charset` |
+| `magic.Mime` | `r.ContentType()` |
+| `magic.Extension` | `r.Extensions` |
+| `magic.Apple` | `r.Apple` |
+| `magic.Continue` | `magic.WithAll()` |
+| `magic.Compress` | `magic.WithDecompress()`, and a decoder from `compress/` |
+| `m.Close()` | nothing. The port has no handle |
+| `magic.Version()` | `magic.FileVersion` |
+| `magic.MagicDB()` | nothing. The port has no `.mgc` (D47) |
+
+A file that cannot be opened is an error now, where libmagic gave the text
+"cannot open".
 
 ## Documents
 

@@ -46,7 +46,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 //
-// This file translates src/cdf.c, src/readcdf.c, src/cdf_time.c of file 5.48 to Go (D29).
+// This file translates src/cdf.c, src/readcdf.c, src/cdf_time.c of file to Go,
+// at the commit that docs/upstream/upstreams.tsv names (D29, D48).
 
 package engine
 
@@ -69,6 +70,7 @@ import (
 
 const (
 	cdfLoopLimit    = 10000
+	cdfMemoryLimit  = 16 * 1024 * 1024
 	cdfElementLimit = 100000
 	cdfSecIDFree    = -1
 	cdfEndOfChain   = -2
@@ -245,13 +247,16 @@ func (in *cdfInfo) readSAT(h *cdfHeader, sat *cdfSAT) bool {
 // countChain is cdf_count_chain: the length of the chain of sectors from
 // sid, or -1.
 func countChain(sat *cdfSAT, sid int32, size uint64) int64 {
+	if size == 0 || sat.n > math.MaxUint64/size {
+		return -1
+	}
 	maxsector := int32(sat.n * size / 4)
 	if sid == cdfEndOfChain {
 		return 0
 	}
 	i := int64(0)
 	for j := 0; sid >= 0; i, j = i+1, j+1 {
-		if j >= cdfLoopLimit || sid >= maxsector {
+		if j >= cdfLoopLimit || uint64(i) >= cdfMemoryLimit/size || sid >= maxsector {
 			return -1
 		}
 		sid = sat.at(sid)
@@ -351,6 +356,9 @@ func (in *cdfInfo) readDir(h *cdfHeader, sat *cdfSAT) ([]cdfDir, bool) {
 		return nil, false
 	}
 	nd := ss / cdfDirSize
+	if nd != 0 && uint64(ns) > cdfMemoryLimit/nd/cdfDirSize {
+		return nil, false
+	}
 	dir := make([]cdfDir, uint64(ns)*nd)
 	buf := make([]byte, ss)
 	for i := uint64(0); i < uint64(ns); i++ {
@@ -474,7 +482,17 @@ func readPropertyInfo(sst *cdfStream, offs uint32, info *[]cdfProperty) bool {
 		return false
 	}
 	shLen := uint64(le.Uint32(sst.tab[sho:]))
-	if shLen > cdfShLenLimit || !sst.checkOffset(sho, shLen) {
+	if shLen > cdfShLenLimit {
+		return false
+	}
+	// From commit bcbb6064 on, file checks the length of the section from
+	// its copy of the header on the stack, not from the stream. On Linux
+	// the stack is far above the heap, so the check always fails, and file
+	// reads no property. The port gives the same answer (D33).
+	if followsStackCheck {
+		return false
+	}
+	if !sst.checkOffset(sho, shLen) {
 		return false
 	}
 	nprops := uint64(le.Uint32(sst.tab[sho+4:]))
@@ -966,6 +984,9 @@ func unpackCatalog(sst *cdfStream) ([]string, bool) {
 			break
 		}
 		reclen := int(le.Uint16(b[p:]))
+		if reclen == 0 {
+			break
+		}
 		if reclen < 14 {
 			if j < len(entries) {
 				entries[j] = ""
@@ -1075,3 +1096,8 @@ func asciiLower(s string) string {
 	}
 	return string(b)
 }
+
+// followsStackCheck is set while the port follows the commits of file that
+// check a section of properties against the stack. readPropertyInfo says
+// why.
+const followsStackCheck = true

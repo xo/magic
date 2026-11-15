@@ -24,7 +24,8 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 //
-// This file translates src/apprentice.c, src/encoding.c of file 5.48 to Go (D29).
+// This file translates src/apprentice.c, src/encoding.c of file to Go, at the
+// commit that docs/upstream/upstreams.tsv names (D29, D48).
 
 package rules
 
@@ -247,7 +248,7 @@ func setTestType(start, e *Entry) {
 // text_chars of encoding.c.
 var textChars = func() [256]bool {
 	var t [256]bool
-	for _, c := range []byte{7, 8, 9, 10, 11, 12, 13, 26, 27, 0x85} {
+	for _, c := range []byte{7, 8, 9, 10, 11, 12, 13, 14, 15, 26, 27, 0x85} {
 		t[c] = true
 	}
 	for c := 0x20; c < 0x7f; c++ {

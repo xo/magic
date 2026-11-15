@@ -41,7 +41,8 @@ How it was done:
 
 1. Each Go file opens with the notice of each C file that it translates,
    then a line that names those files, such as "This file translates
-   src/is_json.c of file 5.48 to Go (D29)".
+   src/is_json.c of file to Go, at the commit that
+   docs/upstream/upstreams.tsv names (D29, D48)".
 2. `LICENSE.file` in the root, and a `LICENSE` in `internal/engine`,
    `internal/rules` and each package of `compress/`, hold `COPYING` of file.
 3. `internal/table/LICENSE` holds `COPYING` and the comments of the 21 rule

@@ -2,13 +2,14 @@
 
 `magic` is a Go package that identifies the type of a file or of bytes, as
 the `file` command does. It is a port of libmagic, the library of `file`, to
-pure Go (D22). It gives the output of libmagic 5.48, and its rules are
-compiled into the package (D35). A program that imports it needs Go and
-nothing else.
+pure Go (D22). It gives the output of libmagic at the commit of file that
+`docs/upstream/upstreams.tsv` names (D48), and its rules are compiled into
+the package (D35). A program that imports it needs Go and nothing else.
 
-Phase 4 of the port, the switch, replaced the cgo package (D47). Phase 5 is
-following upstream: the commits of file after 5.48 (D26). The API is in
-`magic.go` and `options.go`, and the design is in `docs/API.md`.
+The port is done: phase 4 replaced the cgo package (D47), and phase 5
+followed upstream to its newest commit (D48). New upstream commits are ported
+as `docs/UPSTREAM.md` says. The API is in `magic.go` and `options.go`, and
+the design is in `docs/API.md`.
 
 ## Standing rules
 
@@ -38,15 +39,15 @@ of `docs/PLAN.md`. Ask a maintainer.
 | --- | --- |
 | asking why something is the way it is | the index in `docs/decisions/README.md` |
 | changing the API in `magic.go` or `options.go` | D39, D40, D42, D46 and D47, then `docs/API.md` and Go conventions below |
-| changing an expected value in a test | D11 |
+| changing an expected value in a test | D11 and D48. The test module checks the value against the oracle |
 | changing a decoder of compressed data, or its dependency | D27, D28 and D45, then the package in `compress/` |
 | translating a file of libmagic | D29: the Go file opens with the notice of the C file, and names it |
 | tagging a release | D39 and D47, then `CONTRIBUTING.md`, under Release. Tag only when a maintainer says so |
 | changing CI | D12, then `.github/workflows/test.yml` |
 | looking for work that is known and not done | `docs/BACKLOG.md` |
-| working on the port of libmagic | D22 to D47, then `docs/PLAN.md` and `docs/BACKLOG.md`, under The port |
-| following upstream, or adding to the ledger | `docs/UPSTREAM.md`, D25 and D26 |
-| the binary walker | D31, then `docs/BACKLOG.md`, under The binary walker. It comes after phase 5 |
+| working on the port of libmagic | D22 to D48, then `docs/PLAN.md` and `docs/BACKLOG.md`, under The port |
+| following upstream, or adding to the ledger | `docs/UPSTREAM.md`, D25, D26 and D48. After `matched` moves, run `test/oracle/build.sh` and `go generate` in `internal/table` |
+| the binary walker | D31, then `docs/BACKLOG.md`, under The binary walker. It is the next work |
 | writing a document, a code comment, an error message or a commit message | the `simple-english` skill. Load it first |
 | writing or reviewing Go code | the `go-pedantry` skill, then Go conventions below |
 | adding or updating an agent skill | `CONTRIBUTING.md`, under Agent skills, and D15 |
@@ -86,8 +87,8 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 
 1. Ask the peer of a repository about that repository, before you read its
    code or guess. The `okage` peer knows how a port that follows upstream
-   works, and the `resvg` peer knows the layout of modules and tags that D17
-   follows.
+   works. The `resvg` peer knows the layout of modules and tags that D17
+   copied, which magic left with D47.
 2. If magic needs a change in another repository, tell a maintainer, or ask
    that peer. Do not edit another repository from this session unless a
    maintainer asks.
@@ -103,11 +104,11 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `magic_test.go`, `example_test.go` | the tests and the examples of the API |
 | `skills_test.go`, `docs_test.go`, `ledger_test.go` | the tests of the agent setup, the documents and the ledger, in package `magic_test` |
 | `go.mod` | the root module. It has no `require` line |
-| `LICENSE`, `LICENSE.file` | the MIT license of the code of magic, and the license of file, which the port translates (D29) |
+| `LICENSE`, `LICENSE.file` | the MIT license of the code of magic, and the license of file, which the port translates (D29). Each package that holds a translation has a `LICENSE` too |
 | `cmd/file/` | an example program that prints the type of each file that it gets |
 | `internal/rules/` | the port: the compiler of the rules, which gives the entries of `magic.mgc` (D35) |
 | `internal/engine/` | the port: the engine that runs the compiled rules, and the detectors of the formats that rules cannot read. It translates each regular expression for Go (D44) |
-| `internal/table/` | the rules of file 5.48 as the port embeds them, `rules.flate`, and `gen/`, which writes it from `upstream/file` with `go generate` (D35). Do not edit `rules.flate` |
+| `internal/table/` | the rules of file, at the commit that the ledger names (D48), as the port embeds them, `rules.flate`, and `gen/`, which writes it from `upstream/file` with `go generate` (D35). Do not edit `rules.flate` |
 | `compress/` | the registry of the decoders of compressed data, and one package for each library of libmagic: `zlib` and `bzip2` in the root module, `xz` and `zstd` as modules of their own (D45) |
 | `testdata/` | the sample files that the tests read |
 | `.github/workflows/test.yml` | CI |
@@ -119,7 +120,7 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `docs/BACKLOG.md` | the work that is known and not done |
 | `docs/logo/` | the logo of the project, `magic.svg`, which `README.md` shows, with `magic.png`, and `gen_magic.py`, which makes the SVG from the letters in `magic_letters.json` |
 | `upstream/file/` | the checkout of file, the reference for the port. git ignores it. Do not edit it (D25) |
-| `test/` | the test module, with its own `go.mod` (D30): the oracle program in `test/cmd/oracle`, its client and the tests of file in `test/oracle`, the corpus in `test/corpus`, and the differential test in `test/diff` |
+| `test/` | the test module, with its own `go.mod` (D30): the oracle program in `test/cmd/oracle`, its client and the tests of file in `test/oracle`, the corpus in `test/corpus`, the tests of the compiler and the table in `test/rules`, and the gates of the port in `test/diff` |
 | `test/.oracle/` | what `test/oracle/build.sh` builds. git ignores it |
 | `test/corpus/testdata/` | compressed files and Office documents that the corpus adds to the files of file and of `testdata/` |
 | `test/size/` | `TestPortSize`, which measures the bytes that the port adds to a program (D38) |
@@ -171,7 +172,8 @@ commands on every runner, builds for the targets that have no runner, and
 runs the test module against the oracle (D12, D47). The repository has no
 `.golangci.yml`, and CI runs no linter.
 
-`TestOracle` runs only when `file` 5.48 is on `PATH`. Otherwise it skips.
+`TestOracle` runs only when `file` 5.48 is on `PATH`, and compares MIME types
+with it. Otherwise it skips.
 
 ## Go conventions
 
@@ -191,8 +193,9 @@ The code follows these conventions today:
   function is safe for concurrent use.
 - Each test calls `t.Parallel`. A failure message has the form
   `expected no error, got: %v` or `expected %q, got: %q`.
-- An expected value in a test is what libmagic 5.48 reports (D11). The test
-  module checks each one against the oracle.
+- An expected value in a test is what libmagic reports at the commit that
+  the ledger names (D11, D48). The test module checks each one against the
+  oracle.
 - `go.mod` has no `require` line (D14). A decoder that needs another module
   is a module of its own (D45).
 

@@ -12,9 +12,9 @@ phase 1.
 
 ## Status
 
-On 2026-11-15 the branch `main` is the pure Go port, and phase 5 is next. The
-last release, `v0.4.1`, is the cgo package. The next release waits for
-phase 5 (D47).
+On 2026-11-15 the port is done: phases 0 to 5 have their code, and their
+gates hold on the build host. The last release, `v0.4.1`, is the cgo package,
+and the port is the next release (D47).
 
 1. Phase 0, the plan, ended when the maintainers answered the questions of
    the port (D33 to D39) and set the API (D40, D42).
@@ -32,21 +32,25 @@ phase 5 (D47).
 5. Phase 4, the switch, replaced the cgo package with the API of
    `docs/API.md`, and removed the archives and the modules of the targets
    (D47). The license of file is carried as D29 says.
+6. Phase 5 followed upstream to its newest commit, `bbffb78d` (D48). Of the
+   84 pending commits of the ledger, 55 change what the port does, in the
+   rules, the tests or the source, and 29 do not apply. The oracle, the
+   table and the gates follow the commit that the ledger names.
 
-The gates on the build host, with cgo off:
+The gates on the build host, with cgo off, at `bbffb78d`:
 
-1. `TestPortMatchesTheOracle` asks the engine and the oracle 30,674
+1. `TestPortMatchesTheOracle` asks the engine and the oracle 36,624
    questions: 14 outputs, from the description to the MIME type and the flags
-   of compression, for each of 2,071 inputs, as a buffer and as a file. Each
+   of compression, for each of 2,471 inputs, as a buffer and as a file. Each
    answer is the same, except 50 where a decoder of Go reads damaged
    compressed data in another way than the library of C. The test lists
    them.
 2. `TestAPIMatchesTheOracle` checks each form of a `Result` of the API
-   against the oracle, on the same inputs (D46).
-3. `TestPortPassesTheTestsOfFile` runs the 88 tests of file 5.48, and all 88
-   pass (D37).
+   against the oracle, on the same inputs: 13,080 questions (D46).
+3. `TestPortPassesTheTestsOfFile` runs the 113 tests of file at that commit,
+   and all 113 pass (D37).
 4. `TestPortSize` builds a program that prints the MIME type of a file with
-   the API. magic adds 987,136 bytes to it, stripped, where the cgo package
+   the API. magic adds 978,944 bytes to it, stripped, where the cgo package
    added 995,488 (D38).
 
 Checks outside the gates found no difference either. 50,395 files of the
@@ -63,10 +67,11 @@ macOS, and `v0.4.0` fixed both and compressed the database (D20, D21).
 magic identifies the type of a file or a buffer, as the `file` command does.
 The port makes it pure Go: a program that imports it needs the Go toolchain
 and nothing else, and builds with `CGO_ENABLED=0` for every target that Go
-supports (D22). Today a program needs a C compiler, and builds for eight
-targets only.
+supports (D22). Before the switch, a program needed a C compiler, and built
+for eight targets only.
 
-The output is the output of libmagic 5.48 built against glibc (D33). The port
+The output is the output of libmagic built against glibc (D33), at the
+commit of file that the ledger names (D48). The port
 copies what libmagic does, not how its C code is written (D34). The API is new
 and need not stay compatible (D39, D40). A program that uses the port grows by
 no more bytes than it grows with the cgo package (D38).
@@ -115,25 +120,22 @@ The port does not cover:
 
 ## Architecture
 
-The three models of "The reviews" agree on the shape. The names are a
-proposal, and the first file of each package settles them. The packages are
-designed as Go, not as copies of the files of libmagic (D34).
+The plan named a package for each part. The code put the parts that share
+the state of a detection in one package, `internal/engine`, because libmagic
+shares that state between them (D34). The packages, as built:
 
 | Package | What it holds |
 | --- | --- |
-| `magic`, the root | the public API of `docs/API.md` (D40) |
-| `internal/rules` | the compiler of the rules, run by `go generate`, and the tables that it writes (D35) |
-| `internal/engine` | what `softmagic.c` does: offsets, indirect offsets, `name` and `use`, the order of strength, `default` and `clear`, and continuation |
-| `internal/cfmt` | output that matches C: `printf` formats, dates and floats |
-| `internal/elf`, `internal/cdf`, `internal/text`, `internal/compress` and the other detectors | the parsers that are C code in libmagic |
+| `magic`, the root | the public API of `docs/API.md` (D40, D42, D46) |
+| `internal/rules` | the compiler of the rules, which gives the entries of `magic.mgc`, and the form of the table (D35) |
+| `internal/table` | the compiled rules, embedded, and their generator, which `go generate` runs (D35) |
+| `internal/engine` | what `softmagic.c` does, the `printf` formats and dates of C, the translator of regular expressions (D44), and every detector: text, tar, JSON, CSV, SIMH, DER, Compound Document, ELF, the kinds of file, and compressed data |
+| `compress` and the packages under it | the registry of the decoders of compressed data, and one decoder for each library of libmagic (D45) |
 
-The rules are compiled into tables when the package is built (D35). The port
-does not read the binary `.mgc` format. It is the memory layout of the C
-structs of one release, and it ties the port to that release.
-
-The tables are most of the bytes that the port adds to a program, so their form
-is chosen by what they cost (D38). `MagicDB` goes, because a Go engine has no
-`.mgc` to give.
+The port does not read the binary `.mgc` format. It is the memory layout of
+the C structs of one release, and it ties the port to that release. The
+compiler gives the same entries, and the table stores them in a form of its
+own, which is smaller (D38). `MagicDB` went with the switch (D47).
 
 ## The hard parts
 
@@ -147,7 +149,7 @@ The three models name the same risks. These are in order of risk.
    to translate each pattern to match. No rule uses a backreference, so
    `regexp.CompilePOSIX` can express each pattern. Whether it gives the same
    match as the C library needs a test of all 368 rules, on the start and the
-   end of each match.
+   end of each match. D44 records how it was done and measured.
 2. Output. C `printf` differs from Go `fmt` for `%g`, exponents, rounding,
    `%#o` and widths. The port needs a small formatter that copies C, tested
    against C on the 31 float rules and on each integer format.
@@ -168,11 +170,10 @@ The three models name the same risks. These are in order of risk.
 
 ## Compression
 
-D27 gives each compression library a policy. gzip, zlib and bzip2 move to the
-standard library. xz and zstd come from outside packages when they are needed
-(D28), because the standard library has neither. Without them, the port names
-a file that is compressed with xz or zstd and does not look inside it, and its
-output differs from libmagic with `MAGIC_COMPRESS`.
+D27 gives each compression library a policy. gzip, zlib and bzip2 moved to
+the standard library, and xz and zstd come from outside modules (D28). A
+program chooses the decoders that it includes with a blank import (D45), so
+a program that does not look inside compressed data pays for none.
 
 ## Testing plan
 
@@ -181,9 +182,9 @@ coverage of lines does not prove the same output. The maintainers deferred it
 (D37): the aim is to pass the great majority of the tests of file, and to
 judge the rest when the port is close. The plan has these gates:
 
-1. The count of the 88 tests of file that pass goes up and never down, and
+1. The count of the tests of file that pass goes up and never down, and
    each one that fails has a reason (D37). All tests of this
-   repository pass.
+   repository pass. All 113 pass at the commit of D48.
 2. The differential test of D30: the oracle and the port read the same bytes
    with the same flags, and any difference fails.
 3. A corpus of real files, cut and damaged copies of them, and the files that
@@ -195,6 +196,9 @@ judge the rest when the port is close. The plan has these gates:
    panics and for limits on memory and time.
 6. The coverage of statements, reported for each package, and not a gate.
 7. The size that the port adds to a program, measured against D38.
+
+Gates 1, 2, 3 and 7 are tests in the test module. Items 4, 5 and 6 are not
+done, and `docs/BACKLOG.md` holds them.
 
 ## Estimates
 
@@ -255,8 +259,8 @@ until phase 4.
 ## Following upstream
 
 [`UPSTREAM.md`](UPSTREAM.md) holds the rules. The base commit is `FILE5_48`
-(D26), and the ledger has one line for each commit after it. Before phase 5,
-every commit that changes the library, the rules or the tests is `pending`.
+(D26), and the ledger has one line for each commit after it. Phase 5 ported
+or set aside each of the 90 commits, and `matched` names the newest (D48).
 
 ## Risks
 
@@ -281,7 +285,7 @@ and okage D22). Its peer session knows how a port that follows upstream works.
 On 2026-11-15 three models read the same brief, with the numbers of "What
 upstream holds", and answered the same seven questions. The brief told them,
 wrongly, that the Netpbm fault came from two regex engines that differ. The
-cause is the layout of `regmatch_t` (`docs/BACKLOG.md`), and none of their
+cause is the layout of `regmatch_t` (D43), and none of their
 advice depends on it.
 
 1. Gemini Pro (`gemini-3.1-pro-preview`): 12 to 22 weeks for the port. Parse

@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# Build the oracle: libmagic 5.48 from the checkout of file, against the C
-# library of the host, and the program that answers the tests with it. See
-# D30 and D33 in docs/decisions.
+# Build the oracle: libmagic from the checkout of file, against the C library
+# of the host, and the program that answers the tests with it. See D30 and
+# D33 in docs/decisions.
+#
+# It builds the commit that the port follows: the column matched of
+# docs/upstream/upstreams.tsv, or base while matched is empty (D26).
+# ORACLE_COMMIT builds another commit, for the work of following upstream.
 #
 #   test/oracle/build.sh
 #
@@ -19,7 +23,10 @@ test_dir="$(cd "$(dirname "$0")/.." && pwd)"
 root="$(cd "$test_dir/.." && pwd)"
 checkout="$root/upstream/file"
 out="$test_dir/.oracle"
-base="FILE5_48"
+# The commit from the ledger: matched, or base when matched is empty.
+ledger="$root/docs/upstream/upstreams.tsv"
+base="$(awk -F'\t' '$1 == "file" { print ($8 != "" ? $8 : $7) }' "$ledger")"
+base="${ORACLE_COMMIT:-$base}"
 
 if [ ! -d "$checkout/.git" ]; then
   echo "error: no checkout in $checkout. Make it with:" >&2
@@ -28,7 +35,7 @@ if [ ! -d "$checkout/.git" ]; then
 fi
 commit="$(git -C "$checkout" rev-parse "$base^{commit}")"
 
-# The library depends only on the base commit, so it is built once.
+# The library depends only on the commit, so it is built once for each.
 if [ "$(cat "$out/commit" 2>/dev/null || true)" != "$commit" ]; then
   rm -rf "$out"
   mkdir -p "$out/src"
@@ -38,11 +45,12 @@ if [ "$(cat "$out/commit" 2>/dev/null || true)" != "$commit" ]; then
     cd "$out/src"
     autoreconf -fi >"$out/autoreconf.log" 2>&1
     # The compression libraries are the ones of the host, built in. The
-    # oracle program sets MAGIC_NO_COMPRESS_FORK on each call, so that
-    # libmagic runs no outside program, as the port runs none (D36).
+    # oracle program runs libmagic with a PATH where it finds no program, as
+    # the port runs none (D36, D45). lzip, lrzip and lz4 have no decoder in
+    # the port, so the oracle is built without their libraries.
     ./configure --prefix="$out/root" --enable-static --disable-shared \
       --enable-zlib --enable-bzlib --enable-xzlib --enable-zstdlib \
-      --disable-lzlib --disable-lrziplib --disable-libseccomp --disable-landlock \
+      --disable-lzlib --disable-lrziplib --disable-lz4lib --disable-libseccomp --disable-landlock \
       >"$out/configure.log" 2>&1
     make -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)" >"$out/make.log" 2>&1
     make install >"$out/install.log" 2>&1

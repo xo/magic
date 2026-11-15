@@ -13,7 +13,7 @@ in `docs/decisions/`.
 
 The cgo package and its archives left with the switch (D47), and with them
 the items about the archives, the build script and the handle. The binary
-walker comes after phase 5 (D31).
+walker is next (D31).
 
 ## CI
 
@@ -47,20 +47,43 @@ walker comes after phase 5 (D31).
    not regular. libmagic, asked for them, reads a link as the file it points
    to, and fails on a directory. Source: `ExampleDetectFile`, D47.
 
+10. A `sync.Pool` that reuses the buffers of a detection, as D42 expects. A
+    file of 7 MiB takes a new buffer of that size on each call. Source:
+    `docs/API.md`.
+
+11. The engine is about as fast as libmagic on most files, and slower on
+    text. Measured on 2026-11-15 on linux/amd64, one walk for the MIME type
+    took, with the cgo package of `v0.4.1` and with the port: 5.1 µs and
+    4.3 µs for a Word document, 20 µs and 26 µs for a GIF image, 35 µs and
+    37 µs for an XLSX file, 252 µs and 334 µs for random bytes, and 334 µs and
+    1.24 ms for UTF-8 text. Most of the time on text is in Go's `regexp`.
+    The port now converts the bytes at each offset to Latin-1 once for a
+    detection, not once for each rule (D44), which made text 13.5% faster, to
+    1.09 ms. The rest is the matching of `regexp` itself. Source: a benchmark
+    of both packages, D46.
+
 ## The tests
 
-10. The case names and 16 of the 21 files in `testdata/` came from the tests
+12. The case names and 16 of the 21 files in `testdata/` came from the tests
     of `github.com/gabriel-vasile/mimetype`, which is under the MIT license.
     The repository does not carry its copyright notice. Two case names, "json
     issue#239" and "jar in zip #639", cite issues of mimetype and do not name
     it. Source: `magic_test.go` and `testdata/`, compared with mimetype
     v1.4.15. Open question 5 in `docs/PLAN.md`.
-11. Some cases in `mimeTests` repeat. "kml 2.2" and "ogg" are each the
+13. Some cases in `mimeTests` repeat. "kml 2.2" and "ogg" are each the
     name of two cases, so `go test` reports the second one as `ogg#01`.
     "rpm" has the same input as "rpm 1". "svg with comment prefix" has the
     same input as "svg no xml header" and holds no comment. Source:
     `magic_test.go`.
-12. `TestOracle` compares MIME types only with the `file` on `PATH`. The test
+14. Three items of the testing plan of `docs/PLAN.md` are not done. Source:
+    the testing plan, items 4 to 6.
+    - A test made for each feature of the rule format, so that every type,
+      relation and modifier runs at least once.
+    - Go fuzzing of the reader of the rules, the engine and each parser, for
+      panics and for limits on memory and time.
+    - A report of the coverage of statements for each package.
+
+15. `TestOracle` compares MIME types only with the `file` on `PATH`. The test
     module compares every output with the oracle, so this is a quick check,
     and not the gate.
 
@@ -68,30 +91,37 @@ walker comes after phase 5 (D31).
 
 Phases 2 to 4 found these. None of them changes an answer of the gates.
 
-13. The decoders of Go do not name each fault of damaged compressed data as
+16. The decoders of Go do not name each fault of damaged compressed data as
     the libraries of C do. zlib prints "invalid distance too far back" where
     the port prints "data error", and libzstd and liblzma give other codes
     for some damaged frames. `TestPortMatchesTheOracle` lists these answers
     apart. A port of the error checks of inflate would close the zlib part.
     Source: `inftrees.c` and `inflate.c` of zlib.
-14. The reason that libmagic prints after "Composite Document File V2
+17. The reason that libmagic prints after "Composite Document File V2
     Document" can come from `errno` of an earlier step, because a stream of
     length 0 sets no `errno`. The port does not copy this. Source:
     `cdf_read_long_sector_chain` and `file_trycdf`.
-15. The oracle keeps one cookie for all questions. libmagic keeps the value
+18. The oracle keeps one cookie for all questions. libmagic keeps the value
     of the last rule and the levels of continuation in the cookie, and a
     string compare reads past the end of a string. So an answer of libmagic
     can depend on the question before it. The port starts each detection
     from zero. No test has found a difference. Source: `ms_value` and `c.li`
     in `file.h`.
-16. The decoded table holds every entry as a struct of 432 bytes, so a
+19. The decoded table holds every entry as a struct of 432 bytes, so a
     program holds about 10.8 MB of rules in memory, as libmagic does. A
     smaller form in memory would cost a change of the engine.
-17. The xz decoder gives the data of the first block of a cut stream, where
+20. The xz decoder gives the data of the first block of a cut stream, where
     liblzma gives the data of every block that it reached.
-18. With `MAGIC_NO_COMPRESS_FORK`, file 5.48 refuses its libraries and still
+21. With `MAGIC_NO_COMPRESS_FORK`, file 5.48 refuses its libraries and still
     runs outside programs. The port copies the first part and never runs a
     program (D36, D45).
+
+22. Report two bugs of file to upstream (D48). Since `bcbb6064`,
+    `cdf_read_property_info` checks the length of a section against its copy
+    of the header on the stack, so on Linux it reads no property of a Compound
+    Document. Since `7fdb7bf9`, `file_fsmagic` prints the name of each flag of
+    the mode before its comma. The port copies both until upstream fixes them.
+    Source: phase 5.
 
 ## The binary walker
 

@@ -1,629 +1,317 @@
 # Plan
 
-This document holds the plan for `magic`, then every decision that shapes it,
-then the open questions for Ken.
+This document holds the plan for porting libmagic to pure Go (D22), the
+reviews of the plan, and the open questions for the maintainers. The
+decisions are in [`decisions/`](decisions/README.md), one file each (D23).
+[`UPSTREAM.md`](UPSTREAM.md) holds the rules for following upstream, and
+[`API.md`](API.md) holds the design of the new API.
+
+No code of the port exists. The plan and the rules come first (D24), and the
+plan is ready when its open questions are answered or deferred.
+
+## Status
+
+On 2026-11-15 magic is a cgo wrapper of libmagic, at `v0.4.0`:
+
+1. It wraps libmagic 5.48 from file 5.48, and links it with zlib 1.4, bzip2
+   1.0.8, xz 5.8.4 and zstd 1.5.7. The Windows archives also hold libgnurx
+   2.5.1.
+2. It has static archives for eight targets: linux/amd64, linux/arm64,
+   linux/arm (armv7), darwin/amd64, darwin/arm64, windows/amd64, windows/arm64
+   and freebsd/amd64 (D19). Each target is a Go module of its own (D17).
+3. It embeds the database compressed with zstd, and expands it into C memory
+   (D20). `MagicDB` returns the plain database (D21).
+4. CI tests linux/amd64, linux/arm64, windows/amd64 and windows/arm64. macOS
+   has no CI, and freebsd/amd64 has no runner.
+
+The port has not started. Phase 0, this plan, is open. On 2026-11-15 the
+maintainers answered questions 10 to 16 (D33 to D39), set the new API and its
+entry `magic.Detect` (D40), and moved the module to Go 1.27 (D41).
+
+The tags `v0.1.0` (`7b14d3f`), `v0.2.0` (`dedf132`) and `v0.2.1` (`a629036`)
+held the archives in the root module. `v0.3.0` gave each target a module
+(D17), `v0.3.1` rebuilt the archives with zlib 1.4 (D13) and broke Windows and
+macOS, and `v0.4.0` fixed both and compressed the database (D20, D21).
 
 ## Purpose
 
-`magic` lets a Go program identify the type of a file or a buffer with
-libmagic, the library of the `file` command. A program that imports it needs
-Go and a C compiler, and nothing else. It does not need libmagic on the
-system and it does not need a magic database on the system, because the
-repository carries both (D1, D3).
+magic identifies the type of a file or a buffer, as the `file` command does.
+The port makes it pure Go: a program that imports it needs the Go toolchain
+and nothing else, and builds with `CGO_ENABLED=0` for every target that Go
+supports (D22). Today a program needs a C compiler, and builds for eight
+targets only.
 
-## Current state
+The output is the output of libmagic 5.48 built against glibc (D33). The port
+copies what libmagic does, not how its C code is written (D34). The API is new
+and need not stay compatible (D39, D40). A program that uses the port grows by
+no more bytes than it grows with the cgo package (D38).
 
-The tags `v0.1.0` (`7b14d3f`), `v0.2.0` (`dedf132`) and `v0.2.1` (`a629036`)
-hold the archives in the root module. No document says what rule chose their
-numbers. Ken chose `v0.3.0` on 2026-10-14 for the first release with a module
-for each target (D17). `v0.3.1` rebuilt the archives with zlib 1.4 (D13), and
-`v0.4.0` stores the database compressed (D20, D21). It wraps libmagic 5.48 from
-file 5.48, and links it with zlib 1.4, bzip2 1.0.8, xz 5.8.4 and zstd 1.5.7. The
-Windows archives also hold libgnurx 2.5.1.
+## What upstream holds
 
-The package is `magic.go`, with one generated file `link_<goos>_<goarch>.go`
-for each of the eight targets (D17, D19). `magic.go` has these parts:
+The numbers are for file 5.48, the base commit (D26), measured on 2026-11-15.
 
-- `New` opens a handle and loads the embedded database.
-- `Buffer` and `File` identify a buffer or a file with the flags of the
-  handle.
-- `BufferWith`, `FileWith`, `BufferTypes` and `FileTypes` identify with other
-  flags and do not change the flags of the handle (D10).
-- `Flags` and `SetFlags` read and change the flags of the handle.
-- `Close` releases the handle.
-- `Version` and `VersionInt` report the libmagic version.
-- `MagicDB` returns the plain database (D21).
-- The flag constants mirror the `MAGIC_*` constants of `magic.h`.
+| Part | Size |
+| --- | --- |
+| libmagic, the C library in `src/` | 48 files, 23,251 lines. `file.c` and `seccomp.c` are not ported (D27) |
+| The rule engine | `apprentice.c` 3,726 lines reads the rules, `softmagic.c` 2,604 lines matches them |
+| Format parsers in C | ELF 1,980 lines, Compound File (OLE2) 2,384, compression 1,302, text encoding 1,059, JSON 500, DER 458, CSV, tar and SIMH 594 |
+| The rules in `magic/Magdir` | 356 files, 1.9 MB, 28,161 lines that are not comments |
+| Rules that use a regular expression | 368, and none uses a backreference |
+| Rules that use `search` | 780 |
+| Rules that print a date | 102 |
+| Rules that print a float with `%g`, `%f` or `%e` | 31 |
+| Lines that use `indirect` | 65 |
+| Lines that use `name` or `use`, which are subroutines | 2,149 |
+| The tests in `tests/` | 83 input files and 93 expected results |
 
-A handle is safe to share across goroutines (D9).
+Upstream has 90 commits after the base commit (D26). At its newest commit the
+tests have 113 input files and 125 expected results. The ledger in
+`docs/upstream/file.tsv` holds each commit.
 
-The tests in `magic_test.go` pass on linux/amd64 with Go 1.27.1. CI runs them
-on six hosted runners, and freebsd/amd64 has no job (D19). Five of the six
-passed on the last run, including windows/arm64 (D16). The macOS amd64 job
-never starts, so every run ends as cancelled. `docs/BACKLOG.md` holds that item and the other
-known work.
+## Scope
 
-## Direction
+The port covers:
 
-The history records two directions:
+1. libmagic: the reader of the rules, the engine, the output and every
+   detector that is C code, such as ELF, Compound File, JSON, CSV, tar, DER,
+   SIMH and the text encodings.
+2. The rules, compiled into tables when the package is built (D35).
+3. What the flags of libmagic do, as the options of the new API (D40,
+   `docs/API.md`).
+4. The tests of file, and the tests of this repository (D37).
 
-1. Keep the archives on the newest stable release of each dependency (D13).
-2. Keep one handle safe to share across goroutines (D9).
+The port does not cover:
 
-Nothing else is recorded. The questions at the end of this document name the
-choices that are not made yet.
+1. The command line program of file. `cmd/file` stays a small example (D27).
+2. The binary walker, which comes after the port (D31). `docs/BACKLOG.md`
+   holds what is known about it.
+3. Outside programs that libmagic runs for some formats. magic runs none
+   (D36).
 
-## Decisions
+## Architecture
 
-Each decision that shapes `magic`, in the order that it was made. The entries
-are append only. A decision is never edited to change its conclusion. When a
-later decision changes one, the older entry keeps its text, and its heading
-names the decision that changed it.
+The three models of "The reviews" agree on the shape. The names are a
+proposal, and the first file of each package settles them. The packages are
+designed as Go, not as copies of the files of libmagic (D34).
 
-Each heading ends with a status. `Decided` means that the history shows that
-Ken chose it. `Proposed` means that the code follows it and no commit, comment
-or document says that Ken chose it. A decision that changes an earlier one
-says `Amends Dn`, and the earlier one says `Amended by Dn`.
-`TestTheDecisionIndexIsComplete` and `TestAnAmendmentPointsBothWays` hold
-this.
+| Package | What it holds |
+| --- | --- |
+| `magic`, the root | the public API of `docs/API.md` (D40) |
+| `internal/rules` | the compiler of the rules, run by `go generate`, and the tables that it writes (D35) |
+| `internal/engine` | what `softmagic.c` does: offsets, indirect offsets, `name` and `use`, the order of strength, `default` and `clear`, and continuation |
+| `internal/cfmt` | output that matches C: `printf` formats, dates and floats |
+| `internal/elf`, `internal/cdf`, `internal/text`, `internal/compress` and the other detectors | the parsers that are C code in libmagic |
 
-A bare number, such as D3, names a decision in this document. A decision of
-another repository is named with that repository, such as dbmeta D110.
+The rules are compiled into tables when the package is built (D35). The port
+does not read the binary `.mgc` format. It is the memory layout of the C
+structs of one release, and it ties the port to that release.
 
-D1 to D14 were written on 2026-09-27 from the history of the repository, from
-`7b14d3f` (2026-09-04) to `a629036` (2026-09-13). Each gives the commit, what
-changed and the reason. The reason comes from a commit message or a comment.
-If neither gives a reason, the entry says "Reason not recorded".
+The tables are most of the bytes that the port adds to a program, so their form
+is chosen by what they cost (D38). `MagicDB` goes, because a Go engine has no
+`.mgc` to give.
 
-| Decision | Title | Status |
+## The hard parts
+
+The three models name the same risks. These are in order of risk.
+
+1. Regular expressions. libmagic compiles and runs each one in the C locale,
+   in `file_regcomp` and `file_regexec` in `funcs.c`, so a match works on
+   bytes. Go's `regexp` works on UTF-8, and `.` matches a whole multi-byte
+   character where C matches one byte. dburl D3 found the same fault. One way
+   is to read each byte as the character with the same number, 0 to 255, and
+   to translate each pattern to match. No rule uses a backreference, so
+   `regexp.CompilePOSIX` can express each pattern. Whether it gives the same
+   match as the C library needs a test of all 368 rules, on the start and the
+   end of each match.
+2. Output. C `printf` differs from Go `fmt` for `%g`, exponents, rounding,
+   `%#o` and widths. The port needs a small formatter that copies C, tested
+   against C on the 31 float rules and on each integer format.
+3. Dates. 102 rules print a date, in local time or in UTC, with different
+   epochs. The tests pin `TZ`.
+4. The order of results. The strength of each rule decides which result comes
+   first. The sort and its ties must match, or the first line differs.
+5. Text and encodings. `ascmagic.c` and `encoding.c` decide "ASCII text",
+   "UTF-8 text" and the like with rules of thumb. They need a port, not a new
+   design.
+6. Size. The cgo package adds 995,488 bytes to a stripped program (D38), and
+   the port must add no more. The tables, a decoder for xz or zstd and the
+   generic entry each count. A test measures it from the first code on.
+7. ELF and Compound File. These are full parsers for hostile input. Go has
+   `debug/elf`. libmagic describes a damaged file as far as it can read it,
+   and whether `debug/elf` is as tolerant is not tested. If it is not, the
+   port needs a parser of its own.
+
+## Compression
+
+D27 gives each compression library a policy. gzip, zlib and bzip2 move to the
+standard library. xz and zstd come from outside packages when they are needed
+(D28), because the standard library has neither. Without them, the port names
+a file that is compressed with xz or zstd and does not look inside it, and its
+output differs from libmagic with `MAGIC_COMPRESS`.
+
+## Testing plan
+
+All three models say that "100% coverage" needs a definition, and that the
+coverage of lines does not prove the same output. The maintainers deferred it
+(D37): the aim is to pass the great majority of the tests of file, and to
+judge the rest when the port is close. The plan has these gates:
+
+1. The count of the 93 expected results of file that pass goes up and never
+   down, and each one that fails has a reason (D37). All tests of this
+   repository pass.
+2. The differential test of D30: the oracle and the port read the same bytes
+   with the same flags, and any difference fails.
+3. A corpus of real files, cut and damaged copies of them, and the files that
+   the maintainers approve, through the differential test. The 83 test files
+   of file are a gate, and they are far too few to be the whole check.
+4. A test for each feature of the rule format, made for the purpose, so that
+   every type, relation and modifier runs at least once.
+5. Go fuzzing of the reader of the rules, the engine and each parser, for
+   panics and for limits on memory and time.
+6. The coverage of statements, reported for each package, and not a gate.
+7. The size that the port adds to a program, measured against D38.
+
+## Estimates
+
+Engineer-weeks for one experienced Go engineer, from the three reviews and
+from a reading of the code:
+
+| Source | Port of libmagic | Effect of an AI agent |
 | --- | --- | --- |
-| [D1](#d1-the-package-links-static-libmagic-archives-that-the-repository-carries-decided-amended-by-d16-amended-by-d17-amended-by-d19) | The package links static libmagic archives that the repository carries | Decided. Amended by D16. Amended by D17. Amended by D19 |
-| [D2](#d2-build-libmagicsh-cross-compiles-the-archives-with-zig-cc-decided-amended-by-d16-amended-by-d17) | build-libmagic.sh cross-compiles the archives with zig cc | Decided. Amended by D16. Amended by D17 |
-| [D3](#d3-the-magic-database-is-embedded-and-one-copy-serves-every-target-decided-amended-by-d20-amended-by-d21) | The magic database is embedded, and one copy serves every target | Decided. Amended by D20. Amended by D21 |
-| [D4](#d4-libmagic-reads-compressed-files-through-zlib-bzip2-xz-and-zstd-decided) | libmagic reads compressed files through zlib, bzip2, xz and zstd | Decided |
-| [D5](#d5-the-api-follows-the-libmagic-c-api-decided) | The API follows the libmagic C API | Decided |
-| [D6](#d6-a-handle-is-not-safe-for-concurrent-use-decided-amended-by-d9) | A handle is not safe for concurrent use | Decided. Amended by D9 |
-| [D7](#d7-a-closed-handle-reports-an-error-and-never-reaches-c-decided) | A closed handle reports an error and never reaches C | Decided |
-| [D8](#d8-the-code-is-under-the-mit-license-decided) | The code is under the MIT license | Decided |
-| [D9](#d9-a-handle-is-safe-to-share-across-goroutines-decided-amends-d6) | A handle is safe to share across goroutines | Decided. Amends D6 |
-| [D10](#d10-a-lookup-can-use-other-flags-and-leave-the-flags-of-the-handle-alone-decided) | A lookup can use other flags and leave the flags of the handle alone | Decided |
-| [D11](#d11-the-tests-expect-what-libmagic-548-reports-and-file1-is-the-reference-decided) | The tests expect what libmagic 5.48 reports, and file(1) is the reference | Decided |
-| [D12](#d12-ci-builds-and-tests-only-on-hosted-runners-decided-amended-by-d16) | CI builds and tests only on hosted runners | Decided. Amended by D16 |
-| [D13](#d13-the-script-builds-against-the-newest-stable-release-of-each-dependency-decided) | The script builds against the newest stable release of each dependency | Decided |
-| [D14](#d14-the-module-has-no-go-dependencies-proposed) | The module has no Go dependencies | Proposed |
-| [D15](#d15-magic-is-set-up-for-coding-agents-as-every-xo-repository-is-decided) | magic is set up for coding agents as every xo repository is | Decided |
-| [D16](#d16-windowsarm64-is-a-target-decided-amends-d1-amends-d2-amends-d12-amended-by-d17) | windows/arm64 is a target | Decided. Amends D1. Amends D2. Amends D12. Amended by D17 |
-| [D17](#d17-each-target-is-a-go-module-of-its-own-tagged-as-resvg-tags-its-modules-decided-amends-d1-amends-d2-amends-d16) | Each target is a Go module of its own, tagged as resvg tags its modules | Decided. Amends D1. Amends D2. Amends D16 |
-| [D18](#d18-a-target-version-has-a-patch-number-and-a-target-module-declares-go-121-decided) | A target version has a patch number, and a target module declares go 1.21 | Decided |
-| [D19](#d19-magic-builds-the-targets-that-resvg-builds-decided-amends-d1) | magic builds the targets that resvg builds | Decided. Amends D1 |
-| [D20](#d20-the-embedded-database-is-compressed-with-zstd-and-expands-into-c-memory-decided-amends-d3) | The embedded database is compressed with zstd, and expands into C memory | Decided. Amends D3 |
-| [D21](#d21-magicdb-is-a-function-that-expands-the-database-decided-amends-d3) | MagicDB is a function that expands the database | Decided. Amends D3 |
+| Gemini Pro | 12 to 22 | 20 to 30% less |
+| DeepSeek Pro | 12 to 18 | 20 to 30% less |
+| OpenAI Pro | 30 to 60 | 10 to 25% less |
+| This plan | 24 to 47 | 15 to 30% less, and less off the high figure |
+
+The models agree on the parts. They differ on how long it takes to make every
+output equal, which OpenAI Pro thinks is most of the cost. The figures of this
+plan, by part:
+
+| Part | Weeks |
+| --- | --- |
+| The oracle, the differential test in CI and the corpus | 3 to 5 |
+| The reader of the rules, and the tables | 3 to 5 |
+| The engine: offsets, `name` and `use`, strength | 5 to 8 |
+| Output that matches C: formats, dates, floats, regular expressions | 3 to 6 |
+| The detectors: text, ELF, Compound File, JSON, CSV, tar, DER, SIMH | 5 to 9 |
+| Compression | 1 to 2 |
+| Making every output equal on the corpus | 4 to 12 |
+| Total | 24 to 47 |
+
+The uncertainty is in the work of making every output equal, and it depends on
+what the corpus finds. An AI agent writes the first form of parsers, tables
+and tests fast. It does less for the time spent finding why one file of ten
+thousand differs, and that is where the high figures come from.
+
+## Phases
+
+Each phase ends with a gate. The cgo package stays the one that users get
+until phase 4.
+
+0. The plan. The open questions are answered or deferred, and the decisions
+   are settled (D24).
+1. The harness: the test module, the oracle built from the checkout (D30),
+   the differential test, the corpus, and the tests of file as test data.
+   Gate: the oracle and the cgo package of today agree on the corpus, on the C
+   library that each is built for.
+2. The rules and the engine, and enough of the detectors that MIME types
+   match. Gate: every MIME type equals the oracle on the corpus. The port can
+   ship beside the cgo package, so that users can compare.
+3. Full output: the formats of C, every detector and compression. Gate: the
+   great majority of the expected results of file pass, the maintainers judge
+   the rest (D37), and the size is within D38.
+4. The switch. The Go engine and the new API replace the cgo package, and
+   the archives, the build script and the modules for each target leave the
+   repository (D22). The release is the next minor version (D39). Gate: the
+   gates of phase 3, with `CGO_ENABLED=0`, on every target that CI has.
+5. Following upstream: the `pending` commits of the ledger, in order (D26).
+   Gate: `matched` is the newest commit of upstream.
+
+## Following upstream
+
+[`UPSTREAM.md`](UPSTREAM.md) holds the rules. The base commit is `FILE5_48`
+(D26), and the ledger has one line for each commit after it. Before phase 5,
+every commit that changes the library, the rules or the tests is `pending`.
+
+## Risks
+
+1. The port does not reach the same output on some files, after the time that
+   the estimate gives. The differential test makes the gap visible, so the
+   maintainers can decide what to accept.
+2. The tests of file are few, so the corpus decides how much of the engine is
+   tested. A small corpus gives a false sense of parity.
+3. Upstream moves while the port is written. 90 commits came in five months
+   after 5.48. The ledger keeps them in order, and phase 5 ports them.
+4. An outside package for xz or zstd can change or stop. D28 keeps that
+   dependency to two formats.
+
+## Prior art
+
+okage ports tiny-skia and resvg from Rust in the same way, with the same rules
+for decisions, checkouts, ledgers and oracles (okage D1, okage D11, okage D12
+and okage D22). Its peer session knows how a port that follows upstream works.
+
+## The reviews
+
+On 2026-11-15 three models read the same brief, with the numbers of "What
+upstream holds", and answered the same seven questions. The brief told them,
+wrongly, that the Netpbm fault came from two regex engines that differ. The
+cause is the layout of `regmatch_t` (`docs/BACKLOG.md`), and none of their
+advice depends on it.
+
+1. Gemini Pro (`gemini-3.1-pro-preview`): 12 to 22 weeks for the port. Parse
+   the rules at `go generate` time, and do not read `.mgc`. Use
+   `github.com/ulikunitz/xz` and `github.com/klauspost/compress/zstd`. Aim for
+   the same MIME types and accept small differences in the text, which this
+   plan does not adopt, because the goal is the same output. It said that the
+   rules sometimes use backreferences. They do not: the one hit for `\1` to
+   `\9` is `\012`, an octal newline.
+2. DeepSeek Pro (`deepseek-v4-pro`): 12 to 18 weeks. Embed the rule text and
+   parse it at run time, because that is easier to debug. Pin the reference
+   to one C library, the C locale and one time zone.
+3. OpenAI Pro (`gpt-6-astra`): 30 to 60 weeks. Compile the rules at
+   `go generate` time. Build a C oracle in CI that the package itself does not
+   use. "100% coverage of all unit tests" can mean two things, and every test
+   passing is the sound gate.
+
+All three:
+
+1. Do not read `.mgc`.
+2. Use the two outside packages for xz and zstd, because the standard library
+   has neither.
+3. Test against C libmagic with a large corpus, because the tests of file are
+   too few.
+4. Name the reference for "the same output", because there is no single right
+   answer without one.
 
-### D1. The package links static libmagic archives that the repository carries. Decided. Amended by D16. Amended by D17. Amended by D19.
+## Open questions
 
-Commit `7b14d3f` (2026-09-04).
+The numbers do not repeat. Question 1 was answered by D28, and questions 10 to
+16 by D33 to D39. `docs/API.md` has the API, which D42 settled. The next
+question is question 17.
 
-`magic.go` has one `#cgo LDFLAGS` line for each target. Each line points at
-`libmagic/<target>/` and links `libmagic.a` with the four compression
-libraries. The archives are committed. There are six targets: linux/amd64,
-linux/arm64, linux/arm (armv7), darwin/amd64, darwin/arm64 and
-windows/amd64.
-
-The reason is in two comments. The workflow says that the archives are
-static, "so there is nothing to install". `build-libmagic.sh` says "These
-archives get committed", and it filters out pre-release tags for that reason
-(D13).
-
-A consequence: a platform that has no line in `magic.go` does not build.
-
-### D2. build-libmagic.sh cross-compiles the archives with zig cc. Decided. Amended by D16. Amended by D17.
-
-Commit `7b14d3f` (2026-09-04). Commit `a629036` changed how the versions are
-chosen (D13).
-
-One script on one machine builds the archives for all six targets. `zig cc`
-is the C compiler for every target. The Linux targets use musl. The script
-first builds a native copy of `file`, because the build of file runs `file`
-to compile `magic.mgc`, and the cross-compiled one does not run on the host.
-
-The comments in the script give the reason for each workaround, such as the
-bzip2 Makefile that ignores `CC` and the zlib `configure` that does not work
-for MinGW.
-
-### D3. The magic database is embedded, and one copy serves every target. Decided. Amended by D20. Amended by D21.
-
-Commit `7b14d3f` (2026-09-04).
-
-`//go:embed libmagic/magic.mgc` puts the database in the Go binary as
-`MagicDB`. `New` copies it into C memory once for each handle and loads it
-with `magic_load_buffers`. The package never reads a magic file from the
-system.
-
-The comment in `New` gives the reason for the copy. `magic_load_buffers`
-keeps the pointer for the life of the handle, and it can byte-swap the
-contents in place. A Go pointer cannot be kept past the call, and the
-embedded bytes can be in a read-only section.
-
-`libmagic/magic.h` and `libmagic/magic.mgc` are shared by all targets. The
-comment on `MagicDB` says that the format does not depend on byte order.
-`share_once` in the script prints a warning if one target builds a different
-file.
-
-### D4. libmagic reads compressed files through zlib, bzip2, xz and zstd. Decided.
-
-Commit `7b14d3f` (2026-09-04). Commit `dbcd068` (2026-09-12) added
-`-lshlwapi` to the Windows line.
-
-The script configures file with `--enable-zlib --enable-bzlib --enable-xzlib
---enable-zstdlib` and with `--disable-lzlib --disable-libseccomp`. On
-Windows, libgnurx gives libmagic the POSIX regex functions that MinGW does
-not have. `src/magic.c` in file 5.48 includes `shlwapi.h`, so the Windows
-line also links `shlwapi`.
-
-The comment on `GNURX_FALLBACK` says that libgnurx is under LGPL 2.1, "unlike
-everything else here". Reason not recorded for the choice of the four
-compression libraries.
-
-### D5. The API follows the libmagic C API. Decided.
-
-Commit `7b14d3f` (2026-09-04). Commit `7d90219` (2026-09-04) added the
-`-mime` flag to `cmd/file`.
-
-`New` takes an `int` of flags. The exported constants mirror the `MAGIC_*`
-constants and take their values from `magic.h`. `Buffer` and `File` return
-the string that libmagic returns. An error from libmagic carries the name of
-the C function and the text of `magic_error`.
-
-`cmd/file` is an example. The commit message of `7d90219` calls it "cmd/file
-example". It prints the type of each file that it gets, and `-mime` selects
-`MimeType`.
-
-### D6. A handle is not safe for concurrent use. Decided. Amended by D9.
-
-Commit `7b14d3f` (2026-09-04).
-
-The first comment on `Magic` said that a `magic_t` holds mutable state for
-each lookup and is not safe for concurrent use. It told the caller to give
-each goroutine its own handle, or to guard one with a mutex.
-
-### D7. A closed handle reports an error and never reaches C. Decided.
-
-Commit `7b14d3f` (2026-09-04). Commit `dbcd068` (2026-09-12) extended it.
-
-`Close` releases the handle and the copy of the database, and a second call
-does nothing. A finalizer calls `Close` if the caller does not. The comment
-calls it "Backstop only".
-
-At first, `Buffer` and `File` returned an error on a closed handle.
-`dbcd068` made every method return `errClosed`, and made `Close` take the
-lock of the handle (D9). The comment on `Close` gives the reason: a method
-that runs at the same time as `Close` reports a closed handle "rather than
-touching a freed cookie". `TestClosed` holds this.
-
-`Buffer` also refuses an empty buffer, because it passes `&buf[0]` to C.
-`TestEmptyBuffer` holds this.
-
-### D8. The code is under the MIT license. Decided.
-
-Commit `9a4fca8` (2026-09-05).
-
-`LICENSE` is the MIT license, "Copyright (c) 2015-2026 Kenneth Shaw". The
-Windows archives hold libgnurx, which is under LGPL 2.1 (D4). The questions at
-the end ask about that, and about the test data that came from another
-project.
-
-### D9. A handle is safe to share across goroutines. Decided. Amends D6.
-
-Commit `dbcd068` (2026-09-12).
-
-`Magic` has a mutex, and every method holds it for the whole call. The
-comment on `Magic` says that a single handle is safe to share, "at the cost
-of serializing lookups", and that a caller who wants parallel lookups gives
-each worker its own handle.
-
-`TestConcurrent` calls one handle from 16 goroutines. The workflow runs the
-tests with `-race`, and its comment says that this is "what backs the 'safe
-to share a handle' claim".
-
-### D10. A lookup can use other flags and leave the flags of the handle alone. Decided.
-
-Commit `dbcd068` (2026-09-12).
-
-`BufferWith` and `FileWith` identify with the flags that they get.
-`BufferTypes` and `FileTypes` identify once for each flag set, under one
-lock, so that every result describes the same input. `SetFlags` changes the
-flags of the handle. The others do not. `TestFlagsRestored` holds this.
-
-The handle remembers the flags that are on the cookie now, in `cur`, and
-calls `magic_setflags` only when they change. The comment in `each` says that
-this is "Purely an optimization".
-
-### D11. The tests expect what libmagic 5.48 reports, and file(1) is the reference. Decided.
-
-Commit `dbcd068` (2026-09-12). Commit `a629036` (2026-09-13) added the note
-about new file releases to the script.
-
-Each case in `mimeTests` expects the MIME type that libmagic 5.48 reports.
-The comment on `mimeTest` says that some values are less specific than the
-real type, and calls that "the library's behaviour, not a gap in the test".
-
-`TestOracle` writes each case to a file and compares the result of the
-package with `file --mime-type` of the system. It runs only when `file` of
-the same version is on `PATH`. Its comment gives the reason: the expected
-values alone prove only that the wrapper agrees with itself. The script says
-that a new release of file changes the output, "so the Go tests that assert
-exact descriptions may need regenerating afterwards".
-
-Found on 2026-09-27: the names of the cases and 16 of the 21 files in
-`testdata/` come from the tests of `github.com/gabriel-vasile/mimetype`. The
-16 files are byte for byte the same as those in mimetype v1.4.15. The case
-names "json issue#239" and "jar in zip #639" name issues of mimetype, not of
-this repository. Nothing in this repository says so.
-
-### D12. CI builds and tests only on hosted runners. Decided. Amended by D16.
-
-Commit `dbcd068` (2026-09-12) added `.github/workflows/test.yml`. Commit
-`dedf132` (2026-09-12) removed two parts of it.
-
-The workflow runs on a push to `main`, on a pull request and by hand. Each of
-five hosted runners builds, runs `go vet`, runs `go test -race -count=1 -v
-./...` and runs `cmd/file` on three files in `testdata/`. The runners are
-linux/amd64, linux/arm64, macOS amd64 (`macos-13`), macOS arm64 and
-windows/amd64.
-
-`dedf132` removed the `gofmt` step and the `cross` job. The `cross` job linked
-every target with `zig cc`, which was the only CI build of linux/armv7.
-Reason not recorded. The commit message is "More cleanup + fixes for
-workflows".
-
-### D13. The script builds against the newest stable release of each dependency. Decided.
-
-Commit `a629036` (2026-09-13).
-
-On each run, `build-libmagic.sh` looks up the newest release of zlib, bzip2,
-xz, zstd and file. A variable such as `FILE_VER` pins one version. `PINNED=1`
-turns off every lookup. If a lookup fails, the script prints a warning and
-uses the fallback version. The script ignores a pre-release tag, because the
-archives are committed (D1). libgnurx stays at 2.5.1, because upstream
-shipped its last release in 2007.
-
-The comment on the fallback versions says that they are what the committed
-archives were built from. The same commit rebuilt the archives, and every
-`liblzma.a` changed. The archives now hold xz 5.8.4, and `XZ_FALLBACK` still
-said 5.8.3. On 2026-10-14, Ken asked for a check of every dependency. Each
-was at its newest stable release, and `XZ_FALLBACK` was set to 5.8.4.
-
-On 2026-11-12, zlib 1.4 was out, with fixes for two CVEs from an audit. They
-are a buffer overflow in a non-blocking `gzwrite()` and an out-of-bounds
-pointer in `contrib/infback9`. Ken asked for a rebuild of all eight targets.
-The file version stays 5.48, so each target module takes the next patch
-number, `v5.48.1`, as D18 says, and the root takes `v0.3.1`. The script now
-prints the patch number from `MODULE_PATCH`. The rebuild used zig 0.17.1,
-where the archives of `v0.3.0` came from zig 0.16, so all five libraries
-differ in bytes.
-
-The clang of zig 0.17 stops with an error on a line of file 5.48 that zig 0.16
-only warned about. In `readcdf.c`, `&ts.tv_sec` is a `long *` where a
-`const time_t *` is expected, and the two differ in size on Windows. The
-Windows targets pass `-Wno-incompatible-pointer-types`, which gives the code
-that zig 0.16 built. It does not fix the mismatch. On the 21 sample files, the
-Windows build gave the same output as the `file` of the host. The samples
-cannot test the timestamp code, because `file` stops on them with "Cannot read
-short stream".
-
-### D14. The module has no Go dependencies. Proposed.
-
-`go.mod` has no `require` line, and no commit since `7b14d3f` added one. The
-package imports only the standard library and `C`. No commit, comment or
-document says that this is a rule. Ken, is it one?
-
-### D15. magic is set up for coding agents as every xo repository is. Decided.
-
-Ken decided on 2026-09-27 that every repository in the `xo` namespace is set
-up for coding agents the same way. dbmeta records it as dbmeta D110. This
-decision adopts it for `magic`.
-
-The repository now has these files:
-
-- `AGENTS.md` holds the rules for a coding agent, and opens with the three
-  standing rules of dbmeta D110.
-- `CLAUDE.md` holds one line, `@AGENTS.md`, so that Claude Code reads the
-  same rules. It is a file and not a symbolic link.
-- `README.md` and `CONTRIBUTING.md` are new. `CONTRIBUTING.md` has the
-  commands that install the agent skills.
-- `skills-lock.json` names the two skills, `simple-english` and
-  `go-pedantry`. Each is an ordinary folder in `.agents/skills/` and in
-  `.claude/skills/`, installed with `--copy`.
-- `.gitignore` ignores `.claude/settings.local.json`, the Claude Code
-  permissions of one person.
-- `.gitattributes` holds `* text=auto eol=lf`.
-- `docs/PLAN.md` is this document, and `docs/BACKLOG.md` holds the known
-  work.
-
-`magic` is a small library, so its decisions stay in this document and are
-not split into one file each (dbmeta D111).
-
-The tests in `skills_test.go` and `docs_test.go` hold the setup:
-`TestSkillsAreCopies`, `TestClaudeImportsAgents`,
-`TestTheRootHoldsFourDocuments`, `TestTheDecisionIndexIsComplete`,
-`TestAnAmendmentPointsBothWays` and `TestEveryDecisionReferenceExists`. They
-use only the standard library.
-
-### D16. windows/arm64 is a target. Decided. Amends D1. Amends D2. Amends D12. Amended by D17.
-
-Ken decided on 2026-10-14 to add windows/arm64, after he asked Gemini Pro and
-DeepSeek Pro which platforms to add. Gemini Pro recommended it, because
-Windows on arm64 hardware is growing and GitHub has a hosted runner for it.
-DeepSeek Pro put it on request and said that no hosted runner exists. The
-label list of `actionlint` holds `windows-11-arm`, so that claim was wrong.
-
-What changed:
-
-- `libmagic/windows-arm64/` holds the same six archives as `windows-amd64`,
-  8.2 MB in all. `build-libmagic.sh` built them with `zig cc` for
-  `aarch64-windows-gnu`. All six are `coff-arm64`.
-- `magic.go` has a `#cgo` line for windows/arm64.
-- The `test` workflow has a `windows/arm64` job on `windows-11-arm`. That
-  runner has no arm64 mingw-w64, so the job uses `zig cc` as the C compiler.
-  It does not pass `-race`, because Go does not support the race detector on
-  windows/arm64.
-
-Two things differ from the other targets in the script, and neither changes
-an archive of another target:
-
-- A configure script with only `--host` runs a test program to find out
-  whether it is cross-compiling. On this host, wine tries to run the arm64
-  program and hangs. The `noexec` field in `TARGETS` makes the script pass
-  `--build` as well, so that configure runs nothing.
-- xz builds a version resource for Windows, and its configure looks for
-  `<host>-windres`. The host has `windres` only for x86_64 and i686, so the
-  script links `llvm-windres` under the name of the host and gives it the
-  mingw headers of zig. The resource is in `liblzma.a` for both Windows
-  targets.
-
-The same change copies each source tree with `cp -rp`. Without `-p`, the
-copy gets new timestamps, and `make` then tried to regenerate `aclocal.m4`
-in xz and failed.
-
-Test status: the build host links a `file.exe` and a test binary for
-windows/arm64 with `zig cc`. It cannot run them, because it has no arm64
-Windows. The first run of the CI job is the first time that the tests run on
-windows/arm64.
-
-The first run failed, because zig for arm64 Windows crashed on the runner
-with exit 0xc0000005 while it built `runtime/cgo`. The job now installs
-llvm-mingw 20261006 and uses its clang as the C compiler. On that run, every
-test passed on windows/arm64, and `TestOracle` passed. So the archives that
-zig built link and work under a second compiler.
-
-Ken also asked magic to match the targets of resvg. The list of resvg is not
-final, and open question 8 holds what is left.
-
-### D17. Each target is a Go module of its own, tagged as resvg tags its modules. Decided. Amends D1. Amends D2. Amends D16.
-
-Ken decided on 2026-10-14 that magic follows the tagging pattern of resvg. That
-pattern is in D9 of resvg and in `libresvg/README.md` of resvg. One module for
-all targets made every user download every archive, and each new target made it
-worse.
-
-What changed:
-
-- Each folder `libmagic/<goos>_<goarch>/` is a module with its own `go.mod`,
-  its archives and a generated `link.go` that holds the `#cgo` line. The name
-  `linux_arm` is armv7. The new names replace `linux-armv7`, `macos-amd64` and
-  `macos-arm64`.
-- `magic.go` has no `#cgo LDFLAGS` line for a platform any more. A file
-  `link_<goos>_<goarch>.go` in the root imports the module of its platform.
-  Go reads the end of the file name as a build constraint. The script writes
-  both files.
-- The root `go.mod` requires each target module and has a `replace` line that
-  points it at its folder. The replace lines make the repository build before
-  the tags exist. A user of the root module ignores them.
-- A folder that has a `go.mod` is not part of the module above it. The root
-  module no longer holds the archives, so a user downloads the archives of one
-  platform and no other.
-- `magic.h` and `magic.mgc` stay in `libmagic/` in the root module, because
-  they are the same for every target.
-
-The tags follow resvg, with one difference that Go forces:
-
-- The root tag is a plain semver, with no prefix and no upstream version. It
-  tracks the API of the package. A change to the wrapper alone bumps the root.
-  A new target bumps the root minor. The root tags that exist are `v0.1.0`,
-  `v0.2.0` and `v0.2.1`.
-- A target tag is the path of the folder and the version of file that the
-  archives hold, such as `libmagic/linux_amd64/v5.48.0`. A new release of file
-  means new tags for every target, then an edit of the `require` lines, then a
-  new root tag.
-- The module path ends in `/v5`, such as
-  `github.com/xo/magic/libmagic/linux_amd64/v5`. Go wants `/vN` on a module at
-  version 2 or higher. resvg has no suffix, because its versions start with
-  `v0`. The folder and the tags do not change.
-- The order of a release is: push the commit, tag and push the target modules,
-  edit the `require` lines if a version changed, then tag and push the root.
-  A published tag never moves, because the module proxy caches it.
-
-`TestEveryTargetIsWired` and `TestNoLinkFileWithoutATarget` hold the layout.
-
-Nothing is tagged by this decision, because Ken did not say to tag. The tests
-pass with the replace lines. No one has run `go get` from an empty module
-against real tags, because the tags do not exist.
-
-On 2026-10-14, Ken said to tag and publish. The target tags and `v0.3.0` are
-on the commit `5a87245`, where CI passed on every job that gets a runner. Then
-a program in an empty module ran `go get github.com/xo/magic@v0.3.0` and
-printed the version and a type, as the layout intends. `go get` fetched all
-eight target modules, because it reads the imports for every platform. A plain
-`go build` from an empty module cache then downloaded the root module and the
-`linux_amd64` module only.
-
-### D18. A target version has a patch number, and a target module declares go 1.21. Decided.
-
-These two details follow resvg and a limit of Go. Ken accepted them on
-2026-10-14.
-
-A version of file has two parts, such as 5.48, and a Go version has three. The
-script adds `.0`, so the tag is `v5.48.0`. A published tag never moves. If a
-rebuild keeps the same version of file, for example for a new xz, the tag
-needs the next patch number, `v5.48.1`. The script prints `.0` and does not
-know about a patch.
-
-The `go.mod` of a target module says `go 1.21`, as the platform modules of
-resvg do. The root says `go 1.25`. Nothing in a target module needs more than
-1.21.
-
-
-### D19. magic builds the targets that resvg builds. Decided. Amends D1.
-
-Ken decided on 2026-10-14 that magic covers only the targets of resvg, and that
-it needs no linux/ppc64le and no linux/s390x. The targets are linux/amd64,
-linux/arm64, linux/arm, darwin/amd64, darwin/arm64, windows/amd64,
-windows/arm64 (D16) and freebsd/amd64.
-
-freebsd/amd64 is new. The script builds it with `zig cc` for `x86_64-freebsd`
-and the `noexec` field of D16. It has no CI job, because GitHub has no hosted
-FreeBSD runner.
-
-resvg also has `linux_amd64_musl` and `linux_arm64_musl`, which a user selects
-with `-tags musl`. magic does not add them. Its Linux archives are built for
-musl and are static, so a program links them under glibc and under musl. Ken
-accepted this on 2026-10-14. On linux/amd64, the tests passed when the program
-was linked with the glibc gcc of the host and with `zig cc` for musl. On
-linux/arm and linux/arm64, they passed linked with `zig cc` for musl and run
-under qemu. A glibc link of arm and arm64 was not tried.
-
-On 2026-11-12, this turned out to be wrong for glibc. The same `linux_amd64`
-archive gives the output of `file` on all 21 sample files when a program links
-it with musl. When a program links it with glibc, the description of the three
-Netpbm files is wrong, for example `size = 6 10\012000010...` where `file`
-says `size = 6 x 10`. The archives are built against the headers of musl, and
-the text is wrong where libmagic uses a regular expression, so the call into
-the regex code of glibc is the suspect. No one confirmed that. The MIME types
-and the tests are not affected. `v0.2.1` and `v0.3.0` have the same fault. The
-reason for the decision, that one musl build serves both libcs, does not
-hold for descriptions. Open question 9 asks what to do.
-
-Archives for linux/riscv64, linux/ppc64le and linux/s390x were built on
-2026-10-14 and deleted, and none was committed.
-
-What ran on 2026-10-14:
-
-- The tests passed on linux/amd64, linux/arm and linux/arm64, and on
-  windows/amd64 under wine.
-- The program and the test binary linked, and nothing ran them here, for
-  windows/arm64 and freebsd/amd64. After the commit, windows/arm64 ran in
-  CI and passed, as D16 says. freebsd/amd64 has not run.
-- The package compiled, and was not linked, for darwin/amd64 and
-  darwin/arm64. `zig` has no macOS SDK, so the CI jobs on macOS do the link.
-
-The targets of resvg are not final. resvg staged windows/arm64 and
-freebsd/amd64 and did not commit them. If resvg drops one, Ken decides whether
-magic does too.
-
-### D20. The embedded database is compressed with zstd, and expands into C memory. Decided. Amends D3.
-
-Ken decided on 2026-11-15 that the embedded database is stored as a compressed
-artifact. The iv session asked for it. The database is 10,793,952 bytes, and
-`//go:embed` put all of it in every program that imports the package. In iv,
-that was 10.8 MB of a 117.5 MB build.
-
-What changed:
-
-- `libmagic/magic.mgc.zst` replaces `libmagic/magic.mgc`. It is 345,182
-  bytes, from `zstd -19`. On this file, level 3 gives 408,107 bytes and
-  `--ultra -22` gives 325,485. The saving of level 22 is 20 KB, and level 19 is
-  enough.
-- `libmagic/magic.mgc.sha256` holds the hash of the plain database.
-  `TestEmbeddedDatabase` expands the embedded file and compares the hash.
-- `libmagic/zstd.h` and `libmagic/zstd_errors.h` are the headers of the zstd
-  that built the archives. The script copies them from the build, with
-  `magic.h`. The first draft shipped `zstd.h` alone. It built on the build host
-  only because the host has its own `zstd_errors.h`, and a cross build for
-  darwin found it. `TestHeadersAreComplete` now fails on a header that includes
-  a file that `libmagic/` does not hold.
-- `magic.go` has `magic_expand` in its C preamble. It reads the size of the
-  content from the frame header, refuses a size of zero or of 1 GiB or more,
-  calls `malloc` for that size, and calls `ZSTD_decompress` into it. `New`
-  hands that block to `magic_load_buffers`, so the Go heap never holds the
-  database. This replaces the copy that `C.CBytes` made, and the memory that
-  one handle uses stays the same.
-- `libzstd.a` was already linked for libmagic, so the decompressor adds no
-  library.
-- The script keeps the plain database in `.build/shared` to compare it across
-  targets, compresses it at the end, and no longer writes `libmagic/magic.mgc`.
-
-`TestExpandRefusesBadInput` feeds the loader empty input, text, cut and damaged
-copies of the real file, a frame with no recorded size, and frames that claim
-1 TiB and zero bytes. Each gives an error. The huge size is refused before
-`malloc`. A change to the window byte of the header does not change the
-output, and the test does not expect an error for it.
-
-Measured on 2026-11-15 on the build host, with `go build ./cmd/file` at
-`v0.3.1` and at this change: the binary went from 14,554,368 to 4,111,496
-bytes, which is 10.4 MB smaller. `BenchmarkNew` went from about 0.27 ms to
-about 1.7 ms for each call, three runs of 200 each. The old time was a copy of
-10.8 MB, and the new time is the expansion. A program that opens one handle
-does not notice. A program that opens a handle for each file pays 1.4 ms more
-each time, and can share one handle, which D9 makes safe.
-
-The archives do not change, so no target needs a new tag, and the change is in
-the root module only.
-
-### D21. MagicDB is a function that expands the database. Decided. Amends D3.
-
-Ken decided on 2026-11-15 that `MagicDB` stays in the API as a function that
-returns the plain database, and that the release is `v0.4.0`.
-
-`MagicDB` was an exported `[]byte` that held the plain database. D20 stores the
-compressed bytes, so the plain bytes no longer exist in the program as a Go
-value. Now `MagicDB() ([]byte, error)` expands the database and returns a new
-slice of about 10 MiB on each call. `New` does not call it, so a program that
-only identifies files never puts the database on the Go heap.
-
-A program that read the variable no longer builds, and the error points at the
-name. The fix is to call the function and check the error. That is a break of
-the API, so the root takes a minor version.
-
-No user is known. A search of GitHub code for `magic.MagicDB` gave no result,
-which proves little, and no repository under `xo` on this host imports it.
-The iv session, which asked for D20, checked its own Go files on 2026-11-15
-and reports that it uses only `New`, `None`, `MimeType`, `Magic`, `Buffer`
-and `BufferWith`.
-
-The name stutters, as `magic.MagicDB`, which `go-pedantry` advises against. It
-stays, so that a program that used the variable finds the function under the
-same name. `TestMagicDB` holds the hash and that each call returns its own
-slice.
-
-## Open questions for Ken
-
-1. Is D14 a rule? If it is, a test can read `go.mod` and fail on a `require`
-   line, as dburl does.
 2. Is linux/armv7 still a supported target? `magic.go` declares it and the
    script builds it, but no CI job built it after `dedf132` removed the
-   `cross` job (D12). Do you want the `cross` job back?
-3. The `macos-13` job never gets a runner, so every CI run since `dbcd068`
-   ends as cancelled after 24 hours. `actionlint` lists `macos-15-intel` as a
-   current Intel runner. Do you want to move macOS amd64 to it, or remove
-   it?
-4. `dedf132` removed the `gofmt` step from CI. Do you want it back?
+   `cross` job (D12). Is the `cross` job wanted back?
+3. The `macos-13` job never gets a runner, and on 2026-11-15 the `macos-14`
+   job was cancelled before it started, so macOS has no CI. `actionlint`
+   lists `macos-15-intel` and `macos-15` as current runners. Do the macOS jobs
+   move to them?
+4. `dedf132` removed the `gofmt` step from CI. Is it wanted back?
 5. The test data and the case names came from gabriel-vasile/mimetype, which
-   is under the MIT license (D11). Do you want the repository to carry the
-   copyright notice of mimetype, and to name mimetype in the two case names
-   that cite its issues?
+   is under the MIT license (D11). Does the repository carry the copyright
+   notice of mimetype, and name mimetype in the two case names that cite its
+   issues?
 6. The Windows archives link libgnurx statically, and libgnurx is under LGPL
-   2.1 (D4). Do you want the README to tell a user of the Windows build about
-   that license?
-7. The repository has no `.golangci.yml`, and CI runs no linter. Do you want
-   one?
-8. resvg tagged its modules before CI finished on the commit, and says that
-   no rule requires CI to pass first. Do you want a rule that CI passes before
-   any tag, for magic? CI cannot run freebsd/amd64, so that target would stay
-   untested.
-9. The Linux archives are built for musl, and a program that links them with
-   glibc gets wrong descriptions for the Netpbm files (D19). resvg has a glibc
-   module and a musl module for linux/amd64 and linux/arm64, and a user picks
-   the musl one with `-tags musl`. Do you want magic to do the same? It means
-   a glibc build of linux/amd64, linux/arm64 and linux/arm, the musl modules
-   as new targets, and a new root minor version. Or do you want to document the
-   fault and leave it?
+   2.1 (D4). Does the README tell a user of the Windows build about that
+   license?
+7. The repository has no `.golangci.yml`, and CI runs no linter. Is one
+   wanted?
+8. resvg tagged its modules before CI finished on the commit, and no rule
+   requires CI to pass first. Is there a rule that CI passes before any tag?
+   `v0.3.1` was tagged while CI was down, and CI found its Windows fault four
+   days later.
+9. A program that links the Linux archives with glibc gets wrong descriptions
+   (`docs/BACKLOG.md`). The port ends the fault at phase 4. Until then, does
+   magic add glibc builds and musl modules, as resvg has, or does it document
+   the fault and wait for the port?

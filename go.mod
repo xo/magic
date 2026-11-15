@@ -1,6 +1,6 @@
 module github.com/xo/magic
 
-go 1.25
+go 1.27
 
 require (
 	github.com/xo/magic/libmagic/darwin_amd64/v5 v5.48.2

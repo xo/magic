@@ -1,8 +1,9 @@
 # Contributing
 
 This document is for a person who changes `magic`. `AGENTS.md` holds the same
-rules for a coding agent, in more detail. `docs/PLAN.md` holds every decision
-and the reason for it.
+rules for a coding agent, in more detail. `docs/decisions/` holds every
+decision and the reason for it, and `docs/PLAN.md` holds the plan of the pure
+Go port that will replace the cgo package (D22).
 
 ## Build and test
 
@@ -36,9 +37,10 @@ header of the script gives every option.
 By default the script builds against the newest stable release of each
 dependency. `PINNED=1` builds against the fallback versions in the script.
 
-A new release of file changes `libmagic/magic.mgc.zst` and the text that libmagic
-reports. After you rebuild, run the tests and update the expected values that
-changed. D11 in `docs/PLAN.md` says why the tests expect exact values.
+A new release of file changes `libmagic/magic.mgc.zst` and the text that
+libmagic reports. After you rebuild, run the tests and update the expected
+values that changed. D11 in `docs/decisions/` says why the tests expect exact
+values.
 
 The script writes its downloads and build folders to `src/`, `.build/`,
 `.native/`, `.toolchains/` and `.zig-cache/`. Git ignores all five.
@@ -47,7 +49,8 @@ The script writes its downloads and build folders to `src/`, `.build/`,
 
 A target is a Go module of its own, and its tag is the path of its folder and
 the version of file that it holds. The root module has a plain semver tag. D17
-and D18 in `docs/PLAN.md` give the reasons. Tag only when Ken says so.
+and D18 in `docs/decisions/` give the reasons. Tag only when a maintainer
+says so.
 
 1. Push the commit that holds the archives to `main`.
 2. Tag each target module that changed, with the commands that
@@ -65,9 +68,21 @@ number.
 ## Documents
 
 The root holds four documents: `README.md`, `AGENTS.md`, `CLAUDE.md` and this
-one. Every other document goes in `docs/`. A decision goes at the end of the
-decisions in `docs/PLAN.md`, with a row in the index at the top of them. The
-tests in `docs_test.go` fail if the index and the headings disagree.
+one. Every other document goes in `docs/`. A decision is a file of its own in
+`docs/decisions/`, with a row in the index `docs/decisions/README.md` (D23).
+The tests in `docs_test.go` fail if the index and the files disagree. The
+documents name no maintainer (D32).
+
+## The port
+
+magic is becoming a pure Go port of libmagic (D22). No code of the port is
+written before the plan is ready (D24). `docs/PLAN.md` holds the plan, and
+`docs/UPSTREAM.md` holds the rules for following upstream. The port reads the
+checkout of file in `upstream/file/`, which git ignores. Make it with:
+
+```bash
+git clone https://github.com/file/file.git upstream/file
+```
 
 ## Agent skills
 
@@ -96,4 +111,4 @@ symbolic link. A Windows checkout writes a symbolic link as a small text
 file, and Claude Code then loads no skill and reports nothing.
 `TestSkillsAreCopies` fails on a link, on a missing copy, on two copies that
 differ and on a skill that `skills-lock.json` does not name. See D15 in
-`docs/PLAN.md`.
+`docs/decisions/`.

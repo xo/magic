@@ -9,3 +9,6 @@ src/
 
 # The Claude Code permissions of one person. See D15.
 .claude/settings.local.json
+
+# The checkout of file, the reference for the port. See D25.
+/upstream/

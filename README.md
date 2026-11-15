@@ -8,6 +8,10 @@ embeds the magic database. You do not install libmagic, and the package does
 not read a magic file from your system. You need Go and a C compiler, because
 the package uses cgo.
 
+magic is becoming a pure Go port of libmagic, which will need no C compiler.
+The port has not started, and `docs/PLAN.md` holds its plan. Until it is
+ready, the package works as this page describes.
+
 ## Install
 
 ```bash
@@ -90,8 +94,11 @@ windows/arm64, with clang from llvm-mingw as the C compiler.
 | `README.md` | this page, for a person who uses the package |
 | `CONTRIBUTING.md` | how to change the package, rebuild the archives and install the agent skills |
 | `AGENTS.md` | the rules for a coding agent. `CLAUDE.md` imports it |
-| `docs/PLAN.md` | the plan, every decision and the open questions |
-| `docs/BACKLOG.md` | the work that is known and not done |
+| `docs/PLAN.md` | the plan of the pure Go port, and the open questions |
+| `docs/API.md` | the design of the API of the port |
+| `docs/decisions/` | every decision, one file each, with an index |
+| `docs/UPSTREAM.md` | the rules for following file, the upstream of the port |
+| `docs/BACKLOG.md` | the work that is known and not done, and the binary walker |
 
 ## License
 

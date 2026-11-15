@@ -1,0 +1,34 @@
+# D29. The port keeps the license of file
+
+Status: Proposed.
+
+A translation keeps the license of its source. file is under a BSD license
+with two conditions, in `COPYING` of the upstream:
+
+1. A copy of the source keeps the copyright notice "at the beginning of the
+   file, without modification", with the conditions and the disclaimer.
+2. A binary reproduces the notice, the conditions and the disclaimer in its
+   documentation.
+
+The notice is "Copyright (c) Ian F. Darwin 1986, 1987, 1989, 1990, 1991,
+1992, 1994, 1995. Software written by Ian F. Darwin and others; maintained
+1994- Christos Zoulas." 13 files of the rules also carry a notice of their
+own.
+
+The proposal:
+
+1. `LICENSE` in the root keeps the MIT license of magic (D8), for the code that
+   is not a translation, such as the API and the tests.
+2. `LICENSE.file` in the root holds the license of file, with its notice,
+   because the root package holds most of the port.
+3. Each Go file that translates a file of libmagic opens with the notice of
+   that file, as the first condition asks, and then names the upstream file.
+4. The tables made from the rules carry the notice of file, and the notices of
+   the 13 rule files that have their own.
+5. A package under `internal/` that holds a translation has the license in its
+   folder, so that pkg.go.dev reads it.
+
+The wording of condition 1 asks for the notice "at the beginning of the file".
+Whether a Go file that is a translation is a copy of the source in that sense
+is a question for the maintainers, and possibly for a lawyer. okage D13 made
+the same choice for its BSD and MIT sources.

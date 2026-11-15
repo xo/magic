@@ -1,6 +1,6 @@
 # D28. xz and zstd come from other repositories when they are needed
 
-Status: Decided. Amends D14.
+Status: Decided. Amends D14. Amended by D45.
 
 The maintainers decided on 2026-11-15 that the port can use other
 repositories for xz and zstd if they are necessary. The Go standard library

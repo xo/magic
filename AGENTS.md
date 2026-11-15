@@ -6,10 +6,10 @@ libmagic as static archives for eight targets, and it embeds the magic database
 in the package. A program that imports `magic` needs Go and a C compiler, and
 nothing else.
 
-magic is becoming a pure Go port of libmagic (D22). Phase 2 of the port is
-done: `internal/rules` and `internal/engine` give the MIME types of libmagic,
-in pure Go. The descriptions are phase 3. Until the port is ready, the cgo
-package is what users get, and it is kept in working order.
+magic is becoming a pure Go port of libmagic (D22). Phases 2 and 3 of the
+port are done: `internal/engine` gives every output of libmagic in pure Go,
+and passes the tests of file. Phase 4, the switch to the port, is next. Until
+then, the cgo package is what users get, and it is kept in working order.
 
 ## Standing rules
 
@@ -45,7 +45,7 @@ of `docs/PLAN.md`. Ask a maintainer.
 | tagging a release | D17 and D18, then `CONTRIBUTING.md`, under Release. Tag only when a maintainer says so |
 | changing CI | D12, then `.github/workflows/test.yml` |
 | looking for work that is known and not done | `docs/BACKLOG.md` |
-| working on the port of libmagic | D22 to D44, then `docs/PLAN.md` and `docs/BACKLOG.md`, under Phase 3 of the port |
+| working on the port of libmagic | D22 to D45, then `docs/PLAN.md` and `docs/BACKLOG.md`, under The port |
 | designing or changing the API of the port | D39, D40 and D42, then `docs/API.md` |
 | following upstream, or adding to the ledger | `docs/UPSTREAM.md`, D25 and D26 |
 | the binary walker | D31, then `docs/BACKLOG.md`, under The binary walker. It waits for the port |
@@ -109,6 +109,8 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `cmd/file/` | an example program that prints the type of each file that it gets |
 | `internal/rules/` | the port: the compiler of the rules, which gives the entries of `magic.mgc` (D35) |
 | `internal/engine/` | the port: the engine that runs the compiled rules, and the detectors of the formats that rules cannot read. It translates each regular expression for Go (D44) |
+| `internal/table/` | the rules of file 5.48 as the port embeds them, `rules.flate`, and `gen/`, which writes it from `upstream/file` with `go generate` (D35). Do not edit `rules.flate` |
+| `compress/` | the registry of the decoders of compressed data, and one package for each library of libmagic: `zlib` and `bzip2` in the root module, `xz` and `zstd` as modules of their own (D45) |
 | `libmagic/magic.h`, `libmagic/zstd.h`, `libmagic/zstd_errors.h` | the headers that the cgo code includes, shared by all targets. `TestHeadersAreComplete` fails if one includes a header that is not here |
 | `libmagic/magic.mgc.zst`, `libmagic/magic.mgc.sha256` | the compiled database, compressed with zstd, and the hash of the database before it is compressed (D20). `magic.go` embeds the first |
 | `libmagic/<goos>_<goarch>/` | one target. It is a Go module that holds the static archives, a `go.mod` and a generated `link.go`. `linux_arm` is armv7 |
@@ -121,9 +123,12 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `docs/UPSTREAM.md` | the rules for following upstream |
 | `docs/upstream/` | the list of upstreams, and the ledger of the commits of file (D26) |
 | `docs/BACKLOG.md` | the work that is known and not done |
+| `docs/logo/` | the logo of the project, `magic.svg`, which `README.md` shows, with `magic.png`, and `gen_magic.py`, which makes the SVG from the letters in `magic_letters.json` |
 | `upstream/file/` | the checkout of file, the reference for the port. git ignores it. Do not edit it (D25) |
 | `test/` | the test module, with its own `go.mod` (D30): the oracle program in `test/cmd/oracle`, its client and the tests of file in `test/oracle`, the corpus in `test/corpus`, and the differential test in `test/diff` |
 | `test/.oracle/` | what `test/oracle/build.sh` builds. git ignores it |
+| `test/corpus/testdata/` | compressed files and Office documents that the corpus adds to the files of file and of `testdata/` |
+| `test/size/` | `TestPortSize`, which measures the bytes that the port adds to a program (D38) |
 
 `build-libmagic.sh` writes its downloads and build folders to `src/`,
 `.build/`, `.native/`, `.toolchains/` and `.zig-cache/`. `.gitignore` ignores
@@ -156,6 +161,20 @@ cd test && CC="zig cc -target x86_64-linux-musl" go test ./...
 
 The gate also passes with gcc, which links glibc, because the Linux archives
 carry their own regex engine (D43).
+
+After a change of the compiler of the rules, or of the base commit of file,
+write the table again. `TestTableMatchesTheCompiler` fails until you do:
+
+```bash
+cd internal/table && go generate
+```
+
+`compress/xz` and `compress/zstd` are modules of their own. Vet them in their
+folders:
+
+```bash
+(cd compress/xz && go vet ./...) && (cd compress/zstd && go vet ./...)
+```
 
 `gofmt -l .` prints nothing when every file is formatted. CI runs the other
 four commands on every platform (D12). The repository has no `.golangci.yml`,

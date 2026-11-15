@@ -9,6 +9,8 @@ import (
 // the data. It returns -1 on an error.
 func (st *state) buffer(b *buffer, nb int) int {
 	m, rv := 0, 0
+	// The mode is the one of the file, and 0 for a buffer.
+	st.mode = b.mode
 	codeMime := "binary"
 	def := "data"
 
@@ -25,13 +27,22 @@ func (st *state) buffer(b *buffer, nb int) int {
 	looksText := enc.text
 	codeMime = enc.codeMime
 
+	// Compressed data. Its result skips the separator and the encoding at
+	// the end, as the goto done_encoding of libmagic does.
+	if m = st.zmagic(b); m != 0 {
+		if st.err != nil {
+			return -1
+		}
+		return m
+	}
+
 	// The detectors of the formats that the rules cannot describe. Each
 	// one that answers ends the search, unless the flags ask for every
 	// result.
 	for _, try := range []func() int{
 		func() int { return st.tar(b.data) },
 		func() int { return st.json(b.data) },
-		func() int { return st.csv(b.data, looksText) },
+		func() int { return st.csv(b.data, looksText, enc.code) },
 		func() int { return st.simh(b.data) },
 		func() int { return st.cdf(b) },
 	} {
@@ -42,12 +53,25 @@ func (st *state) buffer(b *buffer, nb int) int {
 		}
 	}
 
-	// The ELF reader runs only on a file, and only changes the mode here.
-	if nb > 5 && b.file != nil {
-		st.tryELF(b)
+	// The ELF reader runs only on a file. Its text goes after the result of
+	// the rules, and its walk of the program headers sets the mode that the
+	// rules read.
+	var rbuf []byte
+	if nb > 5 && b.file != nil && b.file.r != nil {
+		pb := st.push()
+		rv = st.tryELF(b)
+		var ok bool
+		if rbuf, ok = st.pop(pb); !ok || rv == -1 {
+			rbuf = nil
+		}
 	}
 
 	m = st.softmagic(b, rules.FlagBinTest, looksText)
+	if m == 1 && rbuf != nil {
+		if st.printf("%s", rbuf) == -1 {
+			return st.done(m, rv, codeMime)
+		}
+	}
 	if m != 0 {
 		if st.checkDone(&rv) {
 			return st.done(m, rv, codeMime)

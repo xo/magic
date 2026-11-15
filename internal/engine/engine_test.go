@@ -268,3 +268,58 @@ func TestBufferOfOneByte(t *testing.T) {
 		}
 	}
 }
+
+func TestCprintfMatchesGlibc(t *testing.T) {
+	t.Parallel()
+	neg := func(v int64) carg { return cint(uint64(v)) }
+	for _, test := range []struct {
+		format string
+		args   []carg
+		want   string
+	}{
+		{"[%5d][%-5d][%05d][%+d][% d]", []carg{cint(42), cint(42), cint(42), cint(42), cint(42)}, "[   42][42   ][00042][+42][ 42]"},
+		{"[%u][%x][%#x][%#o][%X][%#X]", []carg{neg(-1), cint(255), cint(255), cint(8), cint(255), cint(0)}, "[4294967295][ff][0xff][010][FF][0]"},
+		{"[%.3s][%10s][%-10s|]", []carg{cstringS("abcdef"), cstringS("abc"), cstringS("abc")}, "[abc][       abc][abc       |]"},
+		{"[%g][%g][%g][%g][%g][%g]", []carg{cfloat(0.0001), cfloat(123456), cfloat(1234567), cfloat(1e-5), cfloat(0.1), cfloat(100)}, "[0.0001][123456][1.23457e+06][1e-05][0.1][100]"},
+		{"[%e][%.2f][%#g][%G]", []carg{cfloat(1234.5), cfloat(3.14159), cfloat(1), cfloat(1e20)}, "[1.234500e+03][3.14][1.00000][1E+20]"},
+		{"[%c][%hhd][%hd][%lld][%llx]", []carg{cint(65), cint(300), cint(70000), neg(-5), cint(255)}, "[A][44][4464][-5][ff]"},
+		{"[%.0d][%#.0o][%.4x]", []carg{cint(0), cint(0), cint(10)}, "[][0][000a]"},
+	} {
+		if got := cprintfS(test.format, test.args...); got != test.want {
+			t.Errorf("%q: expected %q, got: %q", test.format, test.want, got)
+		}
+	}
+}
+
+func TestFmtcheck(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		desc, def string
+		ok        bool
+	}{
+		{"version %d", "%d", true},
+		{"version %u", "%d", true},
+		{"%c", "%d", true},
+		{"%lld", "%d", false},
+		{"%s", "%d", false},
+		{"%.3s", "%s", true},
+		{"100%% sure, %d", "%u", true},
+		{"%", "%d", false},
+	} {
+		if _, ok := fmtcheck(test.desc, test.def); ok != test.ok {
+			t.Errorf("%q against %q: expected %v, got: %v", test.desc, test.def, test.ok, ok)
+		}
+	}
+}
+
+// TestCompressWithoutDecoder holds D45: with no decoder registered, the port
+// answers as libmagic does when it finds no program for the format.
+func TestCompressWithoutDecoder(t *testing.T) {
+	t.Parallel()
+	e := New(&rules.Database{})
+	got, err := e.Buffer([]byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03hello"), Compress)
+	want := "ERROR:[gzip: Cannot posix_spawn `gzip', No such file or directory] (data)"
+	if err != nil || got != want {
+		t.Errorf("expected %q, got: %q, %v", want, got, err)
+	}
+}

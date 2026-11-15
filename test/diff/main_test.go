@@ -1,6 +1,6 @@
 // Package diff compares the code under test with the oracle of D30, on the
 // corpus. It tests the cgo package of today, which is the gate of phase 1,
-// and the port, which is the gate of phase 2 (docs/PLAN.md).
+// and the port, which is the gate of phases 2 and 3 (docs/PLAN.md).
 package diff
 
 import (

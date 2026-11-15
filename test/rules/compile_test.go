@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/xo/magic/internal/rules"
+	"github.com/xo/magic/internal/table"
 	"github.com/xo/magic/test/oracle"
 )
 
@@ -100,4 +101,21 @@ func trim(b []byte) []byte {
 		n--
 	}
 	return b[:min(n+1, len(b))]
+}
+
+// TestTableMatchesTheCompiler holds D35. The table that the package embeds
+// must hold the same entries as the compiler gives from the rule files of the
+// oracle, so that the generated file is current.
+func TestTableMatchesTheCompiler(t *testing.T) {
+	want, err := rules.Compile(Fragments(t))
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	got, err := table.Load()
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if !bytes.Equal(got.Encode(), want.Encode()) {
+		t.Errorf("the table differs from the compiled rules. Run go generate in internal/table")
+	}
 }

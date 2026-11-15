@@ -48,7 +48,7 @@ D32 set the project up as a port of libmagic.
 | D25 | [The upstream checkout is in `upstream/`, and git ignores it](D025-the-upstream-checkout-is-in-upstream-and-git-ignores-it.md) | Decided |
 | D26 | [The upstream has a base commit and a ledger](D026-the-upstream-has-a-base-commit-and-a-ledger.md) | Decided. Amended by D34 |
 | D27 | [Each part of file has a policy: port, replace or none](D027-each-part-of-file-has-a-policy-port-replace-or-none.md) | Decided. Amended by D36. Amended by D35 |
-| D28 | [xz and zstd come from other repositories when they are needed](D028-xz-and-zstd-come-from-other-repositories-when-they-are-needed.md) | Decided. Amends D14 |
+| D28 | [xz and zstd come from other repositories when they are needed](D028-xz-and-zstd-come-from-other-repositories-when-they-are-needed.md) | Decided. Amends D14. Amended by D45 |
 | D29 | [The port keeps the license of file](D029-the-port-keeps-the-license-of-file.md) | Proposed |
 | D30 | [The test module holds the oracle](D030-the-test-module-holds-the-oracle.md) | Decided. Amended by D33 |
 | D31 | [The binary walker comes after the port](D031-the-binary-walker-comes-after-the-port.md) | Decided |
@@ -58,10 +58,11 @@ D32 set the project up as a port of libmagic.
 | D35 | [The rules are compiled into tables when the package is built](D035-the-rules-are-compiled-into-tables-when-the-package-is-built.md) | Decided. Amends D27 |
 | D36 | [magic runs no outside program](D036-magic-runs-no-outside-program.md) | Decided. Amends D27 |
 | D37 | [The tests of file measure the port, and the last gap is judged later](D037-the-tests-of-file-measure-the-port-and-the-last-gap-is-judged-later.md) | Decided |
-| D38 | [The port adds no more to a program than the cgo package](D038-the-port-adds-no-more-to-a-program-than-the-cgo-package.md) | Decided. Amends D21 |
+| D38 | [The port adds no more to a program than the cgo package](D038-the-port-adds-no-more-to-a-program-than-the-cgo-package.md) | Decided. Amends D21. Amended by D45 |
 | D39 | [The switch to the port is a minor version, and breaks what it needs to](D039-the-switch-to-the-port-is-a-minor-version-and-breaks-what-it-needs-to.md) | Decided. Amends D5 |
 | D40 | [The API is new, and `magic.Detect` is its entry](D040-the-api-is-new-and-magic-detect-is-its-entry.md) | Decided. Amended by D42 |
 | D41 | [The module requires Go 1.27](D041-the-module-requires-go-1-27.md) | Decided. Amends D18 |
 | D42 | [The API takes one walk, no Detector, a context, a generic Source and a slice of matches](D042-the-api-takes-one-walk-no-detector-a-context-a-generic-source-and-a-slice-of-matches.md) | Decided. Amends D40 |
 | D43 | [The Linux archives carry their own regex engine](D043-the-linux-archives-carry-their-own-regex-engine.md) | Decided. Amends D4 |
 | D44 | [The port translates each regular expression for Go](D044-the-port-translates-each-regular-expression-for-go.md) | Decided |
+| D45 | [A program chooses its decoders with a blank import](D045-a-program-chooses-its-decoders-with-a-blank-import.md) | Decided. Amends D28. Amends D38 |

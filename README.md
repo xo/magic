@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/logo/magic.svg" alt="magic" width="480">
+</p>
+
 # magic
 
 `magic` is a Go package that identifies the type of a file or a buffer with
@@ -9,7 +13,7 @@ not read a magic file from your system. You need Go and a C compiler, because
 the package uses cgo.
 
 magic is becoming a pure Go port of libmagic, which will need no C compiler.
-The port has not started, and `docs/PLAN.md` holds its plan. Until it is
+The port is in progress, and `docs/PLAN.md` holds its plan. Until it is
 ready, the package works as this page describes.
 
 ## Install

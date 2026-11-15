@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"math"
-	"strconv"
 
 	"github.com/xo/magic/internal/rules"
 )
@@ -38,6 +37,7 @@ type levelInfo struct {
 type buffer struct {
 	data []byte
 	file *fileInfo
+	mode uint32 // st_mode of the file, or 0
 
 	// ebuf is the end of the file, which fill reads the first time a rule
 	// needs it.
@@ -142,6 +142,7 @@ func (st *state) match(t *table, start, n int, b *buffer, o uint64, mode rules.F
 			skip()
 			continue
 		}
+		st.line = m.Lineno
 
 		switch st.mget(t, start+mi, b, &bb, o, contLevel, mode, text, flip, ic, nc, mv, returnval, found) {
 		case -1:
@@ -200,6 +201,7 @@ func (st *state) match(t *table, start, n int, b *buffer, o uint64, mode rules.F
 		for mi+1 < n && t.entries[start+mi+1].ContLevel != 0 {
 			mi++
 			m = &t.entries[start+mi]
+			st.line = m.Lineno
 			if contLevel < int(m.ContLevel) {
 				continue
 			}
@@ -839,22 +841,32 @@ func (st *state) mget(t *table, idx int, b, bb *buffer, o uint64, contLevel int,
 		}
 		*ic++
 		sbb := &buffer{data: s[offset:], file: b.file}
-		mark := len(st.out)
-		rv := -1
-		set := st.e.sets[0]
-		rv = st.match(set, 0, len(set.entries), sbb, 0, rules.FlagBinTest, text, false, ic, nc, mv, nil, nil)
-		// The output of the indirect match goes after the description of
-		// this entry.
-		inner := string(st.out[mark:])
-		st.out = st.out[:mark]
 		if st.err != nil {
 			return -1
 		}
+		pb := st.push()
+		set := st.e.sets[0]
+		rv := st.match(set, 0, len(set.entries), sbb, 0, rules.FlagBinTest, text, false, ic, nc, mv, nil, nil)
+		inner, ok := st.pop(pb)
+		if !ok {
+			return -1
+		}
+		// The output of the indirect match goes after the description of
+		// this entry.
 		if rv == 1 {
 			if st.flags&NoDesc == 0 {
-				st.printFormat(m, m.DescString(), uint64(offset))
+				if st.cprintf(st.format(cstr(m.Desc[:]), "%u", 1988), cint(uint64(offset))) == -1 {
+					return -1
+				}
 			}
-			st.printf("%s", inner)
+			if inner == nil {
+				// Nothing was printed, so the buffer is NULL, and glibc
+				// prints "(null)" for it.
+				inner = []byte("(null)")
+			}
+			if st.printf("%s", inner) == -1 {
+				return -1
+			}
 		}
 		return rv
 	case rules.Use:
@@ -1314,7 +1326,7 @@ func (st *state) check(t *table, idx int) int {
 		}
 		rx, err := t.regex(idx)
 		if err != nil {
-			st.err = err
+			st.errorAt(m.Lineno, err.Error())
 			return -1
 		}
 		l = 0
@@ -1569,12 +1581,4 @@ func (st *state) varexpand(str []byte, size int) ([]byte, bool) {
 		return nil, false
 	}
 	return out, true
-}
-
-// printFormat prints the description of m with a number, as the
-// description of an indirect entry does.
-func (st *state) printFormat(m *rules.Entry, desc string, v uint64) {
-	// A description with no format prints as it is. Phase 3 brings the
-	// formats of C (docs/PLAN.md).
-	st.printf("%s", fmtC(desc, strconv.FormatUint(v, 10)))
 }

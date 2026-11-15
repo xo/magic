@@ -43,21 +43,33 @@ type request struct {
 
 // response is the answer. Text is what libmagic returned. Error is what
 // magic_error said when libmagic returned NULL, or a fault of the oracle.
+// Both go as bytes, in base64, because a JSON string cannot carry bytes
+// that are not UTF-8, and libmagic prints them with MAGIC_RAW.
 type response struct {
 	ID    int    `json:"id"`
-	Text  string `json:"text"`
-	Error string `json:"error,omitempty"`
+	Text  []byte `json:"text"`
+	Error []byte `json:"error,omitempty"`
 }
 
-// noCompressFork stops libmagic from running an outside program to
-// decompress, as the port runs none (D36).
-const noCompressFork = C.MAGIC_NO_COMPRESS_FORK
+// libmagic decompresses gzip, zlib, bzip2, xz and zstd with the libraries
+// that it links, and runs an outside program for the other formats. The port
+// runs none (D36). MAGIC_NO_COMPRESS_FORK does not stop the programs in file
+// 5.48: it stops the libraries. So the oracle lets libmagic fork, and runs it
+// with a PATH of one empty folder, where it finds no program. Each program
+// then fails in the same way, as it does in the port.
 
 func main() {
 	// The reference runs in the C locale with TZ=UTC (D33), as the tests of
 	// file do.
 	os.Setenv("TZ", "UTC")
 	C.tzset()
+	empty, err := os.MkdirTemp("", "oracle-path-")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "oracle:", err)
+		os.Exit(1)
+	}
+	defer os.Remove(empty)
+	os.Setenv("PATH", empty)
 	C.setlocale(C.LC_ALL, C.CString("C"))
 
 	cookies := map[string]C.magic_t{}
@@ -89,7 +101,7 @@ func answer(cookies map[string]C.magic_t, req request) response {
 	if !ok {
 		ms = C.magic_open(C.MAGIC_NONE)
 		if ms == nil {
-			res.Error = "oracle: magic_open failed"
+			res.Error = []byte("oracle: magic_open failed")
 			return res
 		}
 		var path *C.char
@@ -98,14 +110,14 @@ func answer(cookies map[string]C.magic_t, req request) response {
 			defer C.free(unsafe.Pointer(path))
 		}
 		if C.magic_load(ms, path) != 0 {
-			res.Error = "oracle: magic_load: " + C.GoString(C.magic_error(ms))
+			res.Error = []byte("oracle: magic_load: " + C.GoString(C.magic_error(ms)))
 			C.magic_close(ms)
 			return res
 		}
 		cookies[req.Magic] = ms
 	}
-	if C.magic_setflags(ms, C.int(req.Flags|noCompressFork)) != 0 {
-		res.Error = "oracle: magic_setflags: " + C.GoString(C.magic_error(ms))
+	if C.magic_setflags(ms, C.int(req.Flags)) != 0 {
+		res.Error = []byte("oracle: magic_setflags: " + C.GoString(C.magic_error(ms)))
 		return res
 	}
 	var s *C.char
@@ -122,17 +134,17 @@ func answer(cookies map[string]C.magic_t, req request) response {
 		defer C.free(unsafe.Pointer(path))
 		s = C.magic_file(ms, path)
 	default:
-		res.Error = fmt.Sprintf("oracle: unknown op %q", req.Op)
+		res.Error = []byte(fmt.Sprintf("oracle: unknown op %q", req.Op))
 		return res
 	}
 	if s == nil {
 		if e := C.magic_error(ms); e != nil {
-			res.Error = C.GoString(e)
+			res.Error = []byte(C.GoString(e))
 		} else {
-			res.Error = "libmagic returned no text and no error"
+			res.Error = []byte("libmagic returned no text and no error")
 		}
 		return res
 	}
-	res.Text = C.GoString(s)
+	res.Text = []byte(C.GoString(s))
 	return res
 }

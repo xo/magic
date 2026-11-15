@@ -37,26 +37,35 @@ questions on 1,544 inputs. D30 lists the parts. The harness also found that
 the cgo package crashed when it was linked with glibc, and D43 fixed it: the
 gate now passes with gcc and glibc, and with zig and musl.
 
-Phase 2 has its code, and its gate holds on the build host.
-`internal/rules` compiles the rules (D35): it reads the 356 files that the
-build of file compiles, and gives an array of entries that is the same as the
-`magic.mgc` of the oracle, byte for byte: 24,985 entries in 4,213 rules.
-`TestCompilerMatchesMagicMgc` in the test module holds it.
+Phases 2 and 3 have their code, and their gates hold on the build host.
 
-`internal/engine` runs the compiled rules and the detectors, in pure Go. It
-holds the matcher of `softmagic.c`, the text encodings, the readers of tar,
-JSON, CSV, SIMH tapes and Compound Documents, and the part of the ELF reader
-that changes the mode of a file. Regular expressions go through a translator
-for Go's `regexp` (D44). `TestPortMatchesTheOracle` asks the port and the
-oracle the same 9,918 questions: the MIME type, the MIME encoding, both, the
-Apple type, the extension, and the MIME type with every result, for each of
-the 1,544 inputs, as a buffer and as a file. Each answer is the same. The
-gate passes with glibc and with musl.
+1. `internal/rules` compiles the rules (D35). It gives the same 24,985 entries
+   in 4,213 rules as the `magic.mgc` of the oracle, byte for byte.
+   `internal/table` embeds them in a form of 271,240 bytes, and its generator
+   writes them from the checkout of file.
+2. `internal/engine` runs the rules and every detector of libmagic, in pure
+   Go: the matcher of `softmagic.c` with the `printf` formats and dates of C,
+   the text encodings, tar, JSON, CSV, SIMH tapes, Compound Documents, ELF,
+   the kinds of file of `fsmagic.c`, and compressed data. Regular expressions
+   go through a translator for Go's `regexp` (D44).
+3. A program chooses the decoders of compressed data with a blank import of
+   the packages in `compress/` (D45).
+4. `TestPortMatchesTheOracle` asks the port and the oracle 30,674 questions:
+   14 outputs, from the description to the MIME type and the flags of
+   compression, for each of 2,071 inputs, as a buffer and as a file. Each
+   answer is the same, except 50 where a decoder of Go reads damaged
+   compressed data in another way than the library of C. The test lists
+   them. It passes with glibc and with musl.
+5. `TestPortPassesTheTestsOfFile` runs the 88 tests of file 5.48 with the
+   port, and all 88 pass (D37).
+6. `TestPortSize` builds a program that prints the MIME type of a file. The
+   port adds 950,272 bytes to it, stripped, where the cgo package adds
+   995,488 (D38).
 
-Two checks outside the gate found no difference either: 4,469 more damaged
-inputs, and 7,500 files of the build host, read as files. Phase 3 brings the
-descriptions, which are what the port does not print yet. `docs/BACKLOG.md`
-lists what it needs.
+Checks outside the gates found no difference either. 50,395 files of the
+build host, with 6 output flags each, gave 302,370 answers that are the same
+as the oracle. The work that phase 3 left is in `docs/BACKLOG.md`. Phase 4,
+the switch, is next.
 
 The tags `v0.1.0` (`7b14d3f`), `v0.2.0` (`dedf132`) and `v0.2.1` (`a629036`)
 held the archives in the root module. `v0.3.0` gave each target a module

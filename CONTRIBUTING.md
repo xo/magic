@@ -76,8 +76,9 @@ documents name no maintainer (D32).
 ## The port
 
 magic is becoming a pure Go port of libmagic (D22). The port is in
-`internal/rules` and `internal/engine`, and the cgo package stays what users
-get until phase 4. `docs/PLAN.md` holds the plan, and
+`internal/rules`, `internal/table`, `internal/engine` and `compress/`, and the
+cgo package stays what users get until phase 4. `go generate` in
+`internal/table` writes the table of the rules from `upstream/file`. `docs/PLAN.md` holds the plan, and
 `docs/UPSTREAM.md` holds the rules for following upstream. The port reads the
 checkout of file in `upstream/file/`, which git ignores. Make it with:
 

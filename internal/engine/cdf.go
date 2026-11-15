@@ -2,9 +2,11 @@ package engine
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"math"
 	"strings"
+	"time"
 )
 
 // This file is cdf.c and readcdf.c: the reader of the Compound Document
@@ -13,8 +15,7 @@ import (
 // sectors anywhere in the file.
 //
 // The reader fails at the same step as libmagic on a damaged file, because
-// the output names the step. Phase 2 gives the MIME types. The properties
-// that a description prints come in phase 3 (docs/PLAN.md).
+// the output names the step.
 
 const (
 	cdfLoopLimit    = 10000
@@ -410,6 +411,7 @@ func (s *cdfStream) checkOffset(off, tail uint64) bool {
 type cdfProperty struct {
 	id, typ uint32
 	str     []byte
+	val     uint64 // the value of a number or a time, as cdf_copy_info reads it
 }
 
 // readPropertyInfo is cdf_read_property_info.
@@ -475,7 +477,27 @@ func readPropertyInfo(sst *cdfStream, offs uint32, info *[]cdfProperty) bool {
 		if inp[i].typ&(cdfArray|cdfByRef|cdfReserved) != 0 {
 			continue
 		}
+		// cdf_copy_info: a number of 2, 4 or 8 bytes after the type. A vector
+		// or a short section leaves it 0.
+		copyInfo := func(n uint64) {
+			if inp[i].typ&cdfVector == 0 && e-(q+o4) >= n {
+				switch n {
+				case 2:
+					inp[i].val = uint64(le.Uint16(tab[q+o4:]))
+				case 4:
+					inp[i].val = uint64(le.Uint32(tab[q+o4:]))
+				case 8:
+					inp[i].val = le.Uint64(tab[q+o4:])
+				}
+			}
+		}
 		switch inp[i].typ & cdfTypeMask {
+		case cdfSigned16:
+			copyInfo(2)
+		case cdfSigned32, cdfBool, cdfUnsigned32, cdfFloat:
+			copyInfo(4)
+		case cdfSigned64, cdfUnsigned64, cdfDouble, cdfFiletime:
+			copyInfo(8)
 		case cdfString, cdfWString:
 			if nelements > 1 {
 				*info = append(*info, make([]cdfProperty, nelements)...)
@@ -645,17 +667,25 @@ func (st *state) cdfContents(in *cdfInfo, h *cdfHeader, sat, ssat *cdfSAT, sst *
 			return 1
 		}
 	}
+	// catalog is cdf_file_catalog_info: the list of names of a Thumbs.db.
+	catalog := func() int {
+		var cat cdfStream
+		if ok, _ := in.readUserStream(h, sat, ssat, sst, dir, "Catalog", &cat); !ok {
+			return -1
+		}
+		return st.cdfCatalog(&cat)
+	}
 	i := -1
 	ok, found := in.readUserStream(h, sat, ssat, sst, dir, "\x05SummaryInformation", scn)
 	if ok {
-		i = st.cdfCheckSummary(dir, scn, root, expn)
+		i = st.cdfCheckSummary(dir, scn, root, expn, catalog)
 	} else if found {
 		*expn = "Cannot read summary info"
 	}
 	if i <= 0 {
 		ok, found = in.readUserStream(h, sat, ssat, sst, dir, "\x05DocumentSummaryInformation", scn)
 		if ok {
-			i = st.cdfCheckSummary(dir, scn, root, expn)
+			i = st.cdfCheckSummary(dir, scn, root, expn, catalog)
 		} else if found {
 			*expn = "Cannot read summary info"
 		}
@@ -670,7 +700,7 @@ func (st *state) cdfContents(in *cdfInfo, h *cdfHeader, sat, ssat *cdfSAT, sst *
 }
 
 // cdfCheckSummary is cdf_check_summary_info.
-func (st *state) cdfCheckSummary(dir []cdfDir, scn *cdfStream, root *cdfDir, expn *string) int {
+func (st *state) cdfCheckSummary(dir []cdfDir, scn *cdfStream, root *cdfDir, expn *string, catalog func() int) int {
 	notMime := st.flags&Mime == 0
 	i := st.cdfSummaryInfo(scn, root)
 	if i < 0 {
@@ -710,24 +740,15 @@ func (st *state) cdfCheckSummary(dir []cdfDir, scn *cdfStream, root *cdfDir, exp
 		st.printf("application/%s", str)
 		i = 1
 	}
-	if i <= 0 && notMime {
-		// cdf_file_catalog_info names a Thumbs.db. Its list of names comes
-		// with the rest of the descriptions in phase 3.
-		if findStream(dir, "Catalog", cdfDirUserStream) > 0 {
-			st.printf("Microsoft Thumbs.db")
-			i = 1
-		}
-	} else if i <= 0 && st.flags&MimeType != 0 {
-		if findStream(dir, "Catalog", cdfDirUserStream) > 0 {
-			st.printf("application/CDFV2")
-			i = 1
-		}
+	if i <= 0 {
+		i = catalog()
 	}
 	return i
 }
 
-// cdfSummaryInfo is cdf_file_summary_info with cdf_file_property_info, for
-// the MIME type: the type of the application that wrote the document.
+// cdfSummaryInfo is cdf_file_summary_info with cdf_file_property_info: the
+// header of the summary and its properties, or for MIME the type of the
+// application that wrote the document.
 func (st *state) cdfSummaryInfo(scn *cdfStream, root *cdfDir) int {
 	info, ok := unpackSummaryInfo(scn)
 	if !ok {
@@ -736,17 +757,55 @@ func (st *state) cdfSummaryInfo(scn *cdfStream, root *cdfDir) int {
 	notMime := st.flags&Mime == 0
 	if notMime {
 		st.printf("Composite Document File V2 Document")
+		order := "Big"
+		if le.Uint16(scn.tab) == 0xfffe {
+			order = "Little"
+		}
+		st.printf(", %s Endian", order)
+		ver, os := uint32(le.Uint16(scn.tab[4:])), le.Uint16(scn.tab[6:])
+		switch os {
+		case 2:
+			st.printf(", Os: Windows, Version %d.%d", ver&0xff, ver>>8)
+		case 1:
+			st.printf(", Os: MacOS, Version %d.%d", ver>>8, ver&0xff)
+		default:
+			st.printf(", Os %d, Version: %d.%d", os, ver&0xff, ver>>8)
+		}
+		if root != nil && root.storageUUID == msiCLSID {
+			st.printf(", %s", "Microsoft Installer")
+		}
 	}
 	str := ""
 	if !notMime && root != nil && root.storageUUID == msiCLSID {
 		str = "vnd.ms-msi"
 	}
 	for _, p := range info {
+		name := cdfPropertyName(p.id)
 		switch p.typ {
-		case cdfNull, cdfSigned16, cdfSigned32, cdfUnsigned32, cdfFloat, cdfDouble, cdfFiletime, cdfClipboard:
+		case cdfNull:
+		case cdfSigned16:
+			if notMime {
+				st.printf(", %s: %d", name, int16(p.val))
+			}
+		case cdfSigned32:
+			if notMime {
+				st.printf(", %s: %d", name, int32(p.val))
+			}
+		case cdfUnsigned32:
+			if notMime {
+				st.printf(", %s: %d", name, uint32(p.val))
+			}
+		case cdfFloat:
+			if notMime {
+				st.put(cprintf([]byte(", %s: %g"), cstringS(name), cfloat(float64(math.Float32frombits(uint32(p.val))))))
+			}
+		case cdfDouble:
+			if notMime {
+				st.put(cprintf([]byte(", %s: %g"), cstringS(name), cfloat(math.Float64frombits(p.val))))
+			}
 		case cdfString, cdfWString:
 			n := len(p.str)
-			if n <= 1 || notMime || str != "" || p.id != cdfPropertyApp {
+			if n <= 1 {
 				continue
 			}
 			k := 1
@@ -766,7 +825,25 @@ func (st *state) cdfSummaryInfo(scn *cdfStream, root *cdfDir) int {
 			if len(vbuf) == 1024 {
 				vbuf = vbuf[:1023]
 			}
-			str = appToMime(string(vbuf), app2mime)
+			if notMime {
+				if len(vbuf) > 0 {
+					st.printf(", %s: %s", name, vbuf)
+				}
+			} else if str == "" && p.id == cdfPropertyApp {
+				str = appToMime(string(vbuf), app2mime)
+			}
+		case cdfFiletime:
+			tp := int64(p.val)
+			if tp == 0 || !notMime {
+				continue
+			}
+			if tp < 1000000000000000 {
+				st.printf(", %s: %s", name, cdfElapsed(tp))
+				continue
+			}
+			sec, _ := cdfTimestamp(tp)
+			st.printf(", %s: %s", name, cdfCtime(sec))
+		case cdfClipboard:
 		default:
 			return -2
 		}
@@ -778,6 +855,145 @@ func (st *state) cdfSummaryInfo(scn *cdfStream, root *cdfDir) int {
 		st.printf("application/%s", str)
 	}
 	return 1
+}
+
+// cdfCatalog is cdf_file_catalog.
+func (st *state) cdfCatalog(sst *cdfStream) int {
+	if st.flags&Mime != 0 {
+		if st.flags&MimeType != 0 {
+			st.printf("application/CDFV2")
+		}
+		return 1
+	}
+	st.printf("Microsoft Thumbs.db [")
+	names, ok := unpackCatalog(sst)
+	if !ok {
+		return -1
+	}
+	// The first entry has a comma or a parenthesis, so libmagic skips it.
+	for i := 1; i < len(names); i++ {
+		end := ", "
+		if i == len(names)-1 {
+			end = "]"
+		}
+		st.printf("%s%s", names[i], end)
+	}
+	return 1
+}
+
+// unpackCatalog is cdf_unpack_catalog: the names of the records of a
+// catalog. It copies libmagic, which writes record k+1 in entry k, so that
+// the first record is lost.
+func unpackCatalog(sst *cdfStream) ([]string, bool) {
+	b := sst.tab
+	eb := int(sst.size())
+	p, nr := 0, 0
+	for ; ; nr++ {
+		if p+2 > eb {
+			break
+		}
+		reclen := int(le.Uint16(b[p:]))
+		if reclen == 0 {
+			break
+		}
+		p += reclen
+		if p > eb {
+			break
+		}
+	}
+	if nr == 0 {
+		return nil, false
+	}
+	nr--
+	entries := make([]string, nr)
+	j := 0
+	p = 0
+	// libmagic can loop for ever on a record shorter than 14 bytes. The
+	// port stops after as many steps as the stream has bytes.
+	for i, steps := 0, 0; i < nr && steps <= eb; steps++ {
+		if p+0+2 > eb || p+4+4 > eb || p+8+8 > eb {
+			entries = entries[:max(j, 0)]
+			break
+		}
+		reclen := int(le.Uint16(b[p:]))
+		if reclen < 14 {
+			if j < len(entries) {
+				entries[j] = ""
+			}
+			p += reclen
+			continue
+		}
+		namlen := min(255, reclen-14)
+		np := p + 16
+		if np+2*namlen > eb {
+			if j < len(entries) {
+				entries[j] = ""
+			}
+			break
+		}
+		name := make([]byte, 0, namlen)
+		for k := 0; k < namlen; k++ {
+			c := le.Uint16(b[np+2*k:])
+			if c == 0 {
+				break
+			}
+			name = append(name, byte(c))
+		}
+		entries[j] = string(name)
+		j = i
+		i++
+		p += reclen
+	}
+	return entries[:j], true
+}
+
+// cdfPropertyNames is vn of cdf.c.
+var cdfPropertyNames = map[uint32]string{
+	0x01: "Code page", 0x02: "Title", 0x03: "Subject", 0x04: "Author",
+	0x05: "Keywords", 0x06: "Comments", 0x07: "Template", 0x08: "Last Saved By",
+	0x09: "Revision Number", 0x0a: "Total Editing Time", 0x0b: "Last Printed",
+	0x0c: "Create Time/Date", 0x0d: "Last Saved Time/Date", 0x0e: "Number of Pages",
+	0x0f: "Number of Words", 0x10: "Number of Characters", 0x11: "Thumbnail",
+	0x12: "Name of Creating Application", 0x13: "Security", 0x80000000: "Locale ID",
+}
+
+// cdfPropertyName is cdf_print_property_name.
+func cdfPropertyName(id uint32) string {
+	if n, ok := cdfPropertyNames[id]; ok {
+		return n
+	}
+	return cprintfS("%#x", cint(uint64(id)))
+}
+
+// cdfElapsed is cdf_print_elapsed_time: a time in 100 ns as a duration.
+func cdfElapsed(ts int64) string {
+	ts /= 10000000
+	secs := int32(ts % 60)
+	ts /= 60
+	mins := int32(ts % 60)
+	ts /= 60
+	hours := int32(ts % 24)
+	ts /= 24
+	days := int32(ts)
+	var b strings.Builder
+	if days != 0 {
+		fmt.Fprintf(&b, "%dd+", days)
+	}
+	if days != 0 || hours != 0 {
+		fmt.Fprintf(&b, "%.2d:", hours)
+	}
+	fmt.Fprintf(&b, "%.2d:", mins)
+	fmt.Fprintf(&b, "%.2d", secs)
+	return b.String()
+}
+
+// cdfCtime is cdf_ctime without its newline: ctime_r, in local time, or
+// a mark for a time that asctime cannot print.
+func cdfCtime(sec int64) string {
+	if sec > maxCtime {
+		return cprintfS("*Bad* %#16.16llx", cint(uint64(sec)))
+	}
+	return asctime(time.Unix(sec, 0).Local())
 }
 
 // cdfDirInfo is cdf_file_dir_info: it names the document from the names

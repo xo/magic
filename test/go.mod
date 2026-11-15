@@ -7,6 +7,8 @@ go 1.27
 // carry over, so the same lines are here.
 replace (
 	github.com/xo/magic => ../
+	github.com/xo/magic/compress/xz => ../compress/xz
+	github.com/xo/magic/compress/zstd => ../compress/zstd
 	github.com/xo/magic/libmagic/darwin_amd64/v5 => ../libmagic/darwin_amd64
 	github.com/xo/magic/libmagic/darwin_arm64/v5 => ../libmagic/darwin_arm64
 	github.com/xo/magic/libmagic/freebsd_amd64/v5 => ../libmagic/freebsd_amd64
@@ -17,9 +19,15 @@ replace (
 	github.com/xo/magic/libmagic/windows_arm64/v5 => ../libmagic/windows_arm64
 )
 
-require github.com/xo/magic v0.0.0-00010101000000-000000000000
+require (
+	github.com/xo/magic v0.0.0-00010101000000-000000000000
+	github.com/xo/magic/compress/xz v0.0.0-00010101000000-000000000000
+	github.com/xo/magic/compress/zstd v0.0.0-00010101000000-000000000000
+)
 
 require (
+	github.com/klauspost/compress v1.20.3 // indirect
+	github.com/ulikunitz/xz v0.5.17 // indirect
 	github.com/xo/magic/libmagic/darwin_amd64/v5 v5.48.2 // indirect
 	github.com/xo/magic/libmagic/darwin_arm64/v5 v5.48.2 // indirect
 	github.com/xo/magic/libmagic/freebsd_amd64/v5 v5.48.1 // indirect

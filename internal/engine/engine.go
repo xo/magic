@@ -8,9 +8,9 @@
 package engine
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
-	"io"
-	"os"
 	"sync"
 
 	"github.com/xo/magic/internal/rules"
@@ -23,7 +23,10 @@ type Flags int
 const (
 	None         Flags = 0x0000000
 	Continue     Flags = 0x0000020
+	Symlink      Flags = 0x0000002
+	Devices      Flags = 0x0000008
 	Raw          Flags = 0x0000100
+	Error        Flags = 0x0000200
 	MimeType     Flags = 0x0000010
 	MimeEncoding Flags = 0x0000400
 	Mime               = MimeType | MimeEncoding
@@ -115,25 +118,108 @@ type state struct {
 		offset uint64
 		rmLen  uint64
 	}
-	val value
-	li  []levelInfo
+	val  value
+	li   []levelInfo
+	line uint32 // the line of the rule that runs, for an error
 }
 
-// printf appends to the output, as file_printf does.
-func (st *state) printf(format string, args ...any) {
-	st.out = fmt.Appendf(st.out, format, args...)
+// printf appends to the output, as file_printf does. After an error it
+// prints nothing. One call prints at most 1024 bytes, and the output holds at
+// most 1 MiB.
+func (st *state) printf(format string, args ...any) int {
+	return st.put(fmt.Appendf(nil, format, args...))
 }
 
-// errorf records an error, as file_error does. The first error wins.
-func (st *state) errorf(format string, args ...any) {
-	if st.err == nil {
-		st.err = fmt.Errorf(format, args...)
+// cprintf is file_printf with a C format from a rule. It refuses a format
+// that file_checkfmt refuses.
+func (st *state) cprintf(format []byte, args ...carg) int {
+	if st.err != nil {
+		return 0
 	}
+	if r := checkPrintfFormat(format); r != "" {
+		st.out = st.out[:0]
+		st.errorf("Bad magic format `%s' (%s)", format, r)
+		return -1
+	}
+	return st.put(cprintf(format, args...))
 }
 
-// magErr records an error of the rules, as file_magerror does.
+// put appends s, as the end of file_vprintf.
+func (st *state) put(s []byte) int {
+	if st.err != nil {
+		return 0
+	}
+	if i := bytes.IndexByte(s, 0); i >= 0 {
+		// vasprintf makes a C string.
+		s = s[:i]
+	}
+	if len(s) > 1024 || len(s)+len(st.out) > 1024*1024 {
+		blen := len(st.out)
+		st.out = st.out[:0]
+		st.errorf("Output buffer space exceeded %d+%d", len(s), blen)
+		return -1
+	}
+	if st.out == nil {
+		// The output exists now, even when s is empty.
+		st.out = []byte{}
+	}
+	st.out = append(st.out, s...)
+	return 0
+}
+
+// pushed is file_pushbuf_t: the output and the offset that push saved.
+type pushed struct {
+	out    []byte
+	offset uint32
+}
+
+// push is file_push_buffer: it saves the output and the offset, and starts
+// an empty output.
+func (st *state) push() pushed {
+	pb := pushed{out: st.out, offset: st.offset}
+	st.out, st.offset = nil, 0
+	return pb
+}
+
+// pop is file_pop_buffer: it returns the output since push, and restores
+// what push saved. It fails after an error.
+func (st *state) pop(pb pushed) ([]byte, bool) {
+	if st.err != nil {
+		return nil, false
+	}
+	inner := st.out
+	st.out, st.offset = pb.out, pb.offset
+	return inner, true
+}
+
+// errorf records an error, as file_error does: the text of the error
+// follows the output so far, and the first error wins.
+func (st *state) errorf(format string, args ...any) {
+	st.errorAt(0, fmt.Sprintf(format, args...))
+}
+
+// magErr records an error of a rule, as file_magerror does: the output
+// becomes the line of the rule and the text.
 func (st *state) magErr(format string, args ...any) {
-	st.errorf(format, args...)
+	st.errorAt(st.line, fmt.Sprintf(format, args...))
+}
+
+// errorAt is file_error_core.
+func (st *state) errorAt(line uint32, msg string) {
+	if st.err != nil {
+		return
+	}
+	var b []byte
+	if line != 0 {
+		b = fmt.Appendf(b, "line %d:", line)
+	} else {
+		b = append(b, st.out...)
+	}
+	if len(b) > 0 {
+		b = append(b, ' ')
+	}
+	b = append(b, msg...)
+	st.err = errors.New(string(b))
 }
 
 // Buffer returns what libmagic says of data with flags, as magic_buffer.
@@ -143,89 +229,6 @@ func (e *Engine) Buffer(data []byte, flags Flags) (string, error) {
 	}
 	st := &state{e: e, flags: flags}
 	return st.result(st.buffer(&buffer{data: data}, len(data)))
-}
-
-// File returns what libmagic says of the file at path with flags, as
-// magic_file.
-func (e *Engine) File(path string, flags Flags) (string, error) {
-	st := &state{e: e, flags: flags}
-	fi, err := os.Stat(path)
-	if err != nil {
-		return "", fmt.Errorf("cannot stat `%s' (%w)", path, err)
-	}
-	st.mode = statMode(fi)
-	switch {
-	case fi.IsDir():
-		if flags&Mime != 0 {
-			st.mime("directory")
-		} else {
-			st.printf("directory")
-		}
-		return st.result(1)
-	case !fi.Mode().IsRegular():
-		return "", fmt.Errorf("%s: not a regular file", path)
-	case fi.Size() == 0:
-		if flags&Mime != 0 {
-			st.mime("x-empty")
-		} else {
-			st.printf("empty")
-		}
-		return st.result(1)
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		// unreadable_info: libmagic describes a file that it can stat and
-		// not open.
-		if writable(path) {
-			st.printf("writable, ")
-		}
-		if executable(path) {
-			st.printf("executable, ")
-		}
-		st.printf("regular file, no read permission")
-		return st.result(1)
-	}
-	defer f.Close()
-	data := make([]byte, bytesMax)
-	n, err := io.ReadFull(f, data)
-	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
-		return "", fmt.Errorf("cannot read `%s' (%w)", path, err)
-	}
-	data = data[:n]
-	info := &fileInfo{regular: true, size: fi.Size(), r: f}
-	if fi.Size() <= int64(n) {
-		info.tail = data
-	} else {
-		tl := min(fi.Size(), bytesMax)
-		info.tail = make([]byte, tl)
-		if _, err := f.ReadAt(info.tail, fi.Size()-tl); err != nil {
-			return "", fmt.Errorf("cannot read `%s' (%w)", path, err)
-		}
-	}
-	return st.result(st.buffer(&buffer{data: data, file: info}, n))
-}
-
-// mime prints a MIME type that fsmagic finds, as handle_mime.
-func (st *state) mime(sub string) {
-	if st.flags&MimeType != 0 {
-		st.printf("inode/%s", sub)
-		if st.flags&MimeEncoding != 0 {
-			st.printf("; charset=")
-		}
-	}
-	if st.flags&MimeEncoding != 0 {
-		st.printf("binary")
-	}
-}
-
-// statMode returns the st_mode of fi, for the rules that ask whether a file
-// can run.
-func statMode(fi os.FileInfo) uint32 {
-	m := uint32(fi.Mode().Perm())
-	if fi.Mode().IsRegular() {
-		m |= 0o100000
-	}
-	return m
 }
 
 // result is what magic_buffer returns: the output, or the error.

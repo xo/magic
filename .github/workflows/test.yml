@@ -91,6 +91,12 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # compress/xz and compress/zstd are modules of their own (D45).
+      - name: Vet the decoder modules
+        run: |
+          (cd compress/xz && go vet ./...)
+          (cd compress/zstd && go vet ./...)
+
       # -race is what backs the "safe to share a handle" claim in the docs:
       # TestConcurrent drives one cookie from 16 goroutines.
       - name: Test

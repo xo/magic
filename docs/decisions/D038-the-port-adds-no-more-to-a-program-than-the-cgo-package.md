@@ -1,6 +1,6 @@
 # D38. The port adds no more to a program than the cgo package
 
-Status: Decided. Amends D21.
+Status: Decided. Amends D21. Amended by D45.
 
 The maintainers decided on 2026-11-15 that a program built with the port must
 grow by as few bytes as possible, and by no more than the cgo package makes it

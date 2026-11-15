@@ -415,7 +415,7 @@ out:
 }
 
 // csv is file_is_csv.
-func (st *state) csv(buf []byte, looksText bool) int {
+func (st *state) csv(buf []byte, looksText bool, code string) int {
 	if !looksText || st.flags&(Apple|Extension) != 0 {
 		return 0
 	}
@@ -430,8 +430,7 @@ func (st *state) csv(buf []byte, looksText bool) int {
 		st.printf("text/csv")
 		return 1
 	}
-	// libmagic passes no encoding here, so code is NULL.
-	st.printf("CSV text")
+	st.printf("CSV %s text", code)
 	return 1
 }
 

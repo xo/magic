@@ -7,6 +7,9 @@
 package corpus
 
 import (
+	"bytes"
+	"compress/gzip"
+	"compress/zlib"
 	"fmt"
 	"math/rand/v2"
 	"os"
@@ -38,12 +41,14 @@ func root() string {
 
 // Originals returns the files that the corpus starts from: the test files of
 // file at the base commit, from the tree that test/oracle/build.sh exported,
-// and the files in testdata/ of this repository.
+// the files in testdata/ of this repository, and the compressed files in
+// test/corpus/testdata, for the flag Compress.
 func Originals() ([]Input, error) {
 	var paths []string
 	for _, pattern := range []string{
 		filepath.Join(root(), "test", ".oracle", "src", "tests", "*.testfile"),
 		filepath.Join(root(), "testdata", "*"),
+		filepath.Join(root(), "test", "corpus", "testdata", "*"),
 	} {
 		m, err := filepath.Glob(pattern)
 		if err != nil {
@@ -101,6 +106,26 @@ func All() ([]Input, error) {
 			}
 			out = append(out, Input{Name: fmt.Sprintf("%s~%d", in.Name, i), Data: b})
 		}
+	}
+	// Copies compressed with gzip and zlib, for the flag Compress. They come
+	// from the standard library, so a person can rebuild them.
+	for _, in := range orig {
+		if len(in.Data) == 0 || len(in.Data) > 1<<20 {
+			continue
+		}
+		var gz, zl bytes.Buffer
+		gw := gzip.NewWriter(&gz)
+		gw.Write(in.Data)
+		gw.Close()
+		zw := zlib.NewWriter(&zl)
+		zw.Write(in.Data)
+		zw.Close()
+		g := gz.Bytes()
+		out = append(out,
+			Input{Name: in.Name + ".gz", Data: g},
+			Input{Name: in.Name + ".zlib", Data: zl.Bytes()},
+			Input{Name: in.Name + ".gz[:half]", Data: g[:len(g)/2]},
+		)
 	}
 	return out, nil
 }

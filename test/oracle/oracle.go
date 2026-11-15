@@ -32,6 +32,9 @@ const (
 	Mime         = MimeType | MimeEncoding
 	Apple        = 0x0000800
 	Extension    = 0x1000000
+	// CompressTransp prints the result of the data inside compressed data
+	// alone.
+	CompressTransp = 0x2000000
 )
 
 // Question is one question for the oracle. Op is "buffer", which reads Data,
@@ -134,8 +137,8 @@ func (o *Oracle) Ask(q Question) (Answer, error) {
 	}
 	var res struct {
 		ID    int    `json:"id"`
-		Text  string `json:"text"`
-		Error string `json:"error"`
+		Text  []byte `json:"text"`
+		Error []byte `json:"error"`
 	}
 	if err := json.Unmarshal(o.out.Bytes(), &res); err != nil {
 		return Answer{}, fmt.Errorf("decoding answer %d: %w", id, err)
@@ -143,7 +146,7 @@ func (o *Oracle) Ask(q Question) (Answer, error) {
 	if res.ID != id {
 		return Answer{}, fmt.Errorf("reading answer %d: got the answer to %d", id, res.ID)
 	}
-	return Answer{Text: res.Text, Err: res.Error}, nil
+	return Answer{Text: string(res.Text), Err: string(res.Error)}, nil
 }
 
 // Buffer asks what libmagic says of data with flags.

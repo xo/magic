@@ -36,7 +36,7 @@ header of the script gives every option.
 By default the script builds against the newest stable release of each
 dependency. `PINNED=1` builds against the fallback versions in the script.
 
-A new release of file changes `libmagic/magic.mgc` and the text that libmagic
+A new release of file changes `libmagic/magic.mgc.zst` and the text that libmagic
 reports. After you rebuild, run the tests and update the expected values that
 changed. D11 in `docs/PLAN.md` says why the tests expect exact values.
 

@@ -100,6 +100,30 @@ func TestEveryTargetIsWired(t *testing.T) {
 	}
 }
 
+// TestHeadersAreComplete holds D20. The cgo code includes the headers in
+// libmagic/, and a header there that includes another with quotes needs that
+// one in libmagic/ too. A build on a host that has the header in a system
+// folder passes anyway, which is how zstd.h once shipped without
+// zstd_errors.h. A user without that header then cannot build.
+func TestHeadersAreComplete(t *testing.T) {
+	t.Parallel()
+	headers, err := filepath.Glob(filepath.Join("libmagic", "*.h"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(headers) == 0 {
+		t.Fatal("libmagic/ holds no header, so there is nothing to test")
+	}
+	include := regexp.MustCompile(`(?m)^\s*#\s*include\s+"([^"]+)"`)
+	for _, h := range headers {
+		for _, m := range include.FindAllStringSubmatch(read(t, h), -1) {
+			if _, err := os.Stat(filepath.Join("libmagic", m[1])); err != nil {
+				t.Errorf("%s includes %q, which is not in libmagic/. Copy it from the build", h, m[1])
+			}
+		}
+	}
+}
+
 // TestNoLinkFileWithoutATarget fails on a root file that imports a target
 // that has no folder. Deleting a target means deleting its file and its go.mod
 // lines.

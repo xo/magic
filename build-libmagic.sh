@@ -16,7 +16,7 @@
 # The tags that the script prints end in .0. After a rebuild at the same file
 # version, set the next patch number for the tags: MODULE_PATCH=1.
 #
-# Bumping file(1) changes magic.mgc and the strings libmagic reports, so the
+# Bumping file(1) changes the database and the strings libmagic reports, so the
 # Go tests that assert exact descriptions may need regenerating afterwards.
 #
 # A target is named <goos>_<goarch>, as Go names it, and linux_arm is armv7.
@@ -24,7 +24,9 @@
 # Layout produced, ready for cgo:
 #
 #   libmagic/magic.h                    (shared: no target-conditional content)
-#   libmagic/magic.mgc                  (shared: identical for every target)
+#   libmagic/zstd.h  zstd_errors.h      (shared: the headers for libzstd.a)
+#   libmagic/magic.mgc.zst              (shared: the database, zstd -19)
+#   libmagic/magic.mgc.sha256           (the hash of the database before it is compressed)
 #   libmagic/<target>/libmagic.a
 #   libmagic/<target>/libz.a  libbz2.a  liblzma.a  libzstd.a
 #   libmagic/<target>/libgnurx.a        (windows only)
@@ -530,6 +532,11 @@ if [ "${1:-}" = modules ]; then
   exit 0
 fi
 
+# The database is compared across targets here, and compressed at the end. The
+# plain file is not committed. See D20.
+SHARED="$ROOT/.build/shared"
+rm -rf "$SHARED"; mkdir -p "$SHARED"
+
 resolve_versions
 fetch_all
 FILE_COMPILE="$(build_native_file)"
@@ -589,8 +596,12 @@ for entry in "${TARGETS[@]}"; do
   # it has no target-conditional content. magic.mgc is produced by the native
   # FILE_COMPILE from the same sources, and its format is endian-independent
   # (libmagic byte-swaps on load). Both are shared by every target.
+  # zstd.h is for magic_expand in magic.go, which expands the compressed
+  # database with the libzstd.a that is linked for libmagic anyway.
   share_once "magic.h"   "$prefix/include/magic.h"     "$OUT/magic.h"
-  share_once "magic.mgc" "$prefix/share/misc/magic.mgc" "$OUT/magic.mgc"
+  share_once "zstd.h"    "$prefix/include/zstd.h"      "$OUT/zstd.h"
+  share_once "zstd_errors.h" "$prefix/include/zstd_errors.h" "$OUT/zstd_errors.h"
+  share_once "magic.mgc" "$prefix/share/misc/magic.mgc" "$SHARED/magic.mgc"
 
   echo "--> $OUT/$name"
   ls -1 "$OUT/$name"
@@ -604,6 +615,18 @@ if [ ${#built[@]} -eq 0 ]; then
   echo "no targets matched: ${wanted[*]:-<none specified>}"
   exit 1
 fi
+# Compress the database. magic.go embeds the compressed file and expands it
+# with the size that the frame header records, which zstd writes when it reads
+# a file. The hash is of the plain database, and TestEmbeddedDatabase checks the
+# expanded bytes against it. Measured on file 5.48: level 3 gives 408,107
+# bytes, level 19 gives 345,182 and --ultra -22 gives 325,485. Level 22 saves
+# 20 KB more, and level 19 is enough.
+have zstd || { echo "error: zstd is required to compress the database" >&2; exit 1; }
+zstd -19 -q -f -o "$OUT/magic.mgc.zst" "$SHARED/magic.mgc"
+sha256sum "$SHARED/magic.mgc" | cut -d' ' -f1 > "$OUT/magic.mgc.sha256"
+rm -f "$OUT/magic.mgc"
+echo "database: $(wc -c < "$SHARED/magic.mgc") bytes, $(wc -c < "$OUT/magic.mgc.zst") compressed"
+
 echo "done: ${built[*]}"
 
 # A module version is the file version with a patch number. Never move a tag

@@ -16,9 +16,10 @@ repository carries both (D1, D3).
 The tags `v0.1.0` (`7b14d3f`), `v0.2.0` (`dedf132`) and `v0.2.1` (`a629036`)
 hold the archives in the root module. No document says what rule chose their
 numbers. Ken chose `v0.3.0` on 2026-10-14 for the first release with a module
-for each target (D17). It
-wraps libmagic 5.48 from file 5.48, and links it with zlib 1.4, bzip2 1.0.8,
-xz 5.8.4 and zstd 1.5.7. The Windows archives also hold libgnurx 2.5.1.
+for each target (D17). `v0.3.1` rebuilt the archives with zlib 1.4 (D13), and
+`v0.4.0` stores the database compressed (D20, D21). It wraps libmagic 5.48 from
+file 5.48, and links it with zlib 1.4, bzip2 1.0.8, xz 5.8.4 and zstd 1.5.7. The
+Windows archives also hold libgnurx 2.5.1.
 
 The package is `magic.go`, with one generated file `link_<goos>_<goarch>.go`
 for each of the eight targets (D17, D19). `magic.go` has these parts:
@@ -31,6 +32,7 @@ for each of the eight targets (D17, D19). `magic.go` has these parts:
 - `Flags` and `SetFlags` read and change the flags of the handle.
 - `Close` releases the handle.
 - `Version` and `VersionInt` report the libmagic version.
+- `MagicDB` returns the plain database (D21).
 - The flag constants mirror the `MAGIC_*` constants of `magic.h`.
 
 A handle is safe to share across goroutines (D9).
@@ -77,7 +79,7 @@ If neither gives a reason, the entry says "Reason not recorded".
 | --- | --- | --- |
 | [D1](#d1-the-package-links-static-libmagic-archives-that-the-repository-carries-decided-amended-by-d16-amended-by-d17-amended-by-d19) | The package links static libmagic archives that the repository carries | Decided. Amended by D16. Amended by D17. Amended by D19 |
 | [D2](#d2-build-libmagicsh-cross-compiles-the-archives-with-zig-cc-decided-amended-by-d16-amended-by-d17) | build-libmagic.sh cross-compiles the archives with zig cc | Decided. Amended by D16. Amended by D17 |
-| [D3](#d3-the-magic-database-is-embedded-and-one-copy-serves-every-target-decided) | The magic database is embedded, and one copy serves every target | Decided |
+| [D3](#d3-the-magic-database-is-embedded-and-one-copy-serves-every-target-decided-amended-by-d20-amended-by-d21) | The magic database is embedded, and one copy serves every target | Decided. Amended by D20. Amended by D21 |
 | [D4](#d4-libmagic-reads-compressed-files-through-zlib-bzip2-xz-and-zstd-decided) | libmagic reads compressed files through zlib, bzip2, xz and zstd | Decided |
 | [D5](#d5-the-api-follows-the-libmagic-c-api-decided) | The API follows the libmagic C API | Decided |
 | [D6](#d6-a-handle-is-not-safe-for-concurrent-use-decided-amended-by-d9) | A handle is not safe for concurrent use | Decided. Amended by D9 |
@@ -94,6 +96,8 @@ If neither gives a reason, the entry says "Reason not recorded".
 | [D17](#d17-each-target-is-a-go-module-of-its-own-tagged-as-resvg-tags-its-modules-decided-amends-d1-amends-d2-amends-d16) | Each target is a Go module of its own, tagged as resvg tags its modules | Decided. Amends D1. Amends D2. Amends D16 |
 | [D18](#d18-a-target-version-has-a-patch-number-and-a-target-module-declares-go-121-decided) | A target version has a patch number, and a target module declares go 1.21 | Decided |
 | [D19](#d19-magic-builds-the-targets-that-resvg-builds-decided-amends-d1) | magic builds the targets that resvg builds | Decided. Amends D1 |
+| [D20](#d20-the-embedded-database-is-compressed-with-zstd-and-expands-into-c-memory-decided-amends-d3) | The embedded database is compressed with zstd, and expands into C memory | Decided. Amends D3 |
+| [D21](#d21-magicdb-is-a-function-that-expands-the-database-decided-amends-d3) | MagicDB is a function that expands the database | Decided. Amends D3 |
 
 ### D1. The package links static libmagic archives that the repository carries. Decided. Amended by D16. Amended by D17. Amended by D19.
 
@@ -126,7 +130,7 @@ The comments in the script give the reason for each workaround, such as the
 bzip2 Makefile that ignores `CC` and the zlib `configure` that does not work
 for MinGW.
 
-### D3. The magic database is embedded, and one copy serves every target. Decided.
+### D3. The magic database is embedded, and one copy serves every target. Decided. Amended by D20. Amended by D21.
 
 Commit `7b14d3f` (2026-09-04).
 
@@ -515,6 +519,81 @@ What ran on 2026-10-14:
 The targets of resvg are not final. resvg staged windows/arm64 and
 freebsd/amd64 and did not commit them. If resvg drops one, Ken decides whether
 magic does too.
+
+### D20. The embedded database is compressed with zstd, and expands into C memory. Decided. Amends D3.
+
+Ken decided on 2026-11-15 that the embedded database is stored as a compressed
+artifact. The iv session asked for it. The database is 10,793,952 bytes, and
+`//go:embed` put all of it in every program that imports the package. In iv,
+that was 10.8 MB of a 117.5 MB build.
+
+What changed:
+
+- `libmagic/magic.mgc.zst` replaces `libmagic/magic.mgc`. It is 345,182
+  bytes, from `zstd -19`. On this file, level 3 gives 408,107 bytes and
+  `--ultra -22` gives 325,485. The saving of level 22 is 20 KB, and level 19 is
+  enough.
+- `libmagic/magic.mgc.sha256` holds the hash of the plain database.
+  `TestEmbeddedDatabase` expands the embedded file and compares the hash.
+- `libmagic/zstd.h` and `libmagic/zstd_errors.h` are the headers of the zstd
+  that built the archives. The script copies them from the build, with
+  `magic.h`. The first draft shipped `zstd.h` alone. It built on the build host
+  only because the host has its own `zstd_errors.h`, and a cross build for
+  darwin found it. `TestHeadersAreComplete` now fails on a header that includes
+  a file that `libmagic/` does not hold.
+- `magic.go` has `magic_expand` in its C preamble. It reads the size of the
+  content from the frame header, refuses a size of zero or of 1 GiB or more,
+  calls `malloc` for that size, and calls `ZSTD_decompress` into it. `New`
+  hands that block to `magic_load_buffers`, so the Go heap never holds the
+  database. This replaces the copy that `C.CBytes` made, and the memory that
+  one handle uses stays the same.
+- `libzstd.a` was already linked for libmagic, so the decompressor adds no
+  library.
+- The script keeps the plain database in `.build/shared` to compare it across
+  targets, compresses it at the end, and no longer writes `libmagic/magic.mgc`.
+
+`TestExpandRefusesBadInput` feeds the loader empty input, text, cut and damaged
+copies of the real file, a frame with no recorded size, and frames that claim
+1 TiB and zero bytes. Each gives an error. The huge size is refused before
+`malloc`. A change to the window byte of the header does not change the
+output, and the test does not expect an error for it.
+
+Measured on 2026-11-15 on the build host, with `go build ./cmd/file` at
+`v0.3.1` and at this change: the binary went from 14,554,368 to 4,111,496
+bytes, which is 10.4 MB smaller. `BenchmarkNew` went from about 0.27 ms to
+about 1.7 ms for each call, three runs of 200 each. The old time was a copy of
+10.8 MB, and the new time is the expansion. A program that opens one handle
+does not notice. A program that opens a handle for each file pays 1.4 ms more
+each time, and can share one handle, which D9 makes safe.
+
+The archives do not change, so no target needs a new tag, and the change is in
+the root module only.
+
+### D21. MagicDB is a function that expands the database. Decided. Amends D3.
+
+Ken decided on 2026-11-15 that `MagicDB` stays in the API as a function that
+returns the plain database, and that the release is `v0.4.0`.
+
+`MagicDB` was an exported `[]byte` that held the plain database. D20 stores the
+compressed bytes, so the plain bytes no longer exist in the program as a Go
+value. Now `MagicDB() ([]byte, error)` expands the database and returns a new
+slice of about 10 MiB on each call. `New` does not call it, so a program that
+only identifies files never puts the database on the Go heap.
+
+A program that read the variable no longer builds, and the error points at the
+name. The fix is to call the function and check the error. That is a break of
+the API, so the root takes a minor version.
+
+No user is known. A search of GitHub code for `magic.MagicDB` gave no result,
+which proves little, and no repository under `xo` on this host imports it.
+The iv session, which asked for D20, checked its own Go files on 2026-11-15
+and reports that it uses only `New`, `None`, `MimeType`, `Magic`, `Buffer`
+and `BufferWith`.
+
+The name stutters, as `magic.MagicDB`, which `go-pedantry` advises against. It
+stays, so that a program that used the variable finds the function under the
+same name. `TestMagicDB` holds the hash and that each call returns its own
+slice.
 
 ## Open questions for Ken
 

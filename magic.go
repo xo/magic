@@ -10,6 +10,7 @@ package magic
 #include <string.h>
 #include <errno.h>
 #include "magic.h"
+#include "zstd.h"
 
 // magic_load_buffers takes parallel arrays of pointers and sizes. Building
 // those in Go means a []unsafe.Pointer whose address gets passed to C, which
@@ -17,6 +18,47 @@ package magic
 // free of pointer-array juggling.
 static int magic_load_one(magic_t ms, void *buf, size_t len) {
 	return magic_load_buffers(ms, &buf, &len, 1);
+}
+
+// magic_expand decompresses one zstd frame into a new malloc block, and
+// returns it, or returns NULL with a reason in *why. The size comes from the
+// frame header, so the block is exactly as large as the output. The block is C
+// memory because magic_load_buffers keeps it and can byte-swap it in place.
+// The reasons are string literals or names that zstd owns, so none is freed.
+// A database of 1 GiB or more is refused: the real one is about 10 MiB, and
+// the limit stops a damaged header from asking for all of memory.
+static void *magic_expand(const void *src, size_t srclen, size_t *outlen, const char **why) {
+	unsigned long long n = ZSTD_getFrameContentSize(src, srclen);
+	if (n == ZSTD_CONTENTSIZE_UNKNOWN) {
+		*why = "frame does not record the size of its content";
+		return NULL;
+	}
+	if (n == ZSTD_CONTENTSIZE_ERROR) {
+		*why = "not a zstd frame";
+		return NULL;
+	}
+	if (n == 0 || n >= (1ULL << 30)) {
+		*why = "size of content is out of range";
+		return NULL;
+	}
+	void *buf = malloc((size_t)n);
+	if (buf == NULL) {
+		*why = "out of memory";
+		return NULL;
+	}
+	size_t got = ZSTD_decompress(buf, (size_t)n, src, srclen);
+	if (ZSTD_isError(got)) {
+		*why = ZSTD_getErrorName(got);
+		free(buf);
+		return NULL;
+	}
+	if (got != (size_t)n) {
+		*why = "content is shorter than its header says";
+		free(buf);
+		return NULL;
+	}
+	*outlen = got;
+	return buf;
 }
 */
 import "C"
@@ -57,11 +99,16 @@ func New(flags int) (*Magic, error) {
 
 	// magic_load_buffers does not copy: it keeps the pointer for the lifetime
 	// of the cookie, and byte-swaps the contents in place when the database's
-	// endianness doesn't match the host. Handing it MagicDB directly would
-	// both retain a Go pointer past the call (which cgo forbids) and risk
-	// writing to a read-only section, so copy into C memory once.
-	db := C.CBytes(MagicDB)
-	if C.magic_load_one(cookie, db, C.size_t(len(MagicDB))) != 0 {
+	// endianness doesn't match the host. A Go pointer cannot be kept past the
+	// call, which cgo forbids, and the embedded bytes can sit in a read-only
+	// section. So expand the compressed database straight into C memory. The
+	// Go heap never holds the whole database.
+	db, n, err := expand(magicDBZst)
+	if err != nil {
+		C.magic_close(cookie)
+		return nil, err
+	}
+	if C.magic_load_one(cookie, db, C.size_t(n)) != 0 {
 		err := cookieErr(cookie, "magic_load_buffers")
 		C.free(db)
 		C.magic_close(cookie)
@@ -297,9 +344,49 @@ const (
 	Extension     = C.MAGIC_EXTENSION
 )
 
-// MagicDB is the compiled magic database. It is byte-identical for every
-// target -- the format is endian-independent and libmagic byte-swaps on load
-// -- so one embedded copy serves all platforms.
+// magicDBZst is the compiled magic database, compressed with zstd. It is
+// byte-identical for every target -- the format is endian-independent and
+// libmagic byte-swaps on load -- so one embedded copy serves all platforms.
+// The database is about 10 MiB and this is about 0.3 MiB, which is what every
+// program that imports the package carries. libzstd is already linked for
+// libmagic, so the decompressor costs nothing more. See D20.
 //
-//go:embed libmagic/magic.mgc
-var MagicDB []byte
+//go:embed libmagic/magic.mgc.zst
+var magicDBZst []byte
+
+// expand decompresses one zstd frame into a block of C memory. The caller
+// owns the block and must free it with C.free or freeDB.
+func expand(src []byte) (unsafe.Pointer, int, error) {
+	if len(src) == 0 {
+		return nil, 0, fmt.Errorf("magic: expanding the database: empty input")
+	}
+	var (
+		n   C.size_t
+		why *C.char
+	)
+	// Only borrowed for the duration of the call, so a Go pointer is fine.
+	p := C.magic_expand(unsafe.Pointer(&src[0]), C.size_t(len(src)), &n, &why)
+	runtime.KeepAlive(src)
+	if p == nil {
+		return nil, 0, fmt.Errorf("magic: expanding the database: %s", C.GoString(why))
+	}
+	return p, int(n), nil
+}
+
+// freeDB releases a block that expand returned.
+func freeDB(p unsafe.Pointer) { C.free(p) }
+
+// MagicDB returns the compiled magic database, as libmagic reads it from a
+// magic.mgc file. The package embeds it compressed, so each call expands it
+// into a new slice of about 10 MiB. A program that only identifies files does
+// not need it, because New loads the database itself.
+//
+// MagicDB was a []byte variable before v0.4.0. See D21.
+func MagicDB() ([]byte, error) {
+	p, n, err := expand(magicDBZst)
+	if err != nil {
+		return nil, err
+	}
+	defer freeDB(p)
+	return C.GoBytes(p, C.int(n)), nil
+}

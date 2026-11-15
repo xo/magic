@@ -42,6 +42,11 @@ A handle is safe to share across goroutines. Each call holds a lock, so calls
 on one handle run one at a time. If you want calls to run in parallel, give
 each worker its own handle.
 
+The package embeds the database compressed with zstd, about 0.3 MiB, and `New`
+expands it, which takes about 1.7 ms. `MagicDB` returns the plain database, for
+a program that needs the bytes of a `magic.mgc` file. Each call returns a new
+slice of about 10 MiB.
+
 `cmd/file` is a small example program:
 
 ```bash

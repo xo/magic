@@ -1,6 +1,6 @@
 # D1. The package links static libmagic archives that the repository carries
 
-Status: Decided. Amended by D16. Amended by D17. Amended by D19. Amended by D22.
+Status: Decided. Amended by D16. Amended by D17. Amended by D19. Amended by D22. Amended by D47.
 
 Commit `7b14d3f` (2026-09-04).
 

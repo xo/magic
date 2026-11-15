@@ -4,17 +4,14 @@
 
 # magic
 
-`magic` is a Go package that identifies the type of a file or a buffer with
-[libmagic](https://astron.com/pub/file/), the library of the `file` command.
+`magic` is a Go package that identifies the type of a file or of bytes, as
+the `file` command does. It is a port of
+[libmagic](https://astron.com/pub/file/), the library of `file`, to pure Go.
 
-The repository carries libmagic 5.48 as static archives, and the package
-embeds the magic database. You do not install libmagic, and the package does
-not read a magic file from your system. You need Go and a C compiler, because
-the package uses cgo.
-
-magic is becoming a pure Go port of libmagic, which will need no C compiler.
-The port is in progress, and `docs/PLAN.md` holds its plan. Until it is
-ready, the package works as this page describes.
+It gives the output of libmagic 5.48: the same description, MIME type,
+charset, extensions and Apple code. The rules of `file` are compiled into the
+package. You need only Go 1.27 or later. You do not need a C compiler or
+libmagic, and a program that imports magic builds for every target of Go.
 
 ## Install
 
@@ -24,89 +21,111 @@ go get github.com/xo/magic
 
 ## Use
 
+`Detect` identifies bytes or a string:
+
 ```go
-m, err := magic.New(magic.MimeType)
+r, err := magic.Detect(ctx, buf)
 if err != nil {
 	return err
 }
-defer m.Close()
-
-typ, err := m.File("photo.gif")
-if err != nil {
-	return err
-}
-fmt.Println(typ) // image/gif
+fmt.Println(r.Description)   // GIF image data, version 89a, 1375 x 825
+fmt.Println(r.MIME)          // image/gif
+fmt.Println(r.ContentType()) // image/gif; charset=binary
+fmt.Println(r.Extensions)    // [gif]
 ```
 
-`Buffer` identifies a byte slice in the same way. The flags are the `MAGIC_*`
-flags of libmagic: `None` gives a description, `MimeType` gives a MIME type
-and `Extension` gives the usual file extensions.
+`DetectFile` identifies a file. A directory, a link, a pipe or a device is
+named by its kind, as `file` names it. A file that cannot be found or opened
+is an error that wraps the error of the `os` package:
 
-`FileTypes` and `BufferTypes` identify one input with several flags in one
-call. `FileWith` and `BufferWith` use other flags for one call and do not
-change the flags of the handle.
-
-A handle is safe to share across goroutines. Each call holds a lock, so calls
-on one handle run one at a time. If you want calls to run in parallel, give
-each worker its own handle.
-
-The package embeds the database compressed with zstd, about 0.3 MiB, and `New`
-expands it, which takes about 1.7 ms. `MagicDB` returns the plain database, for
-a program that needs the bytes of a `magic.mgc` file. Each call returns a new
-slice of about 10 MiB.
-
-`cmd/file` is a small example program:
-
-```bash
-go run ./cmd/file -mime testdata/gif.gif
+```go
+r, err := magic.DetectFile(ctx, "photo.jpg")
 ```
 
-## Platforms
+`DetectReader` reads from an `io.Reader`, and `DetectReaderAt` reads from an
+`io.ReaderAt` of a known size. A rule can read from the end of a file, so
+`DetectReaderAt` gives the same answer as a file, and `DetectReader` does
+not when the data is longer than what it reads.
 
-The repository has archives for these targets:
+Each function takes a `context.Context` first. A detection stops between the
+rules when the context is done, and its error wraps `magic.ErrStopped` and
+the error of the context. Every function is safe to call from many
+goroutines at once.
 
-| GOOS | GOARCH |
-| --- | --- |
-| linux | amd64, arm64, arm (armv7) |
-| darwin | amd64, arm64 |
-| windows | amd64, arm64 |
-| freebsd | amd64 |
+### Options
 
-A build for any other target fails.
+The options change how a call detects:
 
-Each platform is a Go module of its own, such as
-`github.com/xo/magic/libmagic/linux_amd64/v5`. Go downloads the module of your
-platform and no other when it builds. `go get` and `go mod tidy` fetch every
-platform once, because they read the imports for all platforms.
+| Option | What it does | Flag of libmagic |
+| --- | --- | --- |
+| `WithAll()` | keeps every match, one on each line of `Description`, and one in each entry of `Matches` | `MAGIC_CONTINUE` |
+| `WithDecompress()` | identifies what is inside compressed data | `MAGIC_COMPRESS` |
+| `WithLimit(n)` | reads and examines n bytes. The default is 7 MiB | `bytes_max` |
+| `WithRaw()` | keeps the characters that cannot be printed, which are octal escapes by default | `MAGIC_RAW` |
+| `WithFollowSymlinks()` | identifies the target of a link | `MAGIC_SYMLINK` |
+| `WithDevices()` | reads a device | `MAGIC_DEVICES` |
+| `WithoutCheck(c)` | turns off one built-in test, such as `CheckJSON` | `MAGIC_NO_CHECK_*` |
 
-The Linux archives link with glibc, which is what `gcc` uses on most Linux
-systems, and with musl. They carry their own regex engine, so the output is the
-same either way.
+### Compressed data
 
-Releases up to `v0.4.0` do not have that engine. Built with `gcc` on Linux,
-they give wrong descriptions for some files, and they can crash with a
-segmentation fault, as on a script that starts with `#! /usr/bin/cmd1`. Use
-`v0.4.1` or later.
+`WithDecompress` decodes a format only when the program imports its
+decoder, as a program imports the driver of `database/sql`. Each decoder
+adds to the size of the program, so a program imports the ones it needs:
 
-The archives for freebsd/amd64 link into a program, and nothing has run them
-yet, because GitHub has no hosted FreeBSD runner. The tests run in CI on
-windows/arm64, with clang from llvm-mingw as the C compiler.
+```go
+import (
+	_ "github.com/xo/magic/compress/bzip2" // bzip2
+	_ "github.com/xo/magic/compress/xz"    // xz and lzma
+	_ "github.com/xo/magic/compress/zlib"  // gzip and zlib
+	_ "github.com/xo/magic/compress/zstd"  // zstd
+)
+```
+
+`compress/xz` and `compress/zstd` are Go modules of their own, because they
+need other modules. Get them with `go get` as well. For a format with no
+decoder, magic answers as libmagic does when it was built without the
+library and finds no program that decodes it. magic never runs a program.
+
+## Size
+
+A program that prints the MIME type of a file grows by about 990 KB with
+magic, stripped, on linux/amd64. Most of it is the compiled rules. The
+decoders add 45 KB for `zlib`, 74 KB for `bzip2`, 442 KB for `xz` and 594 KB
+for `zstd`.
+
+## How it is tested
+
+The test module builds libmagic 5.48 from the source of `file` and compares
+the package with it, on 2,071 files and damaged copies of them, with 14
+combinations of flags, as bytes and as files. Every answer is the same,
+except 50 where a decoder of Go reads damaged compressed data in another way
+than the library of C. All 88 tests of `file` 5.48 pass. `CONTRIBUTING.md` says how to run the tests.
+
+## Versions
+
+Up to `v0.4.1`, magic wrapped libmagic with cgo, and carried static archives
+of it for eight targets. The API changed with the port. `docs/API.md` gives
+the reasons.
 
 ## Documents
 
 | Document | What it holds |
 | --- | --- |
 | `README.md` | this page, for a person who uses the package |
-| `CONTRIBUTING.md` | how to change the package, rebuild the archives and install the agent skills |
+| `CONTRIBUTING.md` | how to change the package and test it |
 | `AGENTS.md` | the rules for a coding agent. `CLAUDE.md` imports it |
-| `docs/PLAN.md` | the plan of the pure Go port, and the open questions |
-| `docs/API.md` | the design of the API of the port |
+| `docs/PLAN.md` | the plan of the port and its phases |
+| `docs/API.md` | the design of the API |
 | `docs/decisions/` | every decision, one file each, with an index |
-| `docs/UPSTREAM.md` | the rules for following file, the upstream of the port |
+| `docs/UPSTREAM.md` | the rules for following `file`, the upstream of the port |
 | `docs/BACKLOG.md` | the work that is known and not done, and the binary walker |
 
 ## License
 
-The code is under the MIT license. See `LICENSE`. The archives hold libmagic,
-zlib, bzip2, xz and zstd, each under its own license. The Windows and Linux
-archives also hold libgnurx, which is under LGPL 2.1.
+The code of magic that is not a translation, such as the API and the tests,
+is under the MIT license, in `LICENSE`. The port translates `file`, which is
+under its own BSD license, in `LICENSE.file`. Each translated Go file opens
+with the notice of the file of `file` that it translates, and the compiled
+rules carry the notices of `file` and of its rule files, in
+`internal/table/LICENSE`. A program that ships magic must reproduce these
+notices in its documentation.

@@ -1,11 +1,64 @@
+// Copyright (c) Ian F. Darwin 1986-1995.
+// Software written by Ian F. Darwin and others;
+// maintained 1995-present by Christos Zoulas and others.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice immediately at the beginning of the file, without modification,
+//    this list of conditions, and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR
+// ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+// OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+// SUCH DAMAGE.
+//
+// Copyright (c) Christos Zoulas 2003.
+// All Rights Reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice immediately at the beginning of the file, without modification,
+//    this list of conditions, and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR
+// ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+// OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+// SUCH DAMAGE.
+//
+// This file translates src/fsmagic.c, src/magic.c of file 5.48 to Go (D29).
+
 package engine
 
 import (
+	"context"
 	"errors"
 	"io"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -16,7 +69,12 @@ import (
 // File returns what libmagic says of the file at path with flags, as
 // magic_file.
 func (e *Engine) File(path string, flags Flags) (string, error) {
-	st := &state{e: e, flags: flags}
+	return e.FileContext(context.Background(), path, Call{Flags: flags})
+}
+
+// FileContext is File with a context and a limit.
+func (e *Engine) FileContext(ctx context.Context, path string, c Call) (string, error) {
+	st := e.newState(ctx, c)
 	switch st.fsmagic(path) {
 	case -1:
 		return st.result(-1)
@@ -35,7 +93,11 @@ func (e *Engine) File(path string, flags Flags) (string, error) {
 	if err != nil {
 		return st.result(1)
 	}
-	data := make([]byte, bytesMax)
+	size := int64(st.bytesMax)
+	if fi.Mode().IsRegular() {
+		size = min(fi.Size(), size)
+	}
+	data := make([]byte, size)
 	n, err := io.ReadFull(f, data)
 	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
 		st.errorf("cannot read `%s' (%s)", path, strerror(err))
@@ -46,7 +108,7 @@ func (e *Engine) File(path string, flags Flags) (string, error) {
 	if fi.Size() <= int64(n) {
 		info.tail = data
 	} else {
-		tl := min(fi.Size(), bytesMax)
+		tl := min(fi.Size(), int64(st.bytesMax))
 		info.tail = make([]byte, tl)
 		if _, err := f.ReadAt(info.tail, fi.Size()-tl); err != nil {
 			info.tail = nil
@@ -219,8 +281,12 @@ func linkTargetExists(fn, target string) bool {
 	if err == nil || pathIsLinux {
 		return err == nil
 	}
-	if !filepath.IsAbs(target) {
-		target = filepath.Join(filepath.Dir(fn), target)
+	// libmagic puts a relative target after the folder of the link, up to
+	// its last '/'.
+	if !strings.HasPrefix(target, "/") {
+		if i := strings.LastIndexByte(fn, '/'); i >= 0 {
+			target = fn[:i+1] + target
+		}
 	}
 	_, err = os.Stat(target)
 	return err == nil

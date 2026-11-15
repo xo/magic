@@ -1,6 +1,6 @@
 # D7. A closed handle reports an error and never reaches C
 
-Status: Decided.
+Status: Decided. Amended by D47.
 
 Commit `7b14d3f` (2026-09-04). Commit `dbcd068` (2026-09-12) extended it.
 

@@ -1,3 +1,30 @@
+// Copyright (c) Christos Zoulas 2003.
+// All Rights Reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice immediately at the beginning of the file, without modification,
+//    this list of conditions, and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR
+// ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+// OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+// SUCH DAMAGE.
+//
+// This file translates src/magic.c, src/funcs.c of file 5.48 to Go (D29).
+
 // Package engine is the port of the engine of libmagic 5.48: it runs the
 // compiled rules and the detectors on a buffer or a file, and gives the text
 // that libmagic gives (D22, D34).
@@ -9,8 +36,10 @@ package engine
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/xo/magic/internal/rules"
@@ -21,17 +50,31 @@ type Flags int
 
 // The flags that the engine knows.
 const (
-	None         Flags = 0x0000000
-	Continue     Flags = 0x0000020
-	Symlink      Flags = 0x0000002
-	Devices      Flags = 0x0000008
-	Raw          Flags = 0x0000100
-	Error        Flags = 0x0000200
-	MimeType     Flags = 0x0000010
-	MimeEncoding Flags = 0x0000400
-	Mime               = MimeType | MimeEncoding
-	Apple        Flags = 0x0000800
-	Extension    Flags = 0x1000000
+	None     Flags = 0x0000000
+	Continue Flags = 0x0000020
+	Symlink  Flags = 0x0000002
+	Devices  Flags = 0x0000008
+	Raw      Flags = 0x0000100
+	Error    Flags = 0x0000200
+
+	// The flags that turn off one test of libmagic each.
+	NoCheckCompress Flags = 0x0001000
+	NoCheckTar      Flags = 0x0002000
+	NoCheckSoft     Flags = 0x0004000
+	NoCheckAppType  Flags = 0x0008000
+	NoCheckELF      Flags = 0x0010000
+	NoCheckText     Flags = 0x0020000
+	NoCheckCDF      Flags = 0x0040000
+	NoCheckCSV      Flags = 0x0080000
+	NoCheckTokens   Flags = 0x0100000
+	NoCheckEncoding Flags = 0x0200000
+	NoCheckJSON     Flags = 0x0400000
+	NoCheckSIMH     Flags = 0x0800000
+	MimeType        Flags = 0x0000010
+	MimeEncoding    Flags = 0x0000400
+	Mime                  = MimeType | MimeEncoding
+	Apple           Flags = 0x0000800
+	Extension       Flags = 0x1000000
 	// NoDesc is MAGIC_NODESC: an output that prints no description.
 	NoDesc = Extension | Mime | Apple
 )
@@ -102,10 +145,12 @@ func (t *table) regex(idx int) (*regex, error) {
 
 // state is what one detection changes, as struct magic_set of libmagic.
 type state struct {
-	e     *Engine
-	flags Flags
-	out   []byte
-	err   error
+	e        *Engine
+	flags    Flags
+	ctx      context.Context
+	bytesMax int
+	out      []byte
+	err      error
 
 	offset  uint32
 	eoffset uint32
@@ -224,15 +269,71 @@ func (st *state) errorAt(line uint32, msg string) {
 
 // Buffer returns what libmagic says of data with flags, as magic_buffer.
 func (e *Engine) Buffer(data []byte, flags Flags) (string, error) {
+	return e.BufferContext(context.Background(), data, Call{Flags: flags})
+}
+
+// Call is what one detection takes besides its input.
+type Call struct {
+	Flags Flags
+	// Limit is how many bytes are read and examined, bytes_max of
+	// libmagic. 0 means 7 MiB.
+	Limit int
+}
+
+// newState returns the state of one detection.
+func (e *Engine) newState(ctx context.Context, c Call) *state {
+	limit := c.Limit
+	if limit <= 0 {
+		limit = bytesMax
+	}
+	return &state{e: e, flags: c.Flags, ctx: ctx, bytesMax: limit}
+}
+
+// BufferContext is Buffer with a context and a limit. The engine does not
+// keep data, and does not change it.
+func (e *Engine) BufferContext(ctx context.Context, data []byte, c Call) (string, error) {
 	if data == nil {
 		data = []byte{}
 	}
-	st := &state{e: e, flags: flags}
+	st := e.newState(ctx, c)
+	if len(data) > st.bytesMax {
+		data = data[:st.bytesMax]
+	}
 	return st.result(st.buffer(&buffer{data: data}, len(data)))
+}
+
+// ReaderAtContext describes the size bytes of r, as libmagic describes an
+// open regular file: it reads the start of r, and the end of r for a rule
+// that reads from the end.
+func (e *Engine) ReaderAtContext(ctx context.Context, r io.ReaderAt, size int64, c Call) (string, error) {
+	st := e.newState(ctx, c)
+	n := int(min(size, int64(st.bytesMax)))
+	data := make([]byte, n)
+	got, err := r.ReadAt(data, 0)
+	if err != nil && err != io.EOF {
+		return "", fmt.Errorf("reading: %w", err)
+	}
+	data = data[:got]
+	info := &fileInfo{regular: true, size: size, r: r}
+	if size <= int64(got) {
+		info.tail = data
+	} else {
+		tl := min(size, int64(st.bytesMax))
+		info.tail = make([]byte, tl)
+		if _, err := r.ReadAt(info.tail, size-tl); err != nil && err != io.EOF {
+			return "", fmt.Errorf("reading: %w", err)
+		}
+	}
+	return st.result(st.buffer(&buffer{data: data, file: info}, len(data)))
 }
 
 // result is what magic_buffer returns: the output, or the error.
 func (st *state) result(rv int) (string, error) {
+	if st.ctx != nil {
+		if err := st.ctx.Err(); err != nil {
+			return "", err
+		}
+	}
 	if st.err != nil {
 		return "", st.err
 	}

@@ -1,6 +1,6 @@
 # D10. A lookup can use other flags and leave the flags of the handle alone
 
-Status: Decided.
+Status: Decided. Amended by D47.
 
 Commit `dbcd068` (2026-09-12).
 

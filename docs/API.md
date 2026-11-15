@@ -1,7 +1,18 @@
 # The API of the port
 
-This document proposes the API of the pure Go port (D22). It is a design, and
-no code exists. The maintainers decided on 2026-11-15 (D40) that:
+This document holds the design of the API of the pure Go port (D22). Phase 4
+built it, in `magic.go` and `options.go` (D47). The code differs from the
+proposal below in four places:
+
+1. A `Result` comes from one walk of the engine for each form, not from one
+   walk (D46).
+2. An `Option` returns an error, so that `WithLimit` can refuse a limit that
+   is not positive.
+3. `WithDecompress` decodes the formats whose decoder the program imports
+   from `compress/` (D45).
+4. `ErrStopped` is the error of a detection whose context is done.
+
+The maintainers decided on 2026-11-15 (D40) that:
 
 1. The API is new and clean, and need not stay compatible with the cgo
    package (D39).

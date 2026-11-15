@@ -1,6 +1,6 @@
 # D42. The API takes one walk, no Detector, a context, a generic Source and a slice of matches
 
-Status: Decided. Amends D40.
+Status: Decided. Amends D40. Amended by D46.
 
 The maintainers decided on 2026-11-15 to take the recommendations of
 [`../API.md`](../API.md) on its five open questions, after the reviews of

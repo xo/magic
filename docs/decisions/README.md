@@ -21,27 +21,27 @@ D32 set the project up as a port of libmagic.
 
 | # | Decision | Status |
 | --- | --- | --- |
-| D1 | [The package links static libmagic archives that the repository carries](D001-the-package-links-static-libmagic-archives-that-the-repository-carries.md) | Decided. Amended by D16. Amended by D17. Amended by D19. Amended by D22 |
-| D2 | [build-libmagic.sh cross-compiles the archives with zig cc](D002-build-libmagic-sh-cross-compiles-the-archives-with-zig-cc.md) | Decided. Amended by D16. Amended by D17. Amended by D22 |
-| D3 | [The magic database is embedded, and one copy serves every target](D003-the-magic-database-is-embedded-and-one-copy-serves-every-target.md) | Decided. Amended by D20. Amended by D21 |
+| D1 | [The package links static libmagic archives that the repository carries](D001-the-package-links-static-libmagic-archives-that-the-repository-carries.md) | Decided. Amended by D16. Amended by D17. Amended by D19. Amended by D22. Amended by D47 |
+| D2 | [build-libmagic.sh cross-compiles the archives with zig cc](D002-build-libmagic-sh-cross-compiles-the-archives-with-zig-cc.md) | Decided. Amended by D16. Amended by D17. Amended by D22. Amended by D47 |
+| D3 | [The magic database is embedded, and one copy serves every target](D003-the-magic-database-is-embedded-and-one-copy-serves-every-target.md) | Decided. Amended by D20. Amended by D21. Amended by D47 |
 | D4 | [libmagic reads compressed files through zlib, bzip2, xz and zstd](D004-libmagic-reads-compressed-files-through-zlib-bzip2-xz-and-zstd.md) | Decided. Amended by D43 |
-| D5 | [The API follows the libmagic C API](D005-the-api-follows-the-libmagic-c-api.md) | Decided. Amended by D39 |
+| D5 | [The API follows the libmagic C API](D005-the-api-follows-the-libmagic-c-api.md) | Decided. Amended by D39. Amended by D47 |
 | D6 | [A handle is not safe for concurrent use](D006-a-handle-is-not-safe-for-concurrent-use.md) | Decided. Amended by D9 |
-| D7 | [A closed handle reports an error and never reaches C](D007-a-closed-handle-reports-an-error-and-never-reaches-c.md) | Decided |
+| D7 | [A closed handle reports an error and never reaches C](D007-a-closed-handle-reports-an-error-and-never-reaches-c.md) | Decided. Amended by D47 |
 | D8 | [The code is under the MIT license](D008-the-code-is-under-the-mit-license.md) | Decided |
-| D9 | [A handle is safe to share across goroutines](D009-a-handle-is-safe-to-share-across-goroutines.md) | Decided. Amends D6 |
-| D10 | [A lookup can use other flags and leave the flags of the handle alone](D010-a-lookup-can-use-other-flags-and-leave-the-flags-of-the-handle-alone.md) | Decided |
+| D9 | [A handle is safe to share across goroutines](D009-a-handle-is-safe-to-share-across-goroutines.md) | Decided. Amends D6. Amended by D47 |
+| D10 | [A lookup can use other flags and leave the flags of the handle alone](D010-a-lookup-can-use-other-flags-and-leave-the-flags-of-the-handle-alone.md) | Decided. Amended by D47 |
 | D11 | [The tests expect what libmagic 5.48 reports, and file(1) is the reference](D011-the-tests-expect-what-libmagic-5-48-reports-and-file-1-is-the-reference.md) | Decided |
-| D12 | [CI builds and tests only on hosted runners](D012-ci-builds-and-tests-only-on-hosted-runners.md) | Decided. Amended by D16 |
-| D13 | [The script builds against the newest stable release of each dependency](D013-the-script-builds-against-the-newest-stable-release-of-each-dependency.md) | Decided |
+| D12 | [CI builds and tests only on hosted runners](D012-ci-builds-and-tests-only-on-hosted-runners.md) | Decided. Amended by D16. Amended by D47 |
+| D13 | [The script builds against the newest stable release of each dependency](D013-the-script-builds-against-the-newest-stable-release-of-each-dependency.md) | Decided. Amended by D47 |
 | D14 | [The module has no Go dependencies](D014-the-module-has-no-go-dependencies.md) | Proposed. Amended by D28 |
 | D15 | [magic is set up for coding agents as every xo repository is](D015-magic-is-set-up-for-coding-agents-as-every-xo-repository-is.md) | Decided. Amended by D23 |
-| D16 | [windows/arm64 is a target](D016-windows-arm64-is-a-target.md) | Decided. Amends D1. Amends D2. Amends D12. Amended by D17 |
-| D17 | [Each target is a Go module of its own, tagged as resvg tags its modules](D017-each-target-is-a-go-module-of-its-own-tagged-as-resvg-tags-its-modules.md) | Decided. Amends D1. Amends D2. Amends D16 |
-| D18 | [A target version has a patch number, and a target module declares go 1.21](D018-a-target-version-has-a-patch-number-and-a-target-module-declares-go-1-21.md) | Decided. Amended by D41 |
-| D19 | [magic builds the targets that resvg builds](D019-magic-builds-the-targets-that-resvg-builds.md) | Decided. Amends D1 |
-| D20 | [The embedded database is compressed with zstd, and expands into C memory](D020-the-embedded-database-is-compressed-with-zstd-and-expands-into-c-memory.md) | Decided. Amends D3 |
-| D21 | [MagicDB is a function that expands the database](D021-magicdb-is-a-function-that-expands-the-database.md) | Decided. Amends D3. Amended by D38 |
+| D16 | [windows/arm64 is a target](D016-windows-arm64-is-a-target.md) | Decided. Amends D1. Amends D2. Amends D12. Amended by D17. Amended by D47 |
+| D17 | [Each target is a Go module of its own, tagged as resvg tags its modules](D017-each-target-is-a-go-module-of-its-own-tagged-as-resvg-tags-its-modules.md) | Decided. Amends D1. Amends D2. Amends D16. Amended by D47 |
+| D18 | [A target version has a patch number, and a target module declares go 1.21](D018-a-target-version-has-a-patch-number-and-a-target-module-declares-go-1-21.md) | Decided. Amended by D41. Amended by D47 |
+| D19 | [magic builds the targets that resvg builds](D019-magic-builds-the-targets-that-resvg-builds.md) | Decided. Amends D1. Amended by D47 |
+| D20 | [The embedded database is compressed with zstd, and expands into C memory](D020-the-embedded-database-is-compressed-with-zstd-and-expands-into-c-memory.md) | Decided. Amends D3. Amended by D47 |
+| D21 | [MagicDB is a function that expands the database](D021-magicdb-is-a-function-that-expands-the-database.md) | Decided. Amends D3. Amended by D38. Amended by D47 |
 | D22 | [magic becomes a pure Go port of libmagic](D022-magic-becomes-a-pure-go-port-of-libmagic.md) | Decided. Amends D1. Amends D2. Amended by D34 |
 | D23 | [Each decision is a file of its own](D023-each-decision-is-a-file-of-its-own.md) | Decided. Amends D15 |
 | D24 | [The plan and the rules come before any code](D024-the-plan-and-the-rules-come-before-any-code.md) | Decided |
@@ -49,7 +49,7 @@ D32 set the project up as a port of libmagic.
 | D26 | [The upstream has a base commit and a ledger](D026-the-upstream-has-a-base-commit-and-a-ledger.md) | Decided. Amended by D34 |
 | D27 | [Each part of file has a policy: port, replace or none](D027-each-part-of-file-has-a-policy-port-replace-or-none.md) | Decided. Amended by D36. Amended by D35 |
 | D28 | [xz and zstd come from other repositories when they are needed](D028-xz-and-zstd-come-from-other-repositories-when-they-are-needed.md) | Decided. Amends D14. Amended by D45 |
-| D29 | [The port keeps the license of file](D029-the-port-keeps-the-license-of-file.md) | Proposed |
+| D29 | [The port keeps the license of file](D029-the-port-keeps-the-license-of-file.md) | Decided |
 | D30 | [The test module holds the oracle](D030-the-test-module-holds-the-oracle.md) | Decided. Amended by D33 |
 | D31 | [The binary walker comes after the port](D031-the-binary-walker-comes-after-the-port.md) | Decided |
 | D32 | [The documents name no maintainer](D032-the-documents-name-no-maintainer.md) | Decided |
@@ -62,7 +62,9 @@ D32 set the project up as a port of libmagic.
 | D39 | [The switch to the port is a minor version, and breaks what it needs to](D039-the-switch-to-the-port-is-a-minor-version-and-breaks-what-it-needs-to.md) | Decided. Amends D5 |
 | D40 | [The API is new, and `magic.Detect` is its entry](D040-the-api-is-new-and-magic-detect-is-its-entry.md) | Decided. Amended by D42 |
 | D41 | [The module requires Go 1.27](D041-the-module-requires-go-1-27.md) | Decided. Amends D18 |
-| D42 | [The API takes one walk, no Detector, a context, a generic Source and a slice of matches](D042-the-api-takes-one-walk-no-detector-a-context-a-generic-source-and-a-slice-of-matches.md) | Decided. Amends D40 |
-| D43 | [The Linux archives carry their own regex engine](D043-the-linux-archives-carry-their-own-regex-engine.md) | Decided. Amends D4 |
+| D42 | [The API takes one walk, no Detector, a context, a generic Source and a slice of matches](D042-the-api-takes-one-walk-no-detector-a-context-a-generic-source-and-a-slice-of-matches.md) | Decided. Amends D40. Amended by D46 |
+| D43 | [The Linux archives carry their own regex engine](D043-the-linux-archives-carry-their-own-regex-engine.md) | Decided. Amends D4. Amended by D47 |
 | D44 | [The port translates each regular expression for Go](D044-the-port-translates-each-regular-expression-for-go.md) | Decided |
 | D45 | [A program chooses its decoders with a blank import](D045-a-program-chooses-its-decoders-with-a-blank-import.md) | Decided. Amends D28. Amends D38 |
+| D46 | [The port runs one walk for each form of a result](D046-the-port-runs-one-walk-for-each-form-of-a-result.md) | Decided. Amends D42 |
+| D47 | [The switch removes the cgo package and its archives](D047-the-switch-removes-the-cgo-package-and-its-archives.md) | Decided. Amends D1. Amends D2. Amends D3. Amends D5. Amends D7. Amends D9. Amends D10. Amends D12. Amends D13. Amends D16. Amends D17. Amends D18. Amends D19. Amends D20. Amends D21. Amends D43 |

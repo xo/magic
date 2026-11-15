@@ -1,6 +1,6 @@
 # D3. The magic database is embedded, and one copy serves every target
 
-Status: Decided. Amended by D20. Amended by D21.
+Status: Decided. Amended by D20. Amended by D21. Amended by D47.
 
 Commit `7b14d3f` (2026-09-04).
 

@@ -13,17 +13,18 @@ import (
 //	"MAGT" version uint8
 //	count of set 0, count of set 1     uvarint each
 //	the 32 bytes of the fixed fields of each entry, byte 0 of every entry
-//	first, then byte 1 of every entry, and so on
+//	first, then byte 1 of every entry, and so on. The line number is the
+//	difference from the line of the entry before.
 //	then, for value, desc, MIME, Apple and ext in turn, the field of each
 //	entry without its zeros at the end, as a uvarint length and the bytes
 //
 // The fixed fields are the first 32 bytes of Encode. A table holds every
-// byte of each entry, so a decoded Database is the same as the one that was
-// encoded.
+// byte of each entry but one kind: the name of the file that libmagic tucks
+// after an empty description, which nothing reads.
 
 const (
 	tableMagic   = "MAGT"
-	tableVersion = 1
+	tableVersion = 3
 	fixedSize    = 32
 )
 
@@ -46,8 +47,18 @@ func (db *Database) MarshalTable() []byte {
 		out = binary.AppendUvarint(out, uint64(n))
 	}
 	enc := make([][EntrySize]byte, len(all))
+	var prev uint32
 	for i, e := range all {
 		enc[i] = e.Encode()
+		if e.Desc[0] == 0 {
+			// The name of the file that libmagic tucks after an empty
+			// description is for debugging, and nothing reads it.
+			clear(enc[i][160:224])
+		}
+		// The line numbers grow by little from one entry to the next, so
+		// their differences compress better than the numbers.
+		le.PutUint32(enc[i][20:], e.Lineno-prev)
+		prev = e.Lineno
 	}
 	for c := range fixedSize {
 		for i := range enc {
@@ -115,6 +126,11 @@ func UnmarshalTable(b []byte) (*Database, error) {
 	}
 	if p != len(b) {
 		return nil, fmt.Errorf("reading the table: %w: %d bytes left", errTable, len(b)-p)
+	}
+	var prev uint32
+	for i := range enc {
+		prev += le.Uint32(enc[i][20:])
+		le.PutUint32(enc[i][20:], prev)
 	}
 	var db Database
 	k := 0

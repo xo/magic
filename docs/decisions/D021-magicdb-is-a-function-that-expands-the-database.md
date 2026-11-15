@@ -1,6 +1,6 @@
 # D21. MagicDB is a function that expands the database
 
-Status: Decided. Amends D3. Amended by D38.
+Status: Decided. Amends D3. Amended by D38. Amended by D47.
 
 The maintainers decided on 2026-11-15 that `MagicDB` stays in the API as a
 function that returns the plain database, and that the release is `v0.4.0`.

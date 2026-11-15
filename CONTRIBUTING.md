@@ -2,13 +2,12 @@
 
 This document is for a person who changes `magic`. `AGENTS.md` holds the same
 rules for a coding agent, in more detail. `docs/decisions/` holds every
-decision and the reason for it, and `docs/PLAN.md` holds the plan of the pure
-Go port that will replace the cgo package (D22).
+decision and the reason for it, and `docs/PLAN.md` holds the plan of the
+port.
 
 ## Build and test
 
-The package uses cgo, so you need a C compiler. Run these commands in the
-repository root:
+The package is pure Go. Run these commands in the repository root:
 
 ```bash
 go build ./...
@@ -17,53 +16,67 @@ go test -race -count=1 ./...
 gofmt -l .
 ```
 
-`gofmt -l .` prints nothing when every file is formatted. CI runs the build,
-`go vet` and the tests on Linux, macOS and Windows.
+`-race` needs cgo. Without a C compiler, run the tests with
+`CGO_ENABLED=0 go test ./...`. `gofmt -l .` prints nothing when every file is
+formatted. CI runs the build, `go vet` and the tests on Linux, macOS and
+Windows, and builds the package for the targets that have no runner.
 
 If `file` 5.48 is on your `PATH`, `TestOracle` compares the package with it.
 Otherwise the test skips.
 
-## Rebuild the archives
+## The harness
 
-`build-libmagic.sh` builds libmagic and its compression libraries for all eight
-targets with `zig cc`. It needs zig 0.13 or later, curl, tar, make, git and a
-native C compiler. The windows_arm64 target also needs `llvm-windres`. The
-header of the script gives every option.
+The test module in `test/` compares the package with libmagic, built from the
+source of file (D30). It reads the checkout of file in `upstream/file/`,
+which git ignores. Make it with:
 
 ```bash
-./build-libmagic.sh
+git clone https://github.com/file/file.git upstream/file
 ```
 
-By default the script builds against the newest stable release of each
-dependency. `PINNED=1` builds against the fallback versions in the script.
+The oracle needs the autotools, a C compiler, and the headers of zlib, bzip2,
+xz and zstd. Build it, then run the test module:
 
-A new release of file changes `libmagic/magic.mgc.zst` and the text that
-libmagic reports. After you rebuild, run the tests and update the expected
-values that changed. D11 in `docs/decisions/` says why the tests expect exact
-values.
+```bash
+test/oracle/build.sh
+```
 
-The script writes its downloads and build folders to `src/`, `.build/`,
-`.native/`, `.toolchains/` and `.zig-cache/`. Git ignores all five.
+```bash
+cd test && go test ./...
+```
+
+The test module holds the gates of the port: `TestPortMatchesTheOracle`,
+`TestAPIMatchesTheOracle`, `TestPortPassesTheTestsOfFile` and `TestPortSize`
+(D38). `docs/PLAN.md` says what each one proves.
+
+## The rules
+
+The rules of file are compiled into `internal/table/rules.flate` (D35). After
+a change of the compiler, or of the commit of file that the port follows,
+write the table again:
+
+```bash
+cd internal/table && go generate
+```
+
+`TestTableMatchesTheCompiler` fails until the table is current, and CI checks
+that `go generate` changes nothing.
 
 ## Release
 
-A target is a Go module of its own, and its tag is the path of its folder and
-the version of file that it holds. The root module has a plain semver tag. D17
-and D18 in `docs/decisions/` give the reasons. Tag only when a maintainer
-says so.
+Tag only when a maintainer says so. The root module has a plain semver tag.
+`compress/xz` and `compress/zstd` are modules of their own, tagged
+`compress/xz/vX.Y.Z` and `compress/zstd/vX.Y.Z`.
 
-1. Push the commit that holds the archives to `main`.
-2. Tag each target module that changed, with the commands that
-   `build-libmagic.sh` prints at its end, such as
-   `git tag libmagic/linux_amd64/v5.48.0`. Push the tags.
-3. If the version of a target changed, edit the `require` lines of `go.mod`.
-   Push that commit.
-4. Tag the root, and push the tag. A change to the wrapper alone bumps the
-   root. A new target bumps the root minor.
+1. Push the commit to `main`, and wait for CI.
+2. Tag the root, such as `git tag v0.5.0`, and push the tag.
+3. In `compress/xz/go.mod` and `compress/zstd/go.mod`, require the new
+   version of the root. Push that commit.
+4. Tag the two modules with the same version, and push the tags.
 
-Never move a tag that is published, because the module proxy caches it. If a
-target needs a rebuild at the same version of file, give it the next patch
-number.
+Never move a tag that is published, because the module proxy caches it. The
+tags of the target modules of the cgo package, such as
+`libmagic/linux_amd64/v5.48.2`, stay published (D47).
 
 ## Documents
 
@@ -75,29 +88,11 @@ documents name no maintainer (D32).
 
 ## The port
 
-magic is becoming a pure Go port of libmagic (D22). The port is in
-`internal/rules`, `internal/table`, `internal/engine` and `compress/`, and the
-cgo package stays what users get until phase 4. `go generate` in
-`internal/table` writes the table of the rules from `upstream/file`. `docs/PLAN.md` holds the plan, and
-`docs/UPSTREAM.md` holds the rules for following upstream. The port reads the
-checkout of file in `upstream/file/`, which git ignores. Make it with:
-
-```bash
-git clone https://github.com/file/file.git upstream/file
-```
-
-The test module in `test/` holds the harness (D30). It builds libmagic 5.48
-from the checkout as the oracle, and compares the code under test with it. It
-needs the autotools, the headers of zlib, bzip2, xz and zstd, and zig. Run
-these commands in the root of the repository:
-
-```bash
-test/oracle/build.sh
-```
-
-```bash
-cd test && CC="zig cc -target x86_64-linux-musl" go test ./...
-```
+`internal/rules` compiles the rules, `internal/table` embeds them,
+`internal/engine` runs them with the detectors of libmagic, and `compress/`
+holds the decoders of compressed data. `docs/UPSTREAM.md` holds the rules for
+following file. A Go file that translates a file of libmagic opens with the
+notice of that file (D29).
 
 ## Agent skills
 

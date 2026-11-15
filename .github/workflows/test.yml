@@ -14,10 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Native build + test on every platform that has a hosted runner. The
-  # prebuilt archives under libmagic/ are static, so there is nothing to
-  # install -- but each platform has its own #cgo LDFLAGS line, and the only
-  # way to know a line is complete is to link it.
+  # The package is pure Go (D22), so each runner tests it with cgo off, as a
+  # program that imports it builds.
   test:
     name: test ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -32,13 +30,13 @@ jobs:
           - {name: macos/amd64, os: macos-13}
           - {name: macos/arm64, os: macos-14}
           - {name: windows/amd64, os: windows-latest}
-          # Hosted arm64 Windows. The runner has no arm64 mingw-w64, so
-          # llvm-mingw is the C compiler. The archives came from zig, and zig
-          # for arm64 Windows crashed on the runner (exit 0xc0000005) while it
-          # built runtime/cgo. Go does not support -race on windows/arm64.
-          - {name: windows/arm64, os: windows-11-arm, llvm: true, norace: true}
+          # Go does not support -race on windows/arm64.
+          - {name: windows/arm64, os: windows-11-arm, norace: true}
     env:
-      CC: ${{ matrix.llvm && 'aarch64-w64-mingw32-clang' || '' }}
+      CGO_ENABLED: "0"
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v7
 
@@ -46,44 +44,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-
-      - name: Install llvm-mingw (Windows arm64)
-        if: matrix.llvm
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $dir = Join-Path $env:RUNNER_TEMP 'llvm-mingw'
-          New-Item -ItemType Directory -Force $dir | Out-Null
-          gh release download 20261006 -R mstorsjo/llvm-mingw -p 'llvm-mingw-*-ucrt-aarch64.zip' -D $dir
-          Expand-Archive -Path (Join-Path $dir 'llvm-mingw-*-ucrt-aarch64.zip') -DestinationPath $dir
-          $bin = (Get-ChildItem -Directory $dir | Where-Object { $_.Name -like 'llvm-mingw-*' } | Select-Object -First 1).FullName + '\bin'
-          $bin | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
-
-      # The runner images ship mingw-w64, but where gcc lands has moved
-      # around, so find it rather than assume it is on PATH.
-      - name: Locate a C compiler (Windows)
-        if: runner.os == 'Windows' && !matrix.llvm
-        shell: pwsh
-        run: |
-          if (Get-Command gcc -ErrorAction SilentlyContinue) { exit 0 }
-          $cands = @(
-            'C:\mingw64\bin',
-            'C:\ProgramData\mingw64\mingw64\bin',
-            'C:\Strawberry\c\bin'
-          ) | Where-Object { Test-Path (Join-Path $_ 'gcc.exe') }
-          if ($cands.Count -eq 0) {
-            choco install -y --no-progress mingw
-            $cands = @('C:\ProgramData\mingw64\mingw64\bin')
-          }
-          $cands[0] | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
-
-      - name: Environment
-        shell: bash
-        run: |
-          go version
-          go env GOOS GOARCH CGO_ENABLED CC
-          gcc --version || cc --version || true
 
       - name: Build
         run: go build ./...
@@ -97,18 +57,46 @@ jobs:
           (cd compress/xz && go vet ./...)
           (cd compress/zstd && go vet ./...)
 
-      # -race is what backs the "safe to share a handle" claim in the docs:
-      # TestConcurrent drives one cookie from 16 goroutines.
-      - name: Test
-        run: go test ${{ !matrix.norace && '-race' || '' }} -count=1 -v ./...
+      - name: Test without cgo
+        run: go test -count=1 -v ./...
+
+      # -race needs cgo. TestConcurrent detects from 16 goroutines at once.
+      - name: Test with the race detector
+        if: ${{ !matrix.norace }}
+        env:
+          CGO_ENABLED: "1"
+        run: go test -race -count=1 ./...
 
       - name: Smoke test cmd/file
         run: go run ./cmd/file testdata/gif.gif testdata/utf8.txt testdata/xlsx.xlsx
 
-  # The harness of the port (D30, docs/PLAN.md): the oracle is libmagic 5.48
-  # built from file at FILE5_48 against glibc (D33), and the test module
-  # compares the code under test with it. Until the port exists, the code under
-  # test is the cgo package.
+  # A program that imports magic builds for every target of Go. This builds
+  # the packages for targets that have no runner.
+  cross:
+    name: build for other targets
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        run: |
+          for t in freebsd/amd64 freebsd/arm64 openbsd/amd64 netbsd/amd64 \
+            linux/386 linux/arm linux/riscv64 linux/ppc64le linux/s390x \
+            linux/loong64 windows/386 android/arm64 js/wasm wasip1/wasm; do
+            echo "$t"
+            GOOS=${t%/*} GOARCH=${t#*/} go build ./...
+          done
+
+  # The harness of the port (D30, docs/PLAN.md): the oracle is libmagic built
+  # from file at the base commit against glibc (D33), and the test module
+  # compares the port with it.
   oracle:
     name: oracle
     runs-on: ubuntu-latest
@@ -119,10 +107,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-
-      - uses: mlugg/setup-zig@v2
-        with:
-          version: 0.17.1
 
       - name: Install the tools that build file
         run: |
@@ -137,24 +121,24 @@ jobs:
       - name: Build the oracle
         run: test/oracle/build.sh
 
+      # The oracle is a program of its own, built with cgo. The test module is
+      # pure Go.
       - name: Vet the test module
         working-directory: test
         env:
-          CC: zig cc -target x86_64-linux-musl
+          CGO_ENABLED: "0"
         run: go vet ./...
 
-      # The gate runs linked with musl and with glibc. The Linux archives carry
-      # their own regex engine, so both must give the answers of the oracle
-      # (D43).
-      - name: Test the oracle and the gate of phase 1, with musl
+      - name: Test the oracle and the gates of the port
         working-directory: test
         env:
-          CC: zig cc -target x86_64-linux-musl
+          CGO_ENABLED: "0"
         run: go test -count=1 -v ./...
 
-      - name: Test the gate of phase 1, with glibc
-        working-directory: test
-        run: go test -count=1 -v ./diff
+      - name: Check that the table of the rules is current
+        run: |
+          (cd internal/table && go generate)
+          git diff --exit-code internal/table/rules.flate
 
       - name: Test the ledger against upstream
         run: go test -count=1 -run TestTheLedgerIsComplete -v .

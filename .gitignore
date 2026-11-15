@@ -1,3 +1,5 @@
+# The folders of build-libmagic.sh, which D47 removed. A checkout can delete
+# them.
 .zig-cache/
 .build/
 .native/

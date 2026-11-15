@@ -12,60 +12,46 @@ phase 1.
 
 ## Status
 
-On 2026-11-15 magic is a cgo wrapper of libmagic, at `v0.4.1`:
+On 2026-11-15 the branch `main` is the pure Go port, and phase 5 is next. The
+last release, `v0.4.1`, is the cgo package. The next release waits for
+phase 5 (D47).
 
-1. It wraps libmagic 5.48 from file 5.48, and links it with zlib 1.4, bzip2
-   1.0.8, xz 5.8.4 and zstd 1.5.7. The Windows archives also hold libgnurx
-   2.5.1.
-2. It has static archives for eight targets: linux/amd64, linux/arm64,
-   linux/arm (armv7), darwin/amd64, darwin/arm64, windows/amd64, windows/arm64
-   and freebsd/amd64 (D19). Each target is a Go module of its own (D17).
-3. It embeds the database compressed with zstd, and expands it into C memory
-   (D20). `MagicDB` returns the plain database (D21).
-4. CI tests linux/amd64, linux/arm64, windows/amd64 and windows/arm64. macOS
-   has no CI, and freebsd/amd64 has no runner.
+1. Phase 0, the plan, ended when the maintainers answered the questions of
+   the port (D33 to D39) and set the API (D40, D42).
+2. Phase 1 built the harness (D30). The oracle gives each of the 88 expected
+   results of the tests of file. The harness also found that the cgo package
+   crashed when it was linked with glibc, and D43 fixed it in `v0.4.1`.
+3. Phase 2 built the compiler of the rules and the engine. `internal/rules`
+   gives the same 24,985 entries in 4,213 rules as the `magic.mgc` of the
+   oracle, byte for byte (D35), and the engine gave the MIME types of the
+   oracle.
+4. Phase 3 gave every output: the `printf` formats and dates of C, every
+   detector, and compressed data, whose decoders a program chooses with a
+   blank import (D45). Regular expressions go through a translator for Go's
+   `regexp` (D44).
+5. Phase 4, the switch, replaced the cgo package with the API of
+   `docs/API.md`, and removed the archives and the modules of the targets
+   (D47). The license of file is carried as D29 says.
 
-On 2026-11-15 the maintainers answered questions 10 to 16 (D33 to D39), set the
-new API and its entry `magic.Detect` (D40, D42), moved the module to Go 1.27
-(D41), and started phase 1, which closes phase 0. Questions 2 to 9 concern
-the cgo package, not the port, and wait.
+The gates on the build host, with cgo off:
 
-Phase 1 has its code, and its gate holds on the build host. The oracle gives
-each of the 88 expected results of the tests of file, and the cgo package,
-built for musl, gives the same answer as the oracle to each of 11,571
-questions on 1,544 inputs. D30 lists the parts. The harness also found that
-the cgo package crashed when it was linked with glibc, and D43 fixed it: the
-gate now passes with gcc and glibc, and with zig and musl.
-
-Phases 2 and 3 have their code, and their gates hold on the build host.
-
-1. `internal/rules` compiles the rules (D35). It gives the same 24,985 entries
-   in 4,213 rules as the `magic.mgc` of the oracle, byte for byte.
-   `internal/table` embeds them in a form of 271,240 bytes, and its generator
-   writes them from the checkout of file.
-2. `internal/engine` runs the rules and every detector of libmagic, in pure
-   Go: the matcher of `softmagic.c` with the `printf` formats and dates of C,
-   the text encodings, tar, JSON, CSV, SIMH tapes, Compound Documents, ELF,
-   the kinds of file of `fsmagic.c`, and compressed data. Regular expressions
-   go through a translator for Go's `regexp` (D44).
-3. A program chooses the decoders of compressed data with a blank import of
-   the packages in `compress/` (D45).
-4. `TestPortMatchesTheOracle` asks the port and the oracle 30,674 questions:
-   14 outputs, from the description to the MIME type and the flags of
-   compression, for each of 2,071 inputs, as a buffer and as a file. Each
+1. `TestPortMatchesTheOracle` asks the engine and the oracle 30,674
+   questions: 14 outputs, from the description to the MIME type and the flags
+   of compression, for each of 2,071 inputs, as a buffer and as a file. Each
    answer is the same, except 50 where a decoder of Go reads damaged
    compressed data in another way than the library of C. The test lists
-   them. It passes with glibc and with musl.
-5. `TestPortPassesTheTestsOfFile` runs the 88 tests of file 5.48 with the
-   port, and all 88 pass (D37).
-6. `TestPortSize` builds a program that prints the MIME type of a file. The
-   port adds 950,272 bytes to it, stripped, where the cgo package adds
-   995,488 (D38).
+   them.
+2. `TestAPIMatchesTheOracle` checks each form of a `Result` of the API
+   against the oracle, on the same inputs (D46).
+3. `TestPortPassesTheTestsOfFile` runs the 88 tests of file 5.48, and all 88
+   pass (D37).
+4. `TestPortSize` builds a program that prints the MIME type of a file with
+   the API. magic adds 987,136 bytes to it, stripped, where the cgo package
+   added 995,488 (D38).
 
 Checks outside the gates found no difference either. 50,395 files of the
 build host, with 6 output flags each, gave 302,370 answers that are the same
-as the oracle. The work that phase 3 left is in `docs/BACKLOG.md`. Phase 4,
-the switch, is next.
+as the oracle. The work that is left is in `docs/BACKLOG.md`.
 
 The tags `v0.1.0` (`7b14d3f`), `v0.2.0` (`dedf132`) and `v0.2.1` (`a629036`)
 held the archives in the root module. `v0.3.0` gave each target a module
@@ -327,11 +313,10 @@ All three:
 
 The numbers do not repeat. Question 1 was answered by D28, question 9 by D43,
 and questions 10 to 16 by D33 to D39. `docs/API.md` has the API, which D42
-settled. The next question is question 17.
+settled. Questions 2 and 6 were about the archives, which D47 removed: the
+`cross` job of CI now builds linux/arm with the other targets that have no
+runner, and no archive holds libgnurx. The next question is question 17.
 
-2. Is linux/armv7 still a supported target? `magic.go` declares it and the
-   script builds it, but no CI job built it after `dedf132` removed the
-   `cross` job (D12). Is the `cross` job wanted back?
 3. The `macos-13` job never gets a runner, and on 2026-11-15 the `macos-14`
    job was cancelled before it started, so macOS has no CI. `actionlint`
    lists `macos-15-intel` and `macos-15` as current runners. Do the macOS jobs
@@ -341,9 +326,6 @@ settled. The next question is question 17.
    is under the MIT license (D11). Does the repository carry the copyright
    notice of mimetype, and name mimetype in the two case names that cite its
    issues?
-6. The Windows archives link libgnurx statically, and libgnurx is under LGPL
-   2.1 (D4). Does the README tell a user of the Windows build about that
-   license?
 7. The repository has no `.golangci.yml`, and CI runs no linter. Is one
    wanted?
 8. resvg tagged its modules before CI finished on the commit, and no rule

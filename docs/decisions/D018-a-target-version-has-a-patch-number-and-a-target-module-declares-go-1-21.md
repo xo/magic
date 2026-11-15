@@ -1,6 +1,6 @@
 # D18. A target version has a patch number, and a target module declares go 1.21
 
-Status: Decided. Amended by D41.
+Status: Decided. Amended by D41. Amended by D47.
 
 These two details follow resvg and a limit of Go. The maintainers accepted them
 on 2026-10-14.

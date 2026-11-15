@@ -1,3 +1,56 @@
+// Copyright (c) Christos Zoulas 2003.
+// All Rights Reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice immediately at the beginning of the file, without modification,
+//    this list of conditions, and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR
+// ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+// OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+// SUCH DAMAGE.
+//
+// Copyright (c) Ian F. Darwin 1986-1995.
+// Software written by Ian F. Darwin and others;
+// maintained 1995-present by Christos Zoulas and others.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice immediately at the beginning of the file, without modification,
+//    this list of conditions, and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR
+// ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+// OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+// SUCH DAMAGE.
+//
+// This file translates src/funcs.c, src/softmagic.c of file 5.48 to Go (D29).
+
 package engine
 
 import (
@@ -23,30 +76,41 @@ func (st *state) buffer(b *buffer, nb int) int {
 		return st.simple(m, nb, def, codeMime)
 	}
 
-	enc := encoding(b.data)
-	looksText := enc.text
-	codeMime = enc.codeMime
+	looksText := false
+	code := ""
+	if st.flags&NoCheckEncoding == 0 {
+		enc := encoding(b.data)
+		looksText, code, codeMime = enc.text, enc.code, enc.codeMime
+	}
 
 	// Compressed data. Its result skips the separator and the encoding at
 	// the end, as the goto done_encoding of libmagic does.
-	if m = st.zmagic(b); m != 0 {
-		if st.err != nil {
-			return -1
+	if st.flags&NoCheckCompress == 0 {
+		if m = st.zmagic(b); m != 0 {
+			if st.err != nil {
+				return -1
+			}
+			return m
 		}
-		return m
 	}
 
 	// The detectors of the formats that the rules cannot describe. Each
 	// one that answers ends the search, unless the flags ask for every
 	// result.
-	for _, try := range []func() int{
-		func() int { return st.tar(b.data) },
-		func() int { return st.json(b.data) },
-		func() int { return st.csv(b.data, looksText, enc.code) },
-		func() int { return st.simh(b.data) },
-		func() int { return st.cdf(b) },
+	for _, d := range []struct {
+		off Flags
+		try func() int
+	}{
+		{NoCheckTar, func() int { return st.tar(b.data) }},
+		{NoCheckJSON, func() int { return st.json(b.data) }},
+		{NoCheckCSV, func() int { return st.csv(b.data, looksText, code) }},
+		{NoCheckSIMH, func() int { return st.simh(b.data) }},
+		{NoCheckCDF, func() int { return st.cdf(b) }},
 	} {
-		if m = try(); m != 0 {
+		if st.flags&d.off != 0 {
+			continue
+		}
+		if m = d.try(); m != 0 {
 			if st.checkDone(&rv) {
 				return st.done(m, rv, codeMime)
 			}
@@ -57,7 +121,7 @@ func (st *state) buffer(b *buffer, nb int) int {
 	// the rules, and its walk of the program headers sets the mode that the
 	// rules read.
 	var rbuf []byte
-	if nb > 5 && b.file != nil && b.file.r != nil {
+	if st.flags&NoCheckELF == 0 && nb > 5 && b.file != nil && b.file.r != nil {
 		pb := st.push()
 		rv = st.tryELF(b)
 		var ok bool
@@ -66,21 +130,25 @@ func (st *state) buffer(b *buffer, nb int) int {
 		}
 	}
 
-	m = st.softmagic(b, rules.FlagBinTest, looksText)
-	if m == 1 && rbuf != nil {
-		if st.printf("%s", rbuf) == -1 {
-			return st.done(m, rv, codeMime)
+	if st.flags&NoCheckSoft == 0 {
+		m = st.softmagic(b, rules.FlagBinTest, looksText)
+		if m == 1 && rbuf != nil {
+			if st.printf("%s", rbuf) == -1 {
+				return st.done(m, rv, codeMime)
+			}
 		}
-	}
-	if m != 0 {
-		if st.checkDone(&rv) {
-			return st.done(m, rv, codeMime)
+		if m != 0 {
+			if st.checkDone(&rv) {
+				return st.done(m, rv, codeMime)
+			}
 		}
 	}
 
-	m = st.ascmagic(b, looksText)
-	if m != 0 {
-		return st.done(m, rv, codeMime)
+	if st.flags&NoCheckText == 0 {
+		m = st.ascmagic(b, looksText)
+		if m != 0 {
+			return st.done(m, rv, codeMime)
+		}
 	}
 	return st.simple(m, nb, def, codeMime)
 }

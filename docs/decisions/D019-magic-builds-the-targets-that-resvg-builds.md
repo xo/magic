@@ -1,6 +1,6 @@
 # D19. magic builds the targets that resvg builds
 
-Status: Decided. Amends D1.
+Status: Decided. Amends D1. Amended by D47.
 
 The maintainers decided on 2026-10-14 that magic covers only the targets of
 resvg, and that it needs no linux/ppc64le and no linux/s390x. The targets are

@@ -1,6 +1,6 @@
 # D17. Each target is a Go module of its own, tagged as resvg tags its modules
 
-Status: Decided. Amends D1. Amends D2. Amends D16.
+Status: Decided. Amends D1. Amends D2. Amends D16. Amended by D47.
 
 The maintainers decided on 2026-10-14 that magic follows the tagging pattern of
 resvg. That pattern is in D9 of resvg and in `libresvg/README.md` of resvg. One

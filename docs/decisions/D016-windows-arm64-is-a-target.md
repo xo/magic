@@ -1,6 +1,6 @@
 # D16. windows/arm64 is a target
 
-Status: Decided. Amends D1. Amends D2. Amends D12. Amended by D17.
+Status: Decided. Amends D1. Amends D2. Amends D12. Amended by D17. Amended by D47.
 
 The maintainers decided on 2026-10-14 to add windows/arm64, after they asked
 Gemini Pro and DeepSeek Pro which platforms to add. Gemini Pro recommended it,

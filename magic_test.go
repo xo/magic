@@ -1,73 +1,60 @@
 package magic
 
 import (
-	"fmt"
+	"bytes"
+	"compress/gzip"
+	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
-)
 
-func TestVersion(t *testing.T) {
-	t.Logf("version: %s", Version())
-}
+	_ "github.com/xo/magic/compress/zlib"
+)
 
 func TestMime(t *testing.T) {
 	t.Parallel()
-	m, err := New(MimeType)
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
 	for _, test := range mimeTests() {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			mime, err := m.Buffer([]byte(test.s))
+			r, err := Detect(context.Background(), test.s)
 			if err != nil {
 				t.Fatalf("expected no error, got: %v", err)
 			}
-			if mime != test.exp {
-				t.Errorf("expected %q, got: %q", test.exp, mime)
+			if r.MIME != test.exp {
+				t.Errorf("expected %q, got: %q", test.exp, r.MIME)
 			}
 		})
 	}
 }
 
-// TestOracle cross-checks the embedded database against the system file(1).
-//
-// The expectations in mimeTests are libmagic's own output, so on their own
-// they would only prove the wrapper is self-consistent. Comparing against an
-// independent build of the same libmagic version proves it is *correct* --
-// that the embedded magic.mgc, the cgo glue and the flag handling all agree
-// with the reference implementation. Skipped unless a matching file(1) is on
-// PATH, so it guards development without constraining CI.
+// TestOracle compares the package with the file command of the same
+// release, when one is on PATH. The test module compares it with libmagic
+// built from source (D30), which is the gate.
 func TestOracle(t *testing.T) {
 	t.Parallel()
 	exe, err := exec.LookPath("file")
 	if err != nil {
-		t.Skip("file(1) not on PATH")
+		t.Skip("file is not on PATH")
 	}
 	out, err := exec.Command(exe, "--version").Output()
 	if err != nil {
 		t.Skipf("file --version: %v", err)
 	}
-	if want := "file-" + Version(); !strings.HasPrefix(string(out), want) {
-		t.Skipf("system file(1) is not %s", want)
+	if !strings.HasPrefix(string(out), "file-"+FileVersion+"\n") {
+		t.Skipf("the file on PATH is not %s", FileVersion)
 	}
-
-	m, err := New(MimeType)
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	defer m.Close()
-
 	dir := t.TempDir()
 	for i, test := range mimeTests() {
 		if len(test.s) == 0 {
 			continue
 		}
-		name := filepath.Join(dir, fmt.Sprintf("case%d", i))
+		name := filepath.Join(dir, "case"+string(rune('a'+i%26))+string(rune('a'+i/26)))
 		if err := os.WriteFile(name, []byte(test.s), 0o644); err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -75,254 +62,178 @@ func TestOracle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
-		sys := strings.TrimSpace(string(out))
-		got, err := m.Buffer([]byte(test.s))
+		r, err := Detect(context.Background(), test.s)
 		if err != nil {
 			t.Fatalf("%s: expected no error, got: %v", test.name, err)
 		}
-		if got != sys {
-			t.Errorf("%s: wrapper says %q, file(1) says %q", test.name, got, sys)
+		if want := strings.TrimSpace(string(out)); r.MIME != want {
+			t.Errorf("%s: expected %q, got: %q", test.name, want, r.MIME)
 		}
 	}
 }
 
-// TestFile checks the File path alongside Buffer, since it takes a different
-// route through libmagic.
-func TestFile(t *testing.T) {
+func TestDetectFile(t *testing.T) {
 	t.Parallel()
-	m, err := New(MimeType)
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	defer m.Close()
 	for _, test := range []struct{ file, exp string }{
 		{"gif.gif", "image/gif"},
 		{"utf8.txt", "text/plain"},
 		{"xlsx.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
 		{"tar.tar", "application/x-tar"},
 	} {
-		got, err := m.File(filepath.Join("testdata", test.file))
+		r, err := DetectFile(context.Background(), filepath.Join("testdata", test.file))
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
-		if got != test.exp {
-			t.Errorf("%s: expected %q, got: %q", test.file, test.exp, got)
+		if r.MIME != test.exp {
+			t.Errorf("%s: expected %q, got: %q", test.file, test.exp, r.MIME)
 		}
 	}
 }
 
-// TestTypes covers the flag-swapping API: several views of one input from a
-// single handle.
-func TestTypes(t *testing.T) {
+// TestResult checks each form of a result, which libmagic gives with a flag
+// each.
+func TestResult(t *testing.T) {
 	t.Parallel()
-	m, err := New(MimeType)
+	r, err := DetectFile(context.Background(), filepath.Join("testdata", "gif.gif"))
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	defer m.Close()
-
-	flags := []int{None, MimeType, MimeEncoding, Mime, Extension}
-	exp := []string{
-		"GIF image data, version 89a, 1375 x 825",
-		"image/gif",
-		"binary",
-		"image/gif; charset=binary",
-		"gif",
+	if exp := "GIF image data, version 89a, 1375 x 825"; r.Description != exp || r.String() != exp {
+		t.Errorf("expected %q, got: %q", exp, r.Description)
 	}
+	if exp := "image/gif; charset=binary"; r.ContentType() != exp {
+		t.Errorf("expected %q, got: %q", exp, r.ContentType())
+	}
+	if exp := []string{"gif"}; !slices.Equal(r.Extensions, exp) {
+		t.Errorf("expected %q, got: %q", exp, r.Extensions)
+	}
+	if exp := "8BIMGIFf"; r.Apple != exp {
+		t.Errorf("expected %q, got: %q", exp, r.Apple)
+	}
+	if len(r.Matches) != 1 || r.Matches[0].Description != r.Description || r.Matches[0].MIME != r.MIME {
+		t.Errorf("expected one match like the result, got: %+v", r.Matches)
+	}
+}
 
-	got, err := m.FileTypes(filepath.Join("testdata", "gif.gif"), flags...)
+// TestSources checks that each entry gives the same result for the same
+// bytes.
+func TestSources(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	b, err := os.ReadFile(filepath.Join("testdata", "utf8.txt"))
 	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
+		t.Fatal(err)
 	}
-	if len(got) != len(exp) {
-		t.Fatalf("expected %d results, got: %d", len(exp), len(got))
+	type raw []byte
+	results := map[string]func() (Result, error){
+		"bytes":    func() (Result, error) { return Detect(ctx, b) },
+		"string":   func() (Result, error) { return Detect(ctx, string(b)) },
+		"named":    func() (Result, error) { return Detect(ctx, raw(b)) },
+		"reader":   func() (Result, error) { return DetectReader(ctx, bytes.NewReader(b)) },
+		"readerat": func() (Result, error) { return DetectReaderAt(ctx, bytes.NewReader(b), int64(len(b))) },
 	}
-	for i := range exp {
-		if got[i] != exp[i] {
-			t.Errorf("flag %d: expected %q, got: %q", i, exp[i], got[i])
+	for name, f := range results {
+		r, err := f()
+		if err != nil {
+			t.Fatalf("%s: expected no error, got: %v", name, err)
+		}
+		if exp := "Unicode text, UTF-8 text"; r.Description != exp {
+			t.Errorf("%s: expected %q, got: %q", name, exp, r.Description)
+		}
+		if exp := "text/plain; charset=utf-8"; r.ContentType() != exp {
+			t.Errorf("%s: expected %q, got: %q", name, exp, r.ContentType())
 		}
 	}
-
-	buf, err := os.ReadFile(filepath.Join("testdata", "gif.gif"))
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	got, err = m.BufferTypes(buf, flags...)
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	for i := range exp {
-		if got[i] != exp[i] {
-			t.Errorf("buffer flag %d: expected %q, got: %q", i, exp[i], got[i])
-		}
-	}
-
-	// No flags means the handle's own.
-	one, err := m.BufferTypes(buf)
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	if len(one) != 1 || one[0] != "image/gif" {
-		t.Errorf("expected [image/gif], got: %q", one)
-	}
 }
 
-// TestFlagsRestored checks that borrowing the cookie for other flags leaves
-// the handle's configured flags alone.
-func TestFlagsRestored(t *testing.T) {
+func TestEmpty(t *testing.T) {
 	t.Parallel()
-	m, err := New(MimeType)
+	r, err := Detect(context.Background(), "")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	defer m.Close()
-	name := filepath.Join("testdata", "gif.gif")
-
-	if _, err := m.FileTypes(name, None, Extension); err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	if got := m.Flags(); got != MimeType {
-		t.Errorf("expected flags %d, got: %d", MimeType, got)
-	}
-	if got, err := m.File(name); err != nil || got != "image/gif" {
-		t.Errorf("expected image/gif, got: %q (%v)", got, err)
-	}
-
-	if _, err := m.FileWith(None, name); err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	if got, err := m.File(name); err != nil || got != "image/gif" {
-		t.Errorf("after FileWith: expected image/gif, got: %q (%v)", got, err)
-	}
-
-	// SetFlags is sticky, unlike the With/Types borrows.
-	if err := m.SetFlags(None); err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	if got := m.Flags(); got != None {
-		t.Errorf("expected flags %d, got: %d", None, got)
-	}
-	if got, err := m.File(name); err != nil || !strings.HasPrefix(got, "GIF image data") {
-		t.Errorf("expected a GIF description, got: %q (%v)", got, err)
+	if r.Description != "empty" || r.ContentType() != "application/x-empty; charset=binary" {
+		t.Errorf("expected %q, got: %q, %q", "empty", r.Description, r.ContentType())
 	}
 }
 
-// TestClosed checks that every method reports a closed handle instead of
-// handing a nil cookie to C.
-func TestClosed(t *testing.T) {
+// TestAll checks WithAll on JSON, which libmagic names twice: as JSON, and
+// as text. The text test of libmagic starts with ", " when something was
+// printed before it.
+func TestAll(t *testing.T) {
 	t.Parallel()
-	m, err := New(MimeType)
+	r, err := Detect(context.Background(), `{"a": [1, 2]}`, WithAll())
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	if err := m.Close(); err != nil {
-		t.Fatalf("expected no error, got: %v", err)
+	exp := []string{"JSON text data", ", ASCII text, with no line terminators"}
+	var got []string
+	for _, m := range r.Matches {
+		got = append(got, m.Description)
 	}
-	if err := m.Close(); err != nil {
-		t.Errorf("double Close: expected no error, got: %v", err)
-	}
-
-	name := filepath.Join("testdata", "gif.gif")
-	if _, err := m.Buffer([]byte("GIF89a")); err == nil {
-		t.Error("Buffer: expected an error")
-	}
-	if _, err := m.File(name); err == nil {
-		t.Error("File: expected an error")
-	}
-	if _, err := m.BufferWith(None, []byte("GIF89a")); err == nil {
-		t.Error("BufferWith: expected an error")
-	}
-	if _, err := m.FileWith(None, name); err == nil {
-		t.Error("FileWith: expected an error")
-	}
-	if _, err := m.BufferTypes([]byte("GIF89a"), None); err == nil {
-		t.Error("BufferTypes: expected an error")
-	}
-	if _, err := m.FileTypes(name, None); err == nil {
-		t.Error("FileTypes: expected an error")
-	}
-	if err := m.SetFlags(None); err == nil {
-		t.Error("SetFlags: expected an error")
+	if !slices.Equal(got, exp) || r.Description != strings.Join(exp, "\n- ") {
+		t.Errorf("expected %q, got: %q", exp, got)
 	}
 }
 
-// TestEmptyBuffer checks the zero-length guard, which exists because
-// magic_buffer would otherwise be handed &buf[0] of an empty slice.
-func TestEmptyBuffer(t *testing.T) {
+func TestDecompress(t *testing.T) {
 	t.Parallel()
-	m, err := New(MimeType)
+	var buf bytes.Buffer
+	w := gzip.NewWriter(&buf)
+	w.Write([]byte("hello world\n"))
+	w.Close()
+	r, err := Detect(context.Background(), buf.Bytes(), WithDecompress())
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	defer m.Close()
-	if _, err := m.Buffer(nil); err == nil {
-		t.Error("expected an error")
-	}
-	if _, err := m.Buffer([]byte{}); err == nil {
-		t.Error("expected an error")
+	if exp := "ASCII text (gzip compressed data, original size modulo 2^32 12)"; r.Description != exp {
+		t.Errorf("expected %q, got: %q", exp, r.Description)
 	}
 }
 
-// TestConcurrent hammers one handle from many goroutines. Run under -race,
-// this is what backs the claim that a Magic is safe to share.
+func TestErrors(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := Detect(ctx, "hello"); !errors.Is(err, context.Canceled) || !errors.Is(err, ErrStopped) {
+		t.Errorf("expected %v, got: %v", context.Canceled, err)
+	}
+	if _, err := Detect(context.Background(), "hello", WithLimit(-1)); err == nil {
+		t.Errorf("expected an error for a negative limit, got none")
+	}
+	_, err := DetectFile(context.Background(), filepath.Join("testdata", "no such file"))
+	if !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("expected %v, got: %v", fs.ErrNotExist, err)
+	}
+}
+
+// TestConcurrent detects from many goroutines at once, which -race checks.
 func TestConcurrent(t *testing.T) {
 	t.Parallel()
-	m, err := New(MimeType)
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	defer m.Close()
-
-	buf, err := os.ReadFile(filepath.Join("testdata", "gif.gif"))
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	name := filepath.Join("testdata", "gif.gif")
-
+	tests := mimeTests()
 	var wg sync.WaitGroup
 	for i := range 16 {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			for range 25 {
-				var err error
-				switch i % 5 {
-				case 0:
-					var s string
-					s, err = m.Buffer(buf)
-					if err == nil && s != "image/gif" {
-						t.Errorf("expected image/gif, got: %q", s)
-					}
-				case 1:
-					var got []string
-					got, err = m.BufferTypes(buf, None, MimeType, Extension)
-					if err == nil && got[1] != "image/gif" {
-						t.Errorf("expected image/gif, got: %q", got[1])
-					}
-				case 2:
-					_, err = m.FileTypes(name, Mime, Extension)
-				case 3:
-					_, err = m.BufferWith(None, buf)
-				case 4:
-					_, err = m.FileWith(MimeEncoding, name)
-				}
+		wg.Go(func() {
+			for j := i; j < len(tests); j += 16 {
+				r, err := Detect(context.Background(), tests[j].s)
 				if err != nil {
 					t.Errorf("expected no error, got: %v", err)
 					return
 				}
+				if r.MIME != tests[j].exp {
+					t.Errorf("%s: expected %q, got: %q", tests[j].name, tests[j].exp, r.MIME)
+				}
 			}
-		}(i)
+		})
 	}
 	wg.Wait()
 }
 
-// mimeTest is one detection case: feed s to libmagic and expect exp.
-//
-// exp records what libmagic 5.48 actually reports, cross-checked against the
-// system file(1) of the same version. Several values are less specific than
-// the MIME type the input "is" (a bare "PK\x03\x04" is application/octet-stream,
-// not application/zip) because libmagic wants more than a signature prefix
-// before it commits. That is the library's behaviour, not a gap in the test.
+// mimeTest is one case: the MIME type that libmagic 5.48 reports for s
+// (D11). Some values are less exact than the type that the input "is": a bare
+// "PK\x03\x04" is application/octet-stream, not application/zip, because
+// libmagic needs more than the first bytes of a format. That is what libmagic
+// does, and the port copies it.
 type mimeTest struct {
 	name string
 	s    string

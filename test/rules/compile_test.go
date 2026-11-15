@@ -115,6 +115,17 @@ func TestTableMatchesTheCompiler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
+	// The table leaves out the name that libmagic tucks after an empty
+	// description.
+	for s := range want.Sets {
+		for _, g := range want.Sets[s] {
+			for i := range g {
+				if g[i].Desc[0] == 0 {
+					clear(g[i].Desc[:])
+				}
+			}
+		}
+	}
 	if !bytes.Equal(got.Encode(), want.Encode()) {
 		t.Errorf("the table differs from the compiled rules. Run go generate in internal/table")
 	}

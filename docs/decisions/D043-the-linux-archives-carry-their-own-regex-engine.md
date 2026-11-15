@@ -1,6 +1,6 @@
 # D43. The Linux archives carry their own regex engine
 
-Status: Decided. Amends D4.
+Status: Decided. Amends D4. Amended by D47.
 
 The maintainers decided on 2026-11-15 that the Linux archives link libgnurx,
 the regex engine of glibc that the Windows archives already use (D4), so that

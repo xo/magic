@@ -1,6 +1,6 @@
 # D9. A handle is safe to share across goroutines
 
-Status: Decided. Amends D6.
+Status: Decided. Amends D6. Amended by D47.
 
 Commit `dbcd068` (2026-09-12).
 

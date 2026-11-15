@@ -1,6 +1,6 @@
 # D13. The script builds against the newest stable release of each dependency
 
-Status: Decided.
+Status: Decided. Amended by D47.
 
 Commit `a629036` (2026-09-13).
 

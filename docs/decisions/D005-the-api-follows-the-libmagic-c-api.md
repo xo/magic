@@ -1,6 +1,6 @@
 # D5. The API follows the libmagic C API
 
-Status: Decided. Amended by D39.
+Status: Decided. Amended by D39. Amended by D47.
 
 Commit `7b14d3f` (2026-09-04). Commit `7d90219` (2026-09-04) added the
 `-mime` flag to `cmd/file`.

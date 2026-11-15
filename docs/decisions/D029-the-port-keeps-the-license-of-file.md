@@ -1,6 +1,10 @@
 # D29. The port keeps the license of file
 
-Status: Proposed.
+Status: Decided.
+
+The maintainers adopted this proposal on 2026-11-15, before the switch of
+phase 4 (D47). The notices are in the code as the proposal says, and
+`LICENSE.file` holds the license of file.
 
 A translation keeps the license of its source. file is under a BSD license
 with two conditions, in `COPYING` of the upstream:
@@ -29,6 +33,16 @@ The proposal:
    folder, so that pkg.go.dev reads it.
 
 The wording of condition 1 asks for the notice "at the beginning of the file".
-Whether a Go file that is a translation is a copy of the source in that sense
-is a question for the maintainers, and possibly for a lawyer. okage D13 made
-the same choice for its BSD and MIT sources.
+Each Go file that translates a file of libmagic opens with the notice of that
+file, written as Go comments, so the choice takes the strict reading. okage
+D13 made the same choice for its BSD and MIT sources.
+
+How it was done:
+
+1. Each Go file opens with the notice of each C file that it translates,
+   then a line that names those files, such as "This file translates
+   src/is_json.c of file 5.48 to Go (D29)".
+2. `LICENSE.file` in the root, and a `LICENSE` in `internal/engine`,
+   `internal/rules` and each package of `compress/`, hold `COPYING` of file.
+3. `internal/table/LICENSE` holds `COPYING` and the comments of the 21 rule
+   files that name a copyright, with the name of each file.

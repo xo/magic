@@ -1,6 +1,6 @@
 # D20. The embedded database is compressed with zstd, and expands into C memory
 
-Status: Decided. Amends D3.
+Status: Decided. Amends D3. Amended by D47.
 
 The maintainers decided on 2026-11-15 that the embedded database is stored as a
 compressed artifact. The iv session asked for it. The database is 10,793,952

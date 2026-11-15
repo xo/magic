@@ -1,6 +1,6 @@
 # D2. build-libmagic.sh cross-compiles the archives with zig cc
 
-Status: Decided. Amended by D16. Amended by D17. Amended by D22.
+Status: Decided. Amended by D16. Amended by D17. Amended by D22. Amended by D47.
 
 Commit `7b14d3f` (2026-09-04). Commit `a629036` changed how the versions are
 chosen (D13).

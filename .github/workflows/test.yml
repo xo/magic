@@ -146,6 +146,18 @@ jobs:
       - name: Check out binwalk
         run: git clone --filter=blob:none https://github.com/ReFirmLabs/binwalk.git upstream/binwalk
 
+      # cargo builds binwalk from its source, which takes many minutes. The
+      # build folder is kept between runs, for the commit that the ledger
+      # names.
+      - name: Cache the build of binwalk
+        uses: actions/cache@v4
+        with:
+          path: |
+            test/.binwalk/target
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: binwalk-${{ runner.os }}-${{ hashFiles('docs/upstream/upstreams.tsv') }}
+
       - name: Build the oracle of the walker
         run: test/oracle/build-binwalk.sh
 

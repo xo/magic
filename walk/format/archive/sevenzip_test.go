@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -19,9 +20,13 @@ import (
 // TestSevenZip makes 7-Zip archives with 7z, with the methods that the
 // walker decodes without the decoders of compress, and compares the members
 // with the files. The test in test/diff covers LZMA, LZMA2 and the headers
-// that are compressed. It skips without 7z.
+// that are compressed. It skips without 7z, and on Windows, where 7z stores
+// a link as a reparse point of Windows and not as a link of Unix.
 func TestSevenZip(t *testing.T) {
 	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("7z on Windows stores links as reparse points")
+	}
 	if _, err := exec.LookPath("7z"); err != nil {
 		t.Skip("no 7z: install 7-Zip")
 	}

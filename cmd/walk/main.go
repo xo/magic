@@ -2,6 +2,16 @@
 
 // Command walk is a small example of the package walk: it prints the files
 // that are embedded in each file that it gets, as binwalk does.
+//
+// The module of this program requires no other module (D14), so it cannot
+// import compress/xz and compress/zstd. Without them, the walker finds no xz
+// or lzma data, and calls xz data "malformed". A program of its own imports
+// them:
+//
+//	import (
+//		_ "github.com/xo/magic/compress/xz"
+//		_ "github.com/xo/magic/compress/zstd"
+//	)
 package main
 
 import (
@@ -30,6 +40,7 @@ func main() {
 	if *all {
 		opts = append(opts, walk.WithSearchAll())
 	}
+	fmt.Fprintln(os.Stderr, "walk: this example has no decoder of xz, lzma or zstd; see its doc")
 	status := 0
 	for _, name := range flag.Args() {
 		fmt.Printf("%s\n\n%-12s %-12s %s\n", name, "DECIMAL", "HEXADECIMAL", "DESCRIPTION")

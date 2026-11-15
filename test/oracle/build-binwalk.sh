@@ -11,7 +11,11 @@
 #
 # Run it from anywhere. It needs the checkout in upstream/binwalk (D25) and
 # the toolchain of Rust. It writes only to test/.binwalk/, which git ignores.
-# A second run does nothing, unless the commit changed.
+# A second run does nothing, unless the commit or the patches changed.
+#
+# The patches in test/oracle/patches fix the bugs of binwalk that the walker
+# fixes too, by a decision of the maintainers (D59). The script applies them
+# in order of their names to the exported tree.
 
 set -euo pipefail
 
@@ -29,18 +33,24 @@ if [ ! -d "$checkout/.git" ]; then
   exit 1
 fi
 commit="$(git -C "$checkout" rev-parse "$base^{commit}")"
+patches="$test_dir/oracle/patches"
+stamp="$commit $(cat "$patches"/*.patch 2>/dev/null | sha256sum | cut -c1-16)"
 
-if [ "$(cat "$out/commit" 2>/dev/null || true)" != "$commit" ]; then
+if [ "$(cat "$out/commit" 2>/dev/null || true)" != "$stamp" ]; then
   # Keep the target folder, so that cargo builds again only what changed.
   rm -rf "$out/src" "$out/bin" "$out/commit"
   mkdir -p "$out/src" "$out/bin"
   # Export the tree of the commit. The checkout itself is never touched.
   git -C "$checkout" archive "$commit" | tar -x -C "$out/src"
+  for p in "$patches"/*.patch; do
+    [ -e "$p" ] || continue
+    patch -s -p1 -d "$out/src" <"$p"
+  done
   (
     cd "$out/src"
     CARGO_TARGET_DIR="$out/target" cargo build --release --locked >"$out/build.log" 2>&1
   )
   cp "$out/target/release/binwalk" "$out/bin/binwalk"
-  echo "$commit" >"$out/commit"
+  echo "$stamp" >"$out/commit"
 fi
 echo "binwalk at $commit: $out/bin/binwalk"

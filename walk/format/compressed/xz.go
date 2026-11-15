@@ -69,12 +69,14 @@ func failed([]byte, int, *walk.Output) walk.Extraction {
 }
 
 // parseXZ is xz_parser. It adds the size of each stream that follows the
-// last one. binwalk compares the offset of the next stream with the bytes
-// that follow the match, and so does parseXZ.
+// last one. binwalk compares the absolute offset of the next stream with the
+// bytes that follow the match, so it misses a stream that starts further into
+// the data than its own length. The walker compares it with the bytes of the
+// data, as binwalk 3.1.0 did, and the oracle carries the same fix (D59).
 func parseXZ(data []byte, off int) (walk.Match, error) {
 	m := walk.Match{Offset: off, Confidence: walk.High, Description: "XZ compressed data"}
 	next, previous := off, -1
-	available := len(data) - off
+	available := len(data)
 	headers := 0
 	for binwalk.OffsetSafe(available, next, previous) {
 		if !xzHeader(data[next:]) {

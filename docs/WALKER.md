@@ -373,7 +373,9 @@ The walker follows binwalk 3 as the port follows libmagic (D49):
    `docs/upstream/binwalk.tsv` is the ledger of the commits after it (D25,
    D26). The checkout is in `upstream/binwalk/`.
 2. `test/oracle/build-binwalk.sh` builds binwalk at that commit into
-   `test/.binwalk/`, with cargo. It needs the toolchain of Rust.
+   `test/.binwalk/`, with cargo. It needs the toolchain of Rust. It applies
+   the patches in `test/oracle/patches/` first, which fix the bugs of binwalk
+   that the walker fixes too (D59).
 3. `TestWalkMatchesBinwalk` in `test/diff` runs binwalk on each input with
    `-l -` and `--include=` with the formats that the walker has. It compares
    the offset, the size, the name, the confidence and the description of each

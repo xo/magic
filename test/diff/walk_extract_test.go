@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -32,6 +34,15 @@ var internal = []string{
 	"trx", "uimage", "vxworks_symtab", "wince", "xz", "zlib",
 }
 
+// external are the signatures that binwalk extracts with a program that it
+// finds on PATH, and the program. The gate compares them where the program
+// is installed. A program writes the target of a link as it is, and the
+// walker keeps it inside the output, so the gate compares the file that a
+// link of these formats names.
+var external = map[string]string{
+	"squashfs": "sasquatch",
+}
+
 // TestWalkExtractsAsBinwalk is the gate of the extractors (D49). On each
 // input of the walk corpus, binwalk extracts with -e, and the walker gives
 // the members of each match. For each offset, the files are the same: the
@@ -47,8 +58,15 @@ func TestWalkExtractsAsBinwalk(t *testing.T) {
 	}
 	var names []string
 	for _, s := range walk.Signatures() {
-		if s.Extract != nil && slices.Contains(internal, s.Name) {
+		if s.Extract == nil {
+			continue
+		}
+		if slices.Contains(internal, s.Name) {
 			names = append(names, s.Name)
+		} else if tool, ok := external[s.Name]; ok {
+			if _, err := exec.LookPath(tool); err == nil {
+				names = append(names, s.Name)
+			}
 		}
 	}
 	if len(names) == 0 {
@@ -102,6 +120,7 @@ func extractCompare(bw *oracle.Binwalk, dir string, i int, in corpus.Input, name
 	}
 
 	got := map[string][]string{}
+	resolve := map[string]bool{} // the offsets of matches of an external format
 	for e, err := range walk.WalkBytes(context.Background(), in.Data, walk.WithFormats(names...)) {
 		if err != nil {
 			return fmt.Sprintf("%s: expected no error, got: %v", in.Name, err)
@@ -119,17 +138,40 @@ func extractCompare(bw *oracle.Binwalk, dir string, i int, in corpus.Input, name
 			tree = append(tree, memberLine(m))
 		}
 		if !failed {
+			key := strconv.FormatInt(e.Offset, 16)
+			if _, ok := external[e.Format]; ok {
+				resolve[key] = true
+				tree = resolveLinks(tree)
+			}
 			slices.Sort(tree)
-			got[strconv.FormatInt(e.Offset, 16)] = tree
+			got[key] = tree
 		}
 	}
 
+	// sasquatch can give other files on another run: whether it stops at a
+	// block that it cannot decompress depends on the timing of its threads
+	// (see skip in squashfs3.go). When the files of an external format
+	// differ, the gate runs binwalk again, and takes a run that matches.
+	var msg string
+	for range 6 {
+		var retry bool
+		if msg, retry = binwalkCompare(bw, work, path, in.Name, names, got, resolve); !retry {
+			break
+		}
+	}
+	return msg
+}
+
+// binwalkCompare extracts the input with binwalk, and returns how the
+// walker differs from it, or "". It reports whether the files of an external
+// format differ.
+func binwalkCompare(bw *oracle.Binwalk, work, path, name string, names []string, got map[string][]string, resolve map[string]bool) (string, bool) {
 	out := filepath.Join(work, "out")
 	if err := bw.Extract(path, out, names); err != nil {
 		if strings.Contains(err.Error(), "panicked") {
-			return ""
+			return "", false
 		}
-		return fmt.Sprintf("%s: %v", in.Name, err)
+		return fmt.Sprintf("%s: %v", name, err), false
 	}
 	want := map[string][]string{}
 	base := filepath.Join(out, "input.extracted")
@@ -141,21 +183,28 @@ func extractCompare(bw *oracle.Binwalk, dir string, i int, in corpus.Input, name
 		}
 		tree, err := diskTree(filepath.Join(base, o.Name()))
 		if err != nil {
-			return fmt.Sprintf("%s: %v", in.Name, err)
+			return fmt.Sprintf("%s: %v", name, err), false
 		}
-		want[strconv.FormatInt(off, 16)] = tree
+		key := strconv.FormatInt(off, 16)
+		if resolve[key] {
+			tree = resolveLinks(tree)
+			slices.Sort(tree)
+		}
+		want[key] = tree
 	}
 
 	var diffs []string
+	retry := false
 	for _, k := range sortedKeys(want, got) {
 		if !slices.Equal(want[k], got[k]) {
 			diffs = append(diffs, fmt.Sprintf("  at 0x%s: expected %q,\n            got: %q", strings.ToUpper(k), want[k], got[k]))
+			retry = retry || resolve[k]
 		}
 	}
 	if len(diffs) > 0 {
-		return fmt.Sprintf("%s:\n%s", in.Name, strings.Join(diffs, "\n"))
+		return fmt.Sprintf("%s:\n%s", name, strings.Join(diffs, "\n")), retry
 	}
-	return ""
+	return "", false
 }
 
 // memberLine describes a member of the walker as diskTree describes a file.
@@ -199,6 +248,9 @@ func diskTree(dir string) ([]string, error) {
 			tree = append(tree, rel+" -> "+filepath.ToSlash(l))
 		case d.IsDir():
 			tree = append(tree, rel+"/")
+		case !d.Type().IsRegular():
+			// A FIFO, a device or a socket that a program made. The walker
+			// makes none, and reading a FIFO would block.
 		default:
 			b, err := os.ReadFile(p)
 			if err != nil {
@@ -229,4 +281,27 @@ func sortedKeys(a, b map[string][]string) []string {
 	}
 	slices.Sort(keys)
 	return keys
+}
+
+// resolveLinks rewrites each link of a tree as the path, from the root of
+// the extraction, of the file that it names.
+func resolveLinks(tree []string) []string {
+	out := make([]string, len(tree))
+	for i, line := range tree {
+		name, target, ok := strings.Cut(line, " -> ")
+		if !ok {
+			out[i] = line
+			continue
+		}
+		if strings.HasPrefix(target, "/") {
+			// The program writes the file system under one folder, such as
+			// squashfs-root, and an absolute target names a file from it.
+			top, _, _ := strings.Cut(name, "/")
+			target = path.Join(top, strings.TrimPrefix(path.Clean(target), "/"))
+		} else {
+			target = strings.TrimPrefix(path.Clean(path.Join("/", path.Dir(name), target)), "/")
+		}
+		out[i] = name + " => " + target
+	}
+	return out
 }

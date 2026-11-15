@@ -389,7 +389,9 @@ The walker follows binwalk 3 as the port follows libmagic (D49):
 6. `TestWalkSquashFS` makes SquashFS images with mksquashfs, with each
    compression, and compares the files of the walker with what unsquashfs
    writes. binwalk extracts SquashFS with sasquatch, a version of
-   unsquashfs. `TestWalkCramFS`, `TestWalkISO9660`, `TestWalkFAT` and
+   unsquashfs. `TestWalkSquashFS3` writes images of SquashFS 1.x, 2.x and
+   3.x in Go, and compares the files with what sasquatch writes.
+   `TestWalkCramFS`, `TestWalkISO9660`, `TestWalkFAT` and
    `TestWalkEXT` make images with mkfs.cramfs, xorrisofs, mkisofs, mkfs.vfat
    and mkfs.ext4, and compare the files with the tree, and with 7-Zip where
    it is installed. `TestWalkJFFS2`, `TestWalkYAFFS` and `TestWalkUBI` write

@@ -23,8 +23,8 @@ var (
 	errCompression = errors.New("squashfs: no decoder for the compression of the image")
 )
 
-// sqfs reads a SquashFS 4.0 image, in either byte order. sasquatch reads
-// the versions before 4.0 too, which the walker does not read yet.
+// sqfs reads a SquashFS 4.0 image, in either byte order. squashfs3.go reads
+// the versions before 4.0.
 type sqfs struct {
 	img        []byte
 	order      binary.ByteOrder
@@ -412,9 +412,8 @@ func (s *sqfs) dir(in *inode) ([]entry, error) {
 	return out, nil
 }
 
-// extractSquashFS writes the files of the image, as sasquatch writes them,
-// under squashfs-root. A device, a FIFO and a socket are files that name
-// them, as binwalk writes them. A link that leaves the root is cleaned as
+// extractSquashFS writes the files of the image, as sasquatch writes them
+// when a user runs it, under squashfs-root: with no device, FIFO or socket. A link that leaves the root is cleaned as
 // binwalk cleans the links of its own extractors, so that it stays inside.
 func extractSquashFS(data []byte, off int, out *walk.Output) walk.Extraction {
 	m, err := parseSquashFS(data, off)
@@ -423,6 +422,11 @@ func extractSquashFS(data []byte, off int, out *walk.Output) walk.Extraction {
 	}
 	if out == nil {
 		return walk.Extraction{OK: true}
+	}
+	// binwalk runs sasquatch with the byte order of the header. An image
+	// before 4.0 has the layout of squashfs3.go.
+	if h, ok := squashfsHeader(data[off:]); ok && h.major < 4 {
+		return extractSquashFS3(data[off:off+m.Size], h.big, out)
 	}
 	s, err := newSqfs(data[off : off+m.Size])
 	if err != nil {
@@ -472,19 +476,18 @@ func (s *sqfs) write(out *walk.Output, p string, dir *inode, depth int) error {
 				err = s.data(in, func(b []byte) bool { return len(b) == 0 || out.AppendFile(name, b) })
 				ok = err == nil
 			}
-			if ok && in.mode&0o111 != 0 {
+			// unsquashfs sets the mode of the file. The walker sets the bit
+			// of execution for others, which is the one that it keeps.
+			if ok && in.mode&0o001 != 0 {
 				ok = out.MakeExecutable(name)
 			}
 		case sqSymlink:
 			ok = out.CreateSymlink(name, in.target)
-		case sqChar:
-			ok = out.CreateCharDevice(name, in.major, in.minor)
-		case sqBlock:
-			ok = out.CreateBlockDevice(name, in.major, in.minor)
-		case sqFIFO:
-			ok = out.CreateFIFO(name)
-		case sqSocket:
-			ok = out.CreateSocket(name)
+		case sqChar, sqBlock, sqFIFO, sqSocket:
+			// binwalk runs sasquatch as the user, who cannot make a device.
+			// sasquatch makes a FIFO, and a socket it skips. The walker
+			// cannot make a FIFO, so it writes none of these, and the
+			// gate skips the FIFOs of sasquatch.
 		}
 		if !ok {
 			return errSquashFS

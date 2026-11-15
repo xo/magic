@@ -3,7 +3,8 @@
 // Copyright (c) 2024 devttys0. Under the MIT license, in LICENSE.
 //
 // This file translates src/signatures/jboot.rs, src/structures/jboot.rs and
-// src/extractors/jboot.rs of binwalk.
+// src/extractors/jboot.rs of binwalk. The parser of the JBOOT ARM header is in
+// walk/format/internal/jbootsig, because the signature dlke uses it too.
 
 package firmware
 
@@ -11,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/xo/magic/walk"
+	"github.com/xo/magic/walk/format/internal/jbootsig"
 	"github.com/xo/magic/walk/internal/binwalk"
 )
 
@@ -53,89 +55,17 @@ func parseJBOOTARM(data []byte, off int) (walk.Match, error) {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	start := off - magicOffset
-	h, ok := jbootARMHeader(data[start:])
+	h, ok := jbootsig.ParseARM(data[start:])
 	if !ok {
 		return walk.Match{}, walk.ErrNoMatch
 	}
 	return walk.Match{
 		Offset:     start,
-		Size:       h.headerSize,
+		Size:       h.HeaderSize,
 		Confidence: walk.Medium,
 		Description: fmt.Sprintf("JBOOT firmware header, header size: %d bytes, ROM ID: %s, erase offset: 0x%X, erase size: 0x%X, data flash offset: 0x%X, data size: 0x%X",
-			h.headerSize, h.romID, h.eraseOffset, h.eraseSize, h.dataOffset, h.dataSize),
+			h.HeaderSize, h.RomID, h.EraseOffset, h.EraseSize, h.DataOffset, h.DataSize),
 	}, nil
-}
-
-var jbootARMStruct = binwalk.Struct{
-	{Name: "drange", Type: "u16"},
-	{Name: "image_checksum", Type: "u16"},
-	{Name: "block_size", Type: "u32"},
-	{Name: "reserved2", Type: "u32"},
-	{Name: "reserved3", Type: "u16"},
-	{Name: "lpvs", Type: "u8"},
-	{Name: "mbz", Type: "u8"},
-	{Name: "timestamp", Type: "u32"},
-	{Name: "erase_start", Type: "u32"},
-	{Name: "erase_size", Type: "u32"},
-	{Name: "data_start", Type: "u32"},
-	{Name: "data_size", Type: "u32"},
-	{Name: "reserved4", Type: "u32"},
-	{Name: "reserved5", Type: "u32"},
-	{Name: "reserved6", Type: "u32"},
-	{Name: "reserved7", Type: "u32"},
-	{Name: "header_id", Type: "u16"},
-	{Name: "header_version", Type: "u16"},
-	{Name: "reserved8", Type: "u16"},
-	{Name: "section_id", Type: "u8"},
-	{Name: "image_info_type", Type: "u8"},
-	{Name: "image_info_offset", Type: "u32"},
-	{Name: "family", Type: "u16"},
-	{Name: "header_checksum", Type: "u16"},
-}
-
-type jbootARMInfo struct {
-	headerSize  int
-	dataSize    int
-	dataOffset  int
-	eraseOffset int
-	eraseSize   int
-	romID       string
-}
-
-// jbootARMHeader is parse_jboot_arm_header. A ROM ID of 12 bytes comes
-// before the fields.
-func jbootARMHeader(data []byte) (jbootARMInfo, bool) {
-	const (
-		structOffset = 12
-		lpvs         = 1
-		mbz          = 0
-		headerID     = 0x4842
-		maxVersion   = 4
-	)
-	b, ok := binwalk.From(data, structOffset)
-	if !ok {
-		return jbootARMInfo{}, false
-	}
-	h, ok := jbootARMStruct.Parse(b, false)
-	if !ok {
-		return jbootARMInfo{}, false
-	}
-	for _, name := range []string{"reserved2", "reserved3", "reserved4", "reserved5", "reserved6", "reserved7", "reserved8"} {
-		if h[name] != 0 {
-			return jbootARMInfo{}, false
-		}
-	}
-	if h["lpvs"] != lpvs || h["mbz"] != mbz || h["header_id"] != headerID || h["header_version"] > maxVersion {
-		return jbootARMInfo{}, false
-	}
-	return jbootARMInfo{
-		headerSize:  jbootARMStruct.Size() + structOffset,
-		romID:       binwalk.CString(data[:structOffset]),
-		dataSize:    h["data_size"],
-		dataOffset:  h["data_start"],
-		eraseOffset: h["erase_start"],
-		eraseSize:   h["erase_size"],
-	}, true
 }
 
 // parseJBOOTSTAG is jboot_stag_parser.

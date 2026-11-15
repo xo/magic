@@ -95,6 +95,10 @@ const (
 // binwalk, which has no limit. A member is a regular file that is not empty,
 // of a match that the walker can extract and whose format does not stop the
 // walk. The default is 0, which walks the input only.
+//
+// As with binwalk, a format whose extraction carves the match to a file,
+// such as png, finds itself again at offset 0 of that file, one level down.
+// A caller that wants each such file once calls Entry.SkipMembers on it.
 func WithDepth(n int) Option {
 	return func(o *options) error {
 		if n < 0 {

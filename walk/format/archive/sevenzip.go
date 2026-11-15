@@ -10,9 +10,6 @@
 package archive
 
 import (
-	"bytes"
-	"compress/bzip2"
-	"compress/flate"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -23,7 +20,6 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"github.com/xo/magic/compress"
 	"github.com/xo/magic/walk"
 	"github.com/xo/magic/walk/internal/binwalk"
 )
@@ -128,15 +124,6 @@ const (
 	szName            = 0x11
 	szWinAttributes   = 0x15
 	szEncodedHeader   = 0x17
-)
-
-// The identifiers of the coders that the walker decodes.
-const (
-	szCopy    = "\x00"
-	szLZMA    = "\x03\x01\x01"
-	szLZMA2   = "\x21"
-	szDeflate = "\x04\x01\x08"
-	szBZip2   = "\x04\x02\x02"
 )
 
 // The attributes of a file of 7-Zip. When the extension bit is set, the
@@ -279,10 +266,14 @@ type szCoder struct {
 }
 
 // szFolder is a folder: coders that give one stream from packed streams.
+// The input streams of the coders have one index in the folder, in the
+// order of the coders, and so do the output streams.
 type szFolder struct {
 	coders     []szCoder
 	numPacked  int
-	bound      []int // the output streams that a bind pair takes
+	bindIn     []int // the input stream that each bind pair feeds
+	bound      []int // the output stream that each bind pair takes
+	packed     []int // the input stream that each packed stream feeds
 	sizes      []int // the size of each output stream
 	crcDefined bool
 	streams    int // the files that the folder holds
@@ -339,13 +330,22 @@ func (r *szReader) readFolder() szFolder {
 		return f
 	}
 	for range numOut - 1 {
-		r.number()
+		f.bindIn = append(f.bindIn, r.count())
 		f.bound = append(f.bound, r.count())
 	}
 	f.numPacked = numIn - (numOut - 1)
-	if f.numPacked > 1 {
+	switch {
+	case f.numPacked == 1:
+		// The one packed stream feeds the input that no bind pair feeds.
+		for i := range numIn {
+			if !slices.Contains(f.bindIn, i) {
+				f.packed = append(f.packed, i)
+				break
+			}
+		}
+	case f.numPacked > 1:
 		for range f.numPacked {
-			r.number()
+			f.packed = append(f.packed, r.count())
 		}
 	}
 	return f
@@ -579,65 +579,55 @@ func (r *szReader) readFiles() []szFile {
 }
 
 // szDecode decodes the folder i of s, from the archive arc, to w. It
-// decodes the folders of one coder, of the methods copy, LZMA, LZMA2,
-// deflate and bzip2. LZMA and LZMA2 need the stream decoders of LZMA and
-// xz, which github.com/xo/magic/compress/xz registers.
+// decodes each coder that szMethods or szFilters holds, in any graph that
+// the bind pairs of the folder make, as the decoder of 7-Zip in 7zDecode.cpp
+// does.
 func szDecode(arc []byte, s *szStreams, i int, w io.Writer) error {
 	f := &s.folders[i]
-	if len(f.coders) != 1 || f.numPacked != 1 || f.coders[0].numIn != 1 || f.coders[0].numOt != 1 {
+	if len(f.packed) != f.numPacked || len(f.sizes) != len(f.coders) {
 		return errSevenZip
 	}
 	pack := 0
 	for j := range i {
 		pack += s.folders[j].numPacked
 	}
-	if pack >= len(s.packSizes) {
+	if pack+f.numPacked > len(s.packSizes) {
 		return errSevenZip
 	}
 	start := sevenZipHeaderSize + s.packPos
 	for _, n := range s.packSizes[:pack] {
 		start += n
 	}
-	src, ok := binwalk.Range(arc, start, start+s.packSizes[pack])
-	if !ok {
+	g := &szGraph{f: f}
+	for _, n := range s.packSizes[pack : pack+f.numPacked] {
+		src, ok := binwalk.Range(arc, start, start+n)
+		if !ok {
+			return errSevenZip
+		}
+		g.packs = append(g.packs, src)
+		start += n
+	}
+	// 7-Zip holds that each coder has one output stream, so the index of
+	// an output stream is the index of its coder.
+	in := 0
+	for _, c := range f.coders {
+		if c.numOt != 1 {
+			return errSevenZip
+		}
+		g.firstIn = append(g.firstIn, in)
+		in += c.numIn
+	}
+	main := -1
+	for j := range f.coders {
+		if !slices.Contains(f.bound, j) {
+			main = j
+			break
+		}
+	}
+	if main < 0 {
 		return errSevenZip
 	}
-	size := f.size()
-	c := f.coders[0]
-	var err error
-	switch c.id {
-	case szCopy:
-		if size > len(src) {
-			return errSevenZip
-		}
-		_, err = w.Write(src[:size])
-	case szLZMA:
-		dec, ok := compress.LookupStream(compress.LZMA)
-		if !ok || len(c.props) != 5 {
-			return errSevenZip
-		}
-		// The header of a .lzma file: the properties, and the size of the
-		// data.
-		b := make([]byte, 0, 13+len(src))
-		b = append(b, c.props...)
-		b = binary.LittleEndian.AppendUint64(b, uint64(size))
-		_, err = dec(append(b, src...), w)
-	case szLZMA2:
-		dec, ok := compress.LookupStream(compress.XZ)
-		if !ok || len(c.props) != 1 {
-			return errSevenZip
-		}
-		_, err = dec(szXZ(c.props[0], src, size), w)
-	case szDeflate:
-		fr := flate.NewReader(bytes.NewReader(src))
-		_, err = io.Copy(w, io.LimitReader(fr, int64(size)))
-		_ = fr.Close()
-	case szBZip2:
-		_, err = io.Copy(w, io.LimitReader(bzip2.NewReader(bytes.NewReader(src)), int64(size)))
-	default:
-		return errSevenZip
-	}
-	if err != nil {
+	if err := g.decode(main, w, 0); err != nil {
 		return fmt.Errorf("archive: decoding 7-Zip folder %d: %w", i, err)
 	}
 	return nil
@@ -657,17 +647,18 @@ func szXZ(dict byte, data []byte, size int) []byte {
 	block := len(b)
 	b = append(b, 2, 0, 0x21, 1, dict, 0, 0, 0)
 	b = appendCRC(b, block)
-	headerSize := len(b) - block
+	// The unpadded size of the block does not count the padding after the
+	// data.
+	unpadded := len(b) - block + len(data)
 	b = append(b, data...)
-	for len(data)%4 != 0 {
-		data = append(data[:len(data):len(data)], 0)
+	for range (4 - len(data)%4) % 4 {
 		b = append(b, 0)
 	}
 	// The index: one record of the unpadded size and the size of the data.
 	index := len(b)
 	b = append(b, 0)
 	b = binary.AppendUvarint(b, 1)
-	b = binary.AppendUvarint(b, uint64(headerSize+len(data)))
+	b = binary.AppendUvarint(b, uint64(unpadded))
 	b = binary.AppendUvarint(b, uint64(size))
 	for (len(b)-index)%4 != 0 {
 		b = append(b, 0)

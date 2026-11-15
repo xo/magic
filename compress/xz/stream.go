@@ -144,7 +144,42 @@ func uvarint(src []byte, p int) (uint64, int) {
 // streamLZMA decodes a stream of .lzma at the start of src, as the auto
 // decoder of liblzma. The range decoder reads one byte at a time, so the
 // bytes that it read are the size of the stream.
+//
+// The reader of lzma allocates the whole dictionary that the header names,
+// up to 512 MiB in the magic of binwalk, where liblzma maps the memory and
+// touches only what it uses. A match reaches back only into data that has
+// come out, so streamLZMA first decodes with a dictionary of at most 64
+// times the input, and decodes again with the whole one only when that
+// fails after more data than the smaller one holds. The output is the same.
 func streamLZMA(src []byte, w io.Writer) (int, error) {
+	const minDict = 1 << 20
+	if len(src) >= 13 {
+		dict := binary.LittleEndian.Uint32(src[1:5])
+		limit := uint32(min(max(64*len(src), minDict), 1<<31-1))
+		if dict > limit {
+			small := bytes.Clone(src[:13])
+			binary.LittleEndian.PutUint32(small[1:5], limit)
+			var buf bytes.Buffer
+			n, err := lzmaOnce(append(small, src[13:]...), &buf)
+			if err == nil {
+				if _, err := w.Write(buf.Bytes()); err != nil {
+					return 0, fmt.Errorf("lzma: %w", err)
+				}
+				return n, nil
+			}
+			// A distance past the smaller dictionary can be valid only
+			// after more data than it holds came out. Any other failure
+			// is a failure with the whole dictionary too.
+			if buf.Len() <= int(limit) {
+				return 0, err
+			}
+		}
+	}
+	return lzmaOnce(src, w)
+}
+
+// lzmaOnce decodes the stream of .lzma at the start of src.
+func lzmaOnce(src []byte, w io.Writer) (int, error) {
 	br := bytes.NewReader(src)
 	r, err := lzma.NewReader(br)
 	if err != nil {

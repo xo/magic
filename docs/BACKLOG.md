@@ -118,34 +118,40 @@ under `walk/format/`, and the extractors of 39 of them that binwalk runs with
 its own code. The walker also extracts most of the formats that binwalk
 extracts with programs, and writes what those programs write. The three
 gates in `test/diff` give the same matches, files and walks as binwalk on
-1821 inputs, and a test for each file system and archive compares its files
+1881 inputs, and a test for each file system and archive compares its files
 with a tool or with the tree that made it. These are left:
 
 1. Formats that the walker finds and does not extract, where binwalk runs a
    program: `lzfse`, `arj`, `rar`, `ntfs`, `pchrom`, `qnx_ifs`,
    `uefi_capsule` and `uefi_pi_volume`. binwalk extracts nothing from `arj`
    either, because it carves only the first header.
-2. Parts of formats that the walker does not extract: SquashFS before 4.0
-   and the variants of LZMA of vendors, which sasquatch reads; 7-Zip with
-   filters (BCJ, BCJ2, Delta), AES or PPMd; cab with LZX or Quantum; lz4 in
-   the legacy frame.
-3. sasquatch, 7zz, lzop, jefferson, unyaffs, ubireader and tsk_recover are
-   not installed, so no test compares the walker with them. The tests
-   compare with the tree that made each image, and with mksquashfs,
-   unsquashfs, 7z (p7zip), cabextract and lz4 where they are installed.
-   Building sasquatch from its source needs the permission of a maintainer.
+2. Parts of formats that the walker does not extract: 7-Zip with AES or
+   the filter RISCV; cab with LZX or Quantum. The walker reads SquashFS 1.x,
+   2.x and 3.x in both byte orders, with each decompressor that sasquatch
+   tries, in its order: gzip, lzo, lz4, xz, zstd, LZMA, and the LZMA of
+   vendors (adaptive, Broadcom and DD-WRT). sasquatch skips a file whose
+   data it cannot decompress, or stops, as the timing of its threads
+   decides. The walker skips the file once a decompressor other than gzip
+   worked, and stops otherwise. Thus the gate runs binwalk again when its
+   SquashFS files differ. The walker decodes
+   7-Zip with PPMd, and with the filters BCJ, BCJ2, ARM, ARMT, ARM64, PPC,
+   SPARC, IA64 and Delta. binwalk does not find lz4 in the legacy frame, because
+   its signature has only the magic of the frame format. Thus the walker
+   does not decode the legacy frame either.
+3. 7zz, lzop, jefferson, unyaffs, ubireader and tsk_recover are not
+   installed, so no test compares the walker with them. The tests compare
+   with the tree that made each image, and with mksquashfs, unsquashfs, 7z
+   (p7zip), cabextract and lz4 where they are installed. Where sasquatch is
+   installed, `TestWalkExtractsAsBinwalk` compares SquashFS with binwalk,
+   which runs it.
 4. `FuzzWalk` in `walk/format/all` fuzzes every format with the walk of
-   members. Two runs of 3 and 4 minutes found no panic and no input over 5
-   seconds. CI runs only its seeds.
+   members. Runs of 3 and 4 minutes found no panic and no input over 5
+   seconds, and a run of 2 minutes no input over 1 second. The rate drops at
+   times while the fuzzer minimizes a new input. CI runs only its seeds.
 5. Under a heavy load, a gate has once in a while shown one difference that
    the next run did not show. binwalk can exit before its worker starts,
    and the clients retry, but not without limit.
-6. A stream of lzma of unknown size makes the decoder of `compress/xz`
-   allocate the whole dictionary that the header names, up to 512 MiB,
-   where liblzma maps the memory and touches only what it uses.
-7. `walk/format/vendor` holds a private copy of the parser of the JBOOT ARM
-   header, which `walk/format/firmware` holds too.
-8. delink tries the keys of the format DLK in the order of a HashMap of
+6. delink tries the keys of the format DLK in the order of a HashMap of
    Rust, which is random, and the walker in the order of their names. No
    sample of `dlke`, `dkbs` or `encfw` decrypts yet.
 

@@ -2,6 +2,7 @@ package xz
 
 import (
 	"bytes"
+	"encoding/binary"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,5 +41,27 @@ func TestStream(t *testing.T) {
 		if _, err := s(src[:len(src)-3], &bytes.Buffer{}); err == nil {
 			t.Errorf("%s: expected an error for a cut stream, got: nil", name)
 		}
+	}
+}
+
+// TestStreamLZMADict holds that a header that names a dictionary of 512 MiB
+// decodes the same, through the smaller dictionary that streamLZMA tries
+// first.
+func TestStreamLZMADict(t *testing.T) {
+	t.Parallel()
+	src, err := os.ReadFile(filepath.Join("..", "..", "test", "corpus", "testdata", "utf8.txt.lzma"))
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	exp, err := os.ReadFile(filepath.Join("..", "..", "testdata", "utf8.txt"))
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	big := bytes.Clone(src)
+	binary.LittleEndian.PutUint32(big[1:5], 0x20000000)
+	var out bytes.Buffer
+	n, err := streamLZMA(big, &out)
+	if err != nil || n != len(src) || !bytes.Equal(out.Bytes(), exp) {
+		t.Errorf("expected %d bytes giving %d, got: %d giving %d, %v", len(src), len(exp), n, out.Len(), err)
 	}
 }

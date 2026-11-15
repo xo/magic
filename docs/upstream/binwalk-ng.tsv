@@ -3,217 +3,217 @@ upstream	date	status	magic	note
 b80eacce67f66e017f7b610049f36499079a99b5	2026-02-13	not-applicable		Remove unneeded build script. It changes build_docker.sh. Not applicable: it changes no code of binwalk-ng
 acb79f0056b8d69317ad89f36e63a475486c4a4b	2026-02-13	not-applicable		Update sasquatch. It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
 fc5af1d8b565a9161a106e04415db779efa52c9f	2026-02-13	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-0801bba524de2f8eb522b364071ccb585e703880	2026-02-13	pending		Run cargo clippy --fix. It changes src/
-7134c915d2e40a535d1d8eea78cd2cc62df81b8f	2026-02-13	pending		Run cargo fmt. It changes src/
+0801bba524de2f8eb522b364071ccb585e703880	2026-02-13	ported	c5ef6dc	Run cargo clippy --fix. It changes src/
+7134c915d2e40a535d1d8eea78cd2cc62df81b8f	2026-02-13	ported	c5ef6dc	Run cargo fmt. It changes src/
 11f162426eee2eb5ba79eeb5b5b828e5524c39cd	2026-02-13	not-applicable		Update miniz_oxide. It changes Cargo.lock, Cargo.toml. Not applicable: it changes no code of binwalk-ng
 bb032fe4ab3ac5d2d3b9f080bde4e2e8061e7a22	2026-02-13	not-applicable		Run cargo update and cargo clippy --fix on fuzzing dir. It changes fuzzing/. Not applicable: it changes no code of binwalk-ng
-1ed7ce9cdc92c88d1dea1437de141f57cb4dd6c8	2026-02-13	pending		Make entropy plot an optional feature (port ReFirmLabs/binwalk#928). It changes Cargo.lock, Cargo.toml, fuzzing/, src/
+1ed7ce9cdc92c88d1dea1437de141f57cb4dd6c8	2026-02-13	ported	c5ef6dc	Make entropy plot an optional feature (port ReFirmLabs/binwalk#928). It changes Cargo.lock, Cargo.toml, fuzzing/, src/
 4ce6acdebf88a1a8522bbabae31fa3e01f01a904	2026-02-13	not-applicable		Update github actions versions. It changes .github/. Not applicable: it changes no code of binwalk-ng
 9a67ba846291ca4e47dba9cd4d8d3be3b4d012dd	2026-02-13	not-applicable		Update README.md with fork note. It changes README.md. Not applicable: it changes no code of binwalk-ng
-01d99df705810b587fe4b48c1e7a6411b3b86e18	2026-02-13	pending		Remove some unwrap. It changes src/
-288b677e1923768e021bf91277847ff5cb2ba092	2026-02-13	pending		Remove warning regarding comparing function pointers. It changes src/
+01d99df705810b587fe4b48c1e7a6411b3b86e18	2026-02-13	ported	c5ef6dc	Remove some unwrap. It changes src/
+288b677e1923768e021bf91277847ff5cb2ba092	2026-02-13	ported	c5ef6dc	Remove warning regarding comparing function pointers. It changes src/
 546a767e18ae02ca77d1d43d73bfa717e25f9d17	2026-02-13	not-applicable		Update name to binwalk-ng. It changes Cargo.toml. Not applicable: it changes no code of binwalk-ng
-8fabc14aafa5f10eb74fca82bf353216bc4c3a21	2026-02-13	pending		Fix some typos. It changes src/
+8fabc14aafa5f10eb74fca82bf353216bc4c3a21	2026-02-13	ported	c5ef6dc	Fix some typos. It changes src/
 b227f3f6d0b34b7ed18059ce3bf76e57cfbd914b	2026-02-13	not-applicable		Adapt tests to the package name change. It changes tests/. Not applicable: it changes no code of binwalk-ng
-e95c25d505e1a9e8d0f169447f0a1d5ffe15b1b8	2026-02-13	pending		Fix another typo. It changes src/
+e95c25d505e1a9e8d0f169447f0a1d5ffe15b1b8	2026-02-13	ported	c5ef6dc	Fix another typo. It changes src/
 f236a78354cfd9b0d35da7ce370586f32a3257df	2026-02-13	not-applicable		Remove git from production image. It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
 4a087250a3d83d42bf86eead13350a4e01274260	2026-02-13	not-applicable		Update github CI. It changes .github/. Not applicable: it changes no code of binwalk-ng
 ea0015de013347e3304ba0b77c4b6645196ddc62	2026-02-13	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 3781d9e1a1034ff28ba56354e4061aefb20702fe	2026-02-13	not-applicable		Update github actions. It changes .github/. Not applicable: it changes no code of binwalk-ng
-27f367d1bbfcf1fa1577a05f79e4bde526d2f847	2026-02-14	pending		Fix crate name and use tempdir for tests. It changes .dockerignore, CARGO_README.md, Cargo.lock, Cargo.toml, Dockerfile, fuzzing/, src/, tests/
-cde9e40acc928091517e5586f4ba85f4a660beaa	2026-02-14	pending		Fix clippy warning. It changes src/, tests/
-d31d1251b04b1a151c0a02e427ed8b00cf99ac47	2026-02-14	pending		Replace is_ascii_number with is_ascii_digit. It changes src/
-21c6efaefd91eb9e10be081630781cb57db8c367	2026-02-14	pending		Use jiff instead of chrono for epoch_to_string. It changes Cargo.lock, Cargo.toml, src/
-d4a2974f89a2d3a7bc79c7bf7228592b27f1991d	2026-02-14	pending		Some rust optimizations. It changes src/
+27f367d1bbfcf1fa1577a05f79e4bde526d2f847	2026-02-14	ported	c5ef6dc	Fix crate name and use tempdir for tests. It changes .dockerignore, CARGO_README.md, Cargo.lock, Cargo.toml, Dockerfile, fuzzing/, src/, tests/
+cde9e40acc928091517e5586f4ba85f4a660beaa	2026-02-14	ported	c5ef6dc	Fix clippy warning. It changes src/, tests/
+d31d1251b04b1a151c0a02e427ed8b00cf99ac47	2026-02-14	ported	c5ef6dc	Replace is_ascii_number with is_ascii_digit. It changes src/
+21c6efaefd91eb9e10be081630781cb57db8c367	2026-02-14	ported	c5ef6dc	Use jiff instead of chrono for epoch_to_string. It changes Cargo.lock, Cargo.toml, src/
+d4a2974f89a2d3a7bc79c7bf7228592b27f1991d	2026-02-14	ported	c5ef6dc	Some rust optimizations. It changes src/
 4577141642a09ad9c19757af2c6ad9efaa6ea0cd	2026-02-14	not-applicable		Reduce docker image size (by mounting uv instead of copying it). It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
 2bcac7e029eab2979e2b5861a18b628ad771ff6c	2026-02-14	not-applicable		cargo update and minor docker optimization. It changes Cargo.lock, Dockerfile. Not applicable: it changes no code of binwalk-ng
 9d0e40969d179c4f6f789835657dc1cffec6dded	2026-02-14	not-applicable		Add ghcr workflow. It changes .github/. Not applicable: it changes no code of binwalk-ng
-1b289a972d07cdc371adba04aeb02e8ae2e4d6fb	2026-02-27	pending		CLI Improvements (#2). It changes Cargo.lock, src/, tests/
-9786be806afd1a5f2246936c6be3ddaba844bd6c	2026-02-27	pending		Use path objects for paths (#3). It changes Cargo.lock, src/
-24e33e48c6bca3b5c21f8ef38cc6ddc35323efa7	2026-02-28	pending		refactor: optimize arcadyan deobfuscator. It changes src/
-a88e0b52b94834dda2881aad746187af8b4e515b	2026-02-28	pending		refactor: clean up autel impl. It changes src/
+1b289a972d07cdc371adba04aeb02e8ae2e4d6fb	2026-02-27	ported	c5ef6dc	CLI Improvements (#2). It changes Cargo.lock, src/, tests/
+9786be806afd1a5f2246936c6be3ddaba844bd6c	2026-02-27	ported	c5ef6dc	Use path objects for paths (#3). It changes Cargo.lock, src/
+24e33e48c6bca3b5c21f8ef38cc6ddc35323efa7	2026-02-28	ported	c5ef6dc	refactor: optimize arcadyan deobfuscator. It changes src/
+a88e0b52b94834dda2881aad746187af8b4e515b	2026-02-28	ported	c5ef6dc	refactor: clean up autel impl. It changes src/
 3c111c687fbcbeb74f64e71d95fefdff28b09b42	2026-03-01	not-applicable		Merge pull request #5 from Dr-Emann/push-xpvqsqyyyqns. Not applicable: a merge, whose changes are in the commits that it merges
 2bceaefda1d87b6f3a074b57b4c850cef37f7aee	2026-03-01	not-applicable		Merge pull request #6 from Dr-Emann/push-nstnsvyozxns. Not applicable: a merge, whose changes are in the commits that it merges
-7b85a114798d9bb3ebfb54553ea6c939782e0ef1	2026-03-01	pending		Optimize some rust code. It changes src/
-338c4be7c1388231e920d6bfde9db9a419db6317	2026-03-01	pending		Fix clippy warning. It changes src/
+7b85a114798d9bb3ebfb54553ea6c939782e0ef1	2026-03-01	ported	c5ef6dc	Optimize some rust code. It changes src/
+338c4be7c1388231e920d6bfde9db9a419db6317	2026-03-01	ported	c5ef6dc	Fix clippy warning. It changes src/
 15b1bd48766c15291bf92f60509ecbcc60e6e983	2026-03-01	not-applicable		Use forked delink. It changes Cargo.lock, Cargo.toml. Not applicable: it changes no code of binwalk-ng
 13e42161d889336351afb05c8c0e7062dc6f80d6	2026-03-01	not-applicable		Merge pull request #9 from binwalk-ng/swich-to-forked-delink. Not applicable: a merge, whose changes are in the commits that it merges
 8ae683a465ee004a86484ae6f4b862e56a344107	2026-03-01	not-applicable		Migrate to main branch. It changes .github/. Not applicable: it changes no code of binwalk-ng
-9f720b9e33128b9083928bdccee612a9f63c440d	2026-03-01	pending		refactor: clean up common parse function. It changes src/
-edde0b67ac139dade4c3a4f64ab8380a22757105	2026-03-01	pending		refactor: cleanup of some common functions. It changes src/
-b1ec57dbb57cf5e1b44af55226ca41b987024d9a	2026-03-01	pending		Simplify pad_to_length even more. It changes src/
+9f720b9e33128b9083928bdccee612a9f63c440d	2026-03-01	ported	c5ef6dc	refactor: clean up common parse function. It changes src/
+edde0b67ac139dade4c3a4f64ab8380a22757105	2026-03-01	ported	c5ef6dc	refactor: cleanup of some common functions. It changes src/
+b1ec57dbb57cf5e1b44af55226ca41b987024d9a	2026-03-01	ported	c5ef6dc	Simplify pad_to_length even more. It changes src/
 71fa3bfc9a0533eb777f01bf45d3321b7d4905ec	2026-03-01	not-applicable		Merge pull request #4 from Dr-Emann/push-ulquoypvkrms. Not applicable: a merge, whose changes are in the commits that it merges
 263d5d302f2b04a21728d230dbbba959abcf1182	2026-03-01	not-applicable		Merge branch 'main' into some-optimizations. Not applicable: a merge, whose changes are in the commits that it merges
 7057a82a3c86e47eb48b20dbecca0233904d0376	2026-03-01	not-applicable		Merge pull request #8 from binwalk-ng/some-optimizations. Not applicable: a merge, whose changes are in the commits that it merges
 ff6d47e802a5ecbd0a8d7e0374a65a49cee58961	2026-03-01	not-applicable		chore(deps): introduce zerocopy dependency. It changes Cargo.lock, Cargo.toml. Not applicable: it changes no code of binwalk-ng
-9c5aa6480883260bfb54215ac1becc97776317a2	2026-03-01	pending		refactor: use zerocopy for "parsing" bmp headers. It changes src/
+9c5aa6480883260bfb54215ac1becc97776317a2	2026-03-01	ported	c5ef6dc	refactor: use zerocopy for "parsing" bmp headers. It changes src/
 71f16b18009a3504f64f5bcd7fe302448e5dc373	2026-03-01	not-applicable		Merge pull request #10 from Dr-Emann/push-oovstowtsnks. Not applicable: a merge, whose changes are in the commits that it merges
 0fc0bd88ef4ba0431216cbd211fd2cf4bfa0934e	2026-03-01	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-b63800758b92c8e15fc7ea96636eca6af6acdc0b	2026-03-01	pending		Migrate structures::linux to zerocopy. It changes src/
+b63800758b92c8e15fc7ea96636eca6af6acdc0b	2026-03-01	ported	c5ef6dc	Migrate structures::linux to zerocopy. It changes src/
 f4c280df6d1f9f31514f6fed1b8bce42b915a92f	2026-03-01	not-applicable		test: add test for lzfse extraction. It changes tests/. Not applicable: it changes no code of binwalk-ng
-2cd9589e1b6d03efcbacdfd35ad09b7fa7f0bb50	2026-03-01	pending		feat: internal extractor for lzfse. It changes Cargo.lock, Cargo.toml, src/, tests/
-e2d9fbee1ef8d9bbcd5317d20fc99a211547e37c	2026-03-02	pending		Use ref_from_prefix insteaf of ref_from_bytes. It changes src/
-bf9359d7dcd6691be3920e5a3229fb7a4545b9ad	2026-03-02	pending		Migrate structures::elf to zerocopy. It changes src/
-ea2ccbc92a46c2c427097583fe980c470622a09d	2026-03-02	pending		Remove use of parse in signatures::rsa, and avoid an unneeded clone. It changes src/
-e2ef2a4bfda8f9535d5450ec4ecd6dc2da39f15f	2026-03-02	pending		Migrate structures::autel to zerocopy. It changes src/
-b8d60ef880d5de57b6f3c8e83e45d8b2ca5aa60a	2026-03-02	pending		Migrate structures::android_bootimg to zerocopy. It changes src/
-9e04b7d47dc3a599751d7e0cd39d2313a7d638b7	2026-03-02	pending		Use ref_from_prefix insteaf of ref_from_bytes in zimage header parsing. It changes src/
-9c54abce71055073efdd057a73b0844d3f51e0ad	2026-03-02	pending		Migrate structures::lzma to zerocopy. It changes src/
-8e7db6de2afcbf44b251bb9783ca2c0bb286339b	2026-03-02	pending		Migrate structures::ntfs to zerocopy. It changes src/
-fc591b2c2c65ba8966ef899a87a263edd6040d50	2026-03-02	pending		Migrate structures::binhdr to zerocopy. It changes src/
-f1221c1bfe3922eb85063026d5a029da4f151b13	2026-03-13	pending		Migrate structures::tplink to zerocopy. It changes src/
-eb57de84a2c93a002dcccc5bc1f0eced6ad9303a	2026-03-13	pending		Migrate structures::shrs to zerocopy. It changes src/
+2cd9589e1b6d03efcbacdfd35ad09b7fa7f0bb50	2026-03-01	ported	c5ef6dc	feat: internal extractor for lzfse. It changes Cargo.lock, Cargo.toml, src/, tests/
+e2d9fbee1ef8d9bbcd5317d20fc99a211547e37c	2026-03-02	ported	c5ef6dc	Use ref_from_prefix insteaf of ref_from_bytes. It changes src/
+bf9359d7dcd6691be3920e5a3229fb7a4545b9ad	2026-03-02	ported	c5ef6dc	Migrate structures::elf to zerocopy. It changes src/
+ea2ccbc92a46c2c427097583fe980c470622a09d	2026-03-02	ported	c5ef6dc	Remove use of parse in signatures::rsa, and avoid an unneeded clone. It changes src/
+e2ef2a4bfda8f9535d5450ec4ecd6dc2da39f15f	2026-03-02	ported	c5ef6dc	Migrate structures::autel to zerocopy. It changes src/
+b8d60ef880d5de57b6f3c8e83e45d8b2ca5aa60a	2026-03-02	ported	c5ef6dc	Migrate structures::android_bootimg to zerocopy. It changes src/
+9e04b7d47dc3a599751d7e0cd39d2313a7d638b7	2026-03-02	ported	c5ef6dc	Use ref_from_prefix insteaf of ref_from_bytes in zimage header parsing. It changes src/
+9c54abce71055073efdd057a73b0844d3f51e0ad	2026-03-02	ported	c5ef6dc	Migrate structures::lzma to zerocopy. It changes src/
+8e7db6de2afcbf44b251bb9783ca2c0bb286339b	2026-03-02	ported	c5ef6dc	Migrate structures::ntfs to zerocopy. It changes src/
+fc591b2c2c65ba8966ef899a87a263edd6040d50	2026-03-02	ported	c5ef6dc	Migrate structures::binhdr to zerocopy. It changes src/
+f1221c1bfe3922eb85063026d5a029da4f151b13	2026-03-13	ported	c5ef6dc	Migrate structures::tplink to zerocopy. It changes src/
+eb57de84a2c93a002dcccc5bc1f0eced6ad9303a	2026-03-13	ported	c5ef6dc	Migrate structures::shrs to zerocopy. It changes src/
 522edfd657c43b856c9e37507d9a88ec159ca91f	2026-03-13	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-03080a708c5a08d117edb98ae867355c9dab9545	2026-03-13	pending		Change member from Vec to an array. It changes src/
-d9c16a8c2799c774667c45dbdf9c9a83b217f2f9	2026-03-20	pending		Borrow link_path. It changes src/
+03080a708c5a08d117edb98ae867355c9dab9545	2026-03-13	ported	c5ef6dc	Change member from Vec to an array. It changes src/
+d9c16a8c2799c774667c45dbdf9c9a83b217f2f9	2026-03-20	ported	c5ef6dc	Borrow link_path. It changes src/
 63c3e11664b32de7f904fe87d937a4bb5d643be3	2026-03-20	not-applicable		Merge pull request #16 from cocoon/fix_build_windows_add_borrow. Not applicable: a merge, whose changes are in the commits that it merges
 8c5086715427dbf4024dba63cd6cb1e776817e4d	2026-03-21	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-d7b0103961460ca41986cd1450c6f598823c8df7	2026-03-21	pending		Migrate structures::dlob to zerocopy. It changes src/
-f13207107f91a7ef8f671ba39ae490b7d6a2e1a4	2026-03-21	pending		Migrate structures::dxbc to zerocopy. It changes src/
-7811efb1a1e2a4bb187a9f36505264337b52999f	2026-03-21	pending		Migrate structures::dmg to zerocopy. It changes src/
+d7b0103961460ca41986cd1450c6f598823c8df7	2026-03-21	ported	c5ef6dc	Migrate structures::dlob to zerocopy. It changes src/
+f13207107f91a7ef8f671ba39ae490b7d6a2e1a4	2026-03-21	ported	c5ef6dc	Migrate structures::dxbc to zerocopy. It changes src/
+7811efb1a1e2a4bb187a9f36505264337b52999f	2026-03-21	ported	c5ef6dc	Migrate structures::dmg to zerocopy. It changes src/
 b47ba13b4472a3a27f6579f27ce48f6a94c28289	2026-03-28	not-applicable		Merge pull request #12 from binwalk-ng/zerocopy-phase-1. Not applicable: a merge, whose changes are in the commits that it merges
 f8ec2a510029e24136d29cb1b9ede2f91282d990	2026-03-28	not-applicable		Merge pull request #13 from Dr-Emann/push-otuoqpomnnnu. Not applicable: a merge, whose changes are in the commits that it merges
-a2aa0c8e50bf39e694d3d9c98546f86b1f396623	2026-03-29	pending		Migrate structures::gif to zerocopy. It changes src/
-6d3f1440f5d4f9e8c6d382707eb8d7db891ae397	2026-03-29	pending		Migrate structures::ubi to zerocopy. It changes src/
+a2aa0c8e50bf39e694d3d9c98546f86b1f396623	2026-03-29	ported	c5ef6dc	Migrate structures::gif to zerocopy. It changes src/
+6d3f1440f5d4f9e8c6d382707eb8d7db891ae397	2026-03-29	ported	c5ef6dc	Migrate structures::ubi to zerocopy. It changes src/
 33db71fc41118124ad0da7711bcf154f2c7ac6a2	2026-03-30	not-applicable		Use Ubuntu 26.04 as docker base. It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
-f85d24b582efdb483d64c99ca6d8a28a4cd2a536	2026-03-31	pending		Migrate structures::wince to zerocopy. It changes src/
-623dfaea43554631dc615f6521df7614d3508043	2026-04-05	pending		Migrate structures::mbr to zerocopy. It changes src/
-944b55bdf08ee669e9d6b4ef127ddc0dbb44e64c	2026-04-05	pending		Migrate structures::zstd to zerocopy and add u24. It changes Cargo.lock, Cargo.toml, src/
-e37860d4d89e3c59e0237b30890393dca41f16f2	2026-04-07	pending		Fix u24 usage. It changes src/
-36053c11d696ab094e475818b9fc30cac15e9172	2026-04-07	pending		Migrate structures::uefi to zerocopy. It changes src/
-2dcf66e60ad30c14b7212a73067c524aa1b4b0c5	2026-04-07	pending		Migrate structures::sevenzip to zerocopy. It changes src/
-4db4908cc9fcd8cae5264e7441579c29adf35812	2026-04-07	pending		Migrate structures::apfs to zerocopy. It changes src/
-29db0bb6aee668192f8d19b9117b744bbe15cc2d	2026-04-07	pending		Migrate structures::androidsparse to zerocopy. It changes src/
-b1bc8dbf6b9623ce15b473c26011492928a6ebc3	2026-04-07	pending		Migrate structures::ext to zerocopy. It changes src/
-5e95cbdd6197cae2e1e68f43c11f54153811be26	2026-04-07	pending		Migrate structures::fat to zerocopy. It changes src/
-453608feed059855356267b338764a309f374c2f	2026-04-08	pending		Migrate structures::pchrom to zerocopy and fix a bug. It changes src/
-d1df704ac560b0b4d62251d2fe4692fc572e98f7	2026-04-08	pending		Change some vecs to arrays. It changes src/
-5daec94e966d751a98a2d6fa78ec0d429f4ac9fd	2026-04-08	pending		Change some more vecs to arrays. It changes src/
-7e6e13da9f3b2da9075baf24c1f0e73ffb16e329	2026-04-08	pending		Migrate structures::trx to zerocopy. It changes src/
-0586ab74f41de675d96c85ef7d8dc345f1da6a7a	2026-04-08	pending		Migrate structures::zip to zerocopy. It changes src/
-cb61fe3fab11e91cb940b24ea22b2f4d4a7ce62a	2026-04-08	pending		Migrate structures::chk to zerocopy. It changes src/
-c96a0ff38041105a2d416e6b1c57e7f571ad8939	2026-04-07	pending		fix: avoid possible panic in dlob. It changes src/
+f85d24b582efdb483d64c99ca6d8a28a4cd2a536	2026-03-31	ported	c5ef6dc	Migrate structures::wince to zerocopy. It changes src/
+623dfaea43554631dc615f6521df7614d3508043	2026-04-05	ported	c5ef6dc	Migrate structures::mbr to zerocopy. It changes src/
+944b55bdf08ee669e9d6b4ef127ddc0dbb44e64c	2026-04-05	ported	c5ef6dc	Migrate structures::zstd to zerocopy and add u24. It changes Cargo.lock, Cargo.toml, src/
+e37860d4d89e3c59e0237b30890393dca41f16f2	2026-04-07	ported	c5ef6dc	Fix u24 usage. It changes src/
+36053c11d696ab094e475818b9fc30cac15e9172	2026-04-07	ported	c5ef6dc	Migrate structures::uefi to zerocopy. It changes src/
+2dcf66e60ad30c14b7212a73067c524aa1b4b0c5	2026-04-07	ported	c5ef6dc	Migrate structures::sevenzip to zerocopy. It changes src/
+4db4908cc9fcd8cae5264e7441579c29adf35812	2026-04-07	ported	c5ef6dc	Migrate structures::apfs to zerocopy. It changes src/
+29db0bb6aee668192f8d19b9117b744bbe15cc2d	2026-04-07	ported	c5ef6dc	Migrate structures::androidsparse to zerocopy. It changes src/
+b1bc8dbf6b9623ce15b473c26011492928a6ebc3	2026-04-07	ported	c5ef6dc	Migrate structures::ext to zerocopy. It changes src/
+5e95cbdd6197cae2e1e68f43c11f54153811be26	2026-04-07	ported	c5ef6dc	Migrate structures::fat to zerocopy. It changes src/
+453608feed059855356267b338764a309f374c2f	2026-04-08	ported	c5ef6dc	Migrate structures::pchrom to zerocopy and fix a bug. It changes src/
+d1df704ac560b0b4d62251d2fe4692fc572e98f7	2026-04-08	ported	c5ef6dc	Change some vecs to arrays. It changes src/
+5daec94e966d751a98a2d6fa78ec0d429f4ac9fd	2026-04-08	ported	c5ef6dc	Change some more vecs to arrays. It changes src/
+7e6e13da9f3b2da9075baf24c1f0e73ffb16e329	2026-04-08	ported	c5ef6dc	Migrate structures::trx to zerocopy. It changes src/
+0586ab74f41de675d96c85ef7d8dc345f1da6a7a	2026-04-08	ported	c5ef6dc	Migrate structures::zip to zerocopy. It changes src/
+cb61fe3fab11e91cb940b24ea22b2f4d4a7ce62a	2026-04-08	ported	c5ef6dc	Migrate structures::chk to zerocopy. It changes src/
+c96a0ff38041105a2d416e6b1c57e7f571ad8939	2026-04-07	ported	c5ef6dc	fix: avoid possible panic in dlob. It changes src/
 8484cb2c8da6426351d332af62fa8b7ddf0a258d	2026-04-08	not-applicable		Merge pull request #20 from Dr-Emann/push-rksswqxnmstr. Not applicable: a merge, whose changes are in the commits that it merges
-03ac3e31b7e722f7de8a24bb2b4a25606480c383	2026-04-08	pending		Some optimizations and fix a typo. It changes src/
+03ac3e31b7e722f7de8a24bb2b4a25606480c383	2026-04-08	ported	c5ef6dc	Some optimizations and fix a typo. It changes src/
 35171541a300c6582ff23db4ff2444e5874129a3	2026-04-08	not-applicable		Merge branch 'main' into zerocopy-phase-2. Not applicable: a merge, whose changes are in the commits that it merges
-7d4a2478d887e8fecbbfc7755d77839fce0a3ada	2026-04-08	pending		Migrate structures::dtb to zerocopy. It changes src/
-da5f398aa4cda81e1b6ecdae5524e25aa60df7c8	2026-04-08	pending		Migrate structures::pe to zerocopy. It changes src/
-067867abf6bc739f46a44d8da161782fb6c03509	2026-04-08	pending		Migrate structures::png to zerocopy. It changes src/
-1e283ffe830ff76b4f8db4f6868dbb1dd99ef989	2026-04-08	pending		Migrate structures::mh01 to zerocopy. It changes src/
-79cfab41920007d49822ceaf0591e84b08a54c03	2026-04-08	pending		Migrate structures::gzip to zerocopy. It changes src/
-9b7b847b377a82584ac4a6a943ed5926f9eb2c57	2026-04-09	pending		Partially migrate structures:matter_ota to zerocopy. It changes src/
-e9b5f8218a629627901570ce4293d2c33b669166	2026-04-08	pending		perf: optimize byte swapping. It changes src/
+7d4a2478d887e8fecbbfc7755d77839fce0a3ada	2026-04-08	ported	c5ef6dc	Migrate structures::dtb to zerocopy. It changes src/
+da5f398aa4cda81e1b6ecdae5524e25aa60df7c8	2026-04-08	ported	c5ef6dc	Migrate structures::pe to zerocopy. It changes src/
+067867abf6bc739f46a44d8da161782fb6c03509	2026-04-08	ported	c5ef6dc	Migrate structures::png to zerocopy. It changes src/
+1e283ffe830ff76b4f8db4f6868dbb1dd99ef989	2026-04-08	ported	c5ef6dc	Migrate structures::mh01 to zerocopy. It changes src/
+79cfab41920007d49822ceaf0591e84b08a54c03	2026-04-08	ported	c5ef6dc	Migrate structures::gzip to zerocopy. It changes src/
+9b7b847b377a82584ac4a6a943ed5926f9eb2c57	2026-04-09	ported	c5ef6dc	Partially migrate structures:matter_ota to zerocopy. It changes src/
+e9b5f8218a629627901570ce4293d2c33b669166	2026-04-08	ported	c5ef6dc	perf: optimize byte swapping. It changes src/
 6a721285b1df15b54108db7b1117b1702d79e6b0	2026-04-08	not-applicable		ci: make dockerfile better able to cache. It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
 491a338082ceb3867bc479bac15c05409a459f23	2026-04-10	not-applicable		Merge pull request #22 from Dr-Emann/push-wlyuqmzozmvq. Not applicable: a merge, whose changes are in the commits that it merges
 4883c3163ac56e65d6045dd0c5a67d55b30a73e0	2026-04-10	not-applicable		Merge pull request #17 from binwalk-ng/zerocopy-phase-2. Not applicable: a merge, whose changes are in the commits that it merges
-a232aded0244386660e7e57e335672e385a1a9b2	2026-04-10	pending		Migrate structures::qnx to zerocopy. It changes src/
-9f15f11f4540a7c2ce88940541ba62b778eb3551	2026-04-10	pending		Migrate structures::efigpt to zerocopy. It changes src/
-5843db37e8294a8d11448aea303042f1dec97baf	2026-04-10	pending		Rewrite parse_gpt_partition_entry. It changes src/
-0c573f7cd9dda1eb83a4a0642b54392760f2fdaf	2026-04-10	pending		Fix CI. It changes src/
-5a539359f33f210802c0fb1b81e4e9043cd2f7c0	2026-04-10	pending		Migrate structures::riff to zerocopy. It changes src/
-d4979efafb274a06da210fb4f7e7360b849ac24a	2026-04-10	pending		Migrate structures::lzfse to zerocopy. It changes src/
-75573e1df7f199985848c98eb4686bd04eb2f294	2026-04-10	pending		Reformat gif match. It changes src/
-b1fca5aefab2995e3d07d6c5fe5258041222ac84	2026-04-10	pending		Fix CI. It changes src/
-904c1e59505534def1d273c60e9c5413066b38ab	2026-04-10	pending		Fix CI. It changes src/
-e1e1d18b286f16abe09816491deefeba5b3fcbfa	2026-04-10	pending		Remove unneeded vecs. It changes src/
-63269142905fa7cb05fdf8db084375b1b2e4ef7f	2026-04-10	pending		Migrate structures::iso9660 to zerocopy. It changes src/
-718a5eed119da59544ae7eb9b9107f7107a2ada6	2026-04-10	pending		Use shorter Struct::default(). It changes src/
-28ec343258827e43c08757c40d53c88c5f8c1ff0	2026-04-10	pending		Use shorter Struct::default(). It changes src/
-9b6e421bb08aec89c38a0734cbca1cb83025cec5	2026-04-10	pending		Migrate structures::btrfs to zerocopy. It changes src/
-ce0b9fdb5f6aba1358be2a2b68f393265745d750	2026-04-10	pending		Migrate structures::romfs to zerocopy. It changes src/
-dc578e26e80d435f6f88f3b6f8bb7306c4d6981b	2026-04-10	pending		Optimize lzma_magic. It changes src/
-d878622d6312db07b199399baa25b9a0bcf35676	2026-04-10	pending		Migrate structures::jboot to zerocopy. It changes src/
-2da0f28700124a942722a83ce09ef398549f2373	2026-04-11	pending		Migrate structures::rtk to zerocopy. It changes src/
-9bfe2323f6b9a944176a154fed9dd40a747eb50b	2026-04-11	pending		Migrate structures::xz to zerocopy. It changes src/
-58410bd53a2c3eed438b75517f3159679c9b5133	2026-04-11	pending		Migrate structures::packimg to zerocopy. It changes src/
-cef09e6e8afe65c5a63d4eb95ce05392b0062089	2026-04-11	pending		Migrate structures::logfs to zerocopy. It changes src/
+a232aded0244386660e7e57e335672e385a1a9b2	2026-04-10	ported	c5ef6dc	Migrate structures::qnx to zerocopy. It changes src/
+9f15f11f4540a7c2ce88940541ba62b778eb3551	2026-04-10	ported	c5ef6dc	Migrate structures::efigpt to zerocopy. It changes src/
+5843db37e8294a8d11448aea303042f1dec97baf	2026-04-10	ported	c5ef6dc	Rewrite parse_gpt_partition_entry. It changes src/
+0c573f7cd9dda1eb83a4a0642b54392760f2fdaf	2026-04-10	ported	c5ef6dc	Fix CI. It changes src/
+5a539359f33f210802c0fb1b81e4e9043cd2f7c0	2026-04-10	ported	c5ef6dc	Migrate structures::riff to zerocopy. It changes src/
+d4979efafb274a06da210fb4f7e7360b849ac24a	2026-04-10	ported	c5ef6dc	Migrate structures::lzfse to zerocopy. It changes src/
+75573e1df7f199985848c98eb4686bd04eb2f294	2026-04-10	ported	c5ef6dc	Reformat gif match. It changes src/
+b1fca5aefab2995e3d07d6c5fe5258041222ac84	2026-04-10	ported	c5ef6dc	Fix CI. It changes src/
+904c1e59505534def1d273c60e9c5413066b38ab	2026-04-10	ported	c5ef6dc	Fix CI. It changes src/
+e1e1d18b286f16abe09816491deefeba5b3fcbfa	2026-04-10	ported	c5ef6dc	Remove unneeded vecs. It changes src/
+63269142905fa7cb05fdf8db084375b1b2e4ef7f	2026-04-10	ported	c5ef6dc	Migrate structures::iso9660 to zerocopy. It changes src/
+718a5eed119da59544ae7eb9b9107f7107a2ada6	2026-04-10	ported	c5ef6dc	Use shorter Struct::default(). It changes src/
+28ec343258827e43c08757c40d53c88c5f8c1ff0	2026-04-10	ported	c5ef6dc	Use shorter Struct::default(). It changes src/
+9b6e421bb08aec89c38a0734cbca1cb83025cec5	2026-04-10	ported	c5ef6dc	Migrate structures::btrfs to zerocopy. It changes src/
+ce0b9fdb5f6aba1358be2a2b68f393265745d750	2026-04-10	ported	c5ef6dc	Migrate structures::romfs to zerocopy. It changes src/
+dc578e26e80d435f6f88f3b6f8bb7306c4d6981b	2026-04-10	ported	c5ef6dc	Optimize lzma_magic. It changes src/
+d878622d6312db07b199399baa25b9a0bcf35676	2026-04-10	ported	c5ef6dc	Migrate structures::jboot to zerocopy. It changes src/
+2da0f28700124a942722a83ce09ef398549f2373	2026-04-11	ported	c5ef6dc	Migrate structures::rtk to zerocopy. It changes src/
+9bfe2323f6b9a944176a154fed9dd40a747eb50b	2026-04-11	ported	c5ef6dc	Migrate structures::xz to zerocopy. It changes src/
+58410bd53a2c3eed438b75517f3159679c9b5133	2026-04-11	ported	c5ef6dc	Migrate structures::packimg to zerocopy. It changes src/
+cef09e6e8afe65c5a63d4eb95ce05392b0062089	2026-04-11	ported	c5ef6dc	Migrate structures::logfs to zerocopy. It changes src/
 730dfc958ba2704ad38fc0abf939ba40813e7e9b	2026-04-11	not-applicable		Use tmux for binwalk-ui instead of screen. It changes scripts/. Not applicable: it changes no code of binwalk-ng
 2605ad2e96637a99444e73e0336ef143bcd9d88a	2026-04-11	not-applicable		Fix forward slash in dockefile. It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
-2715fb3955cde105b5941d464e691a9f37ffd239	2026-04-11	pending		Migrate structures::uimage to zerocopy. It changes src/
-72398371bc88e6db432a0fdd8bf4f4d4cebe2fb8	2026-04-11	pending		Additional cleaning up of Default::default. It changes src/
+2715fb3955cde105b5941d464e691a9f37ffd239	2026-04-11	ported	c5ef6dc	Migrate structures::uimage to zerocopy. It changes src/
+72398371bc88e6db432a0fdd8bf4f4d4cebe2fb8	2026-04-11	ported	c5ef6dc	Additional cleaning up of Default::default. It changes src/
 5f025100739e375c14753ccd56aa3066852a422e	2026-04-11	not-applicable		Merge pull request #23 from binwalk-ng/zerocopy-phase-3. Not applicable: a merge, whose changes are in the commits that it merges
-4c656c22a6d9f28c4bcbcea9cbebf01161f92835	2026-04-11	pending		add Fritz!Box EVA kernel image signature/extractor. It changes src/, tests/
+4c656c22a6d9f28c4bcbcea9cbebf01161f92835	2026-04-11	ported	c5ef6dc	add Fritz!Box EVA kernel image signature/extractor. It changes src/, tests/
 b8931cc480341f5cfae0ad60535b56857d17edbf	2026-04-11	not-applicable		Merge pull request #21 from Dr-Emann/push-pkqvwwxkunrl. Not applicable: a merge, whose changes are in the commits that it merges
 fabc67818dad4e565769e37567da360c736ef700	2026-04-12	not-applicable		Merge pull request #26 from grische/eva-signatures-zerocopy. Not applicable: a merge, whose changes are in the commits that it merges
-5e715ab3660c2c9ab7fd8c2743c4ec858ea9400d	2026-04-17	pending		Fix clippy warnings in new rust version. It changes src/
-18e009579a9aacc0c0133b015ac61fef31a4603c	2026-04-17	pending		Perform some optimizations. It changes src/
+5e715ab3660c2c9ab7fd8c2743c4ec858ea9400d	2026-04-17	ported	c5ef6dc	Fix clippy warnings in new rust version. It changes src/
+18e009579a9aacc0c0133b015ac61fef31a4603c	2026-04-17	ported	c5ef6dc	Perform some optimizations. It changes src/
 27aed8df804263aeb1fc1ee93a557c1915ec35d3	2026-04-17	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-3dcf9f2c5a3d5d02d151214f4eed2021e01962e0	2026-04-17	pending		Migrate structures::cab to zerocopy. It changes src/
-c4484ed9601a1c0e417d488f022d2beca772eea1	2026-04-18	pending		Migrate structures::arj to zerocopy. It changes src/
-15fba04df4613a26d6626e0f0ca11f6953444563	2026-04-18	pending		Migrate structures::lz4 to zerocopy. It changes src/
-332f195de60aabd45251cf5f6acd992a6c267434	2026-04-18	pending		Migrate structures::dms to zerocopy. It changes src/
-638b57568b584f8e6857ba621e5fe61ad27cb154	2026-04-18	pending		Migrate structures::rar to zerocopy. It changes src/
-a6cae88052c16ca42a30d38ae9e44b1d10348641	2026-04-18	pending		Migrate structures::lzop to zerocopy. It changes src/
-704698eee4abe8db1201d07ca53e56bb521990f2	2026-04-18	pending		Migrate structures::luks to zerocopy. It changes src/
-a75cf4863fd8dc57e9f62c196c7c7e2ce1d74f24	2026-04-18	pending		Migrate structures::openssl to zerocopy. It changes src/
-e25e50fe301f85cca25255581eec7ce82689bf69	2026-04-24	pending		Migrate structures::dpapi to zerocopy, and fix a bug with u128. It changes src/
-5c6fbc61e3187221723ca5cbef11e634952b94da	2026-04-24	pending		Migrate structures::dlink_tlv to zerocopy. It changes src/
-ecfc801f73d124887e04be329db192e8613640e5	2026-04-24	pending		Fix a bug in lzop (constant false value). It changes src/
-fad02c090c976fd12f96aebadd52f174733eee04	2026-04-24	pending		Migrate structures::qcow to zerocopy. It changes src/
-e1b11f31160794de984b77b2b1b1bcc61669e92f	2026-04-24	pending		Move some initializations to where they are really needed. It changes src/
-6ff437986e860eae8eba17b516dbe5b62dd71fce	2026-04-24	pending		Remove some unneeded HashMap and convert into a match expression. It changes src/
-ff93b0307a1740ec04208f020cbf0f8938bfae4d	2026-04-24	pending		Convert a vec to an array. It changes src/
+3dcf9f2c5a3d5d02d151214f4eed2021e01962e0	2026-04-17	ported	c5ef6dc	Migrate structures::cab to zerocopy. It changes src/
+c4484ed9601a1c0e417d488f022d2beca772eea1	2026-04-18	ported	c5ef6dc	Migrate structures::arj to zerocopy. It changes src/
+15fba04df4613a26d6626e0f0ca11f6953444563	2026-04-18	ported	c5ef6dc	Migrate structures::lz4 to zerocopy. It changes src/
+332f195de60aabd45251cf5f6acd992a6c267434	2026-04-18	ported	c5ef6dc	Migrate structures::dms to zerocopy. It changes src/
+638b57568b584f8e6857ba621e5fe61ad27cb154	2026-04-18	ported	c5ef6dc	Migrate structures::rar to zerocopy. It changes src/
+a6cae88052c16ca42a30d38ae9e44b1d10348641	2026-04-18	ported	c5ef6dc	Migrate structures::lzop to zerocopy. It changes src/
+704698eee4abe8db1201d07ca53e56bb521990f2	2026-04-18	ported	c5ef6dc	Migrate structures::luks to zerocopy. It changes src/
+a75cf4863fd8dc57e9f62c196c7c7e2ce1d74f24	2026-04-18	ported	c5ef6dc	Migrate structures::openssl to zerocopy. It changes src/
+e25e50fe301f85cca25255581eec7ce82689bf69	2026-04-24	ported	c5ef6dc	Migrate structures::dpapi to zerocopy, and fix a bug with u128. It changes src/
+5c6fbc61e3187221723ca5cbef11e634952b94da	2026-04-24	ported	c5ef6dc	Migrate structures::dlink_tlv to zerocopy. It changes src/
+ecfc801f73d124887e04be329db192e8613640e5	2026-04-24	ported	c5ef6dc	Fix a bug in lzop (constant false value). It changes src/
+fad02c090c976fd12f96aebadd52f174733eee04	2026-04-24	ported	c5ef6dc	Migrate structures::qcow to zerocopy. It changes src/
+e1b11f31160794de984b77b2b1b1bcc61669e92f	2026-04-24	ported	c5ef6dc	Move some initializations to where they are really needed. It changes src/
+6ff437986e860eae8eba17b516dbe5b62dd71fce	2026-04-24	ported	c5ef6dc	Remove some unneeded HashMap and convert into a match expression. It changes src/
+ff93b0307a1740ec04208f020cbf0f8938bfae4d	2026-04-24	ported	c5ef6dc	Convert a vec to an array. It changes src/
 577e676d2de5133b8d4fd90485c38b8fa6ab385c	2026-04-24	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 5a6542bd29a4de504b5d654c5b0259aada71aed8	2026-04-24	not-applicable		Update delink. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 1a5e1c9e38220a9665a65b381d485a3d7ee31d94	2026-04-25	not-applicable		Merge pull request #27 from binwalk-ng/zerocopy-phase-4. Not applicable: a merge, whose changes are in the commits that it merges
 073a785bab3f646431a486d93422705ccefae44c	2026-04-25	not-applicable		Merge pull request #18 from binwalk-ng/docker-ubuntu-2604. Not applicable: a merge, whose changes are in the commits that it merges
-08678ebb58a060a4345e394a5df7bf193466ed2f	2026-05-07	pending		feat: add Broadcom ProgramStore firmware. It changes src/, tests/
-5ad45b429cdeb925cb5ed730bd84148896ec4653	2026-05-09	pending		chore: PR Review. It changes src/
+08678ebb58a060a4345e394a5df7bf193466ed2f	2026-05-07	ported	c5ef6dc	feat: add Broadcom ProgramStore firmware. It changes src/, tests/
+5ad45b429cdeb925cb5ed730bd84148896ec4653	2026-05-09	ported	c5ef6dc	chore: PR Review. It changes src/
 fb23302f04e6e9a5f161f6f8e347d9663474cfbd	2026-05-12	not-applicable		Merge pull request #32 from Dr-Emann/push-tuuuolzusqwx. Not applicable: a merge, whose changes are in the commits that it merges
 b66332c07e15e3ff5200e57aef2755d503c12cc4	2026-05-18	not-applicable		Add tests to gha. It changes .github/, Dockerfile. Not applicable: it changes no code of binwalk-ng
 40380f83abd78b763b4c40a4cd4634a1fedc1af8	2026-05-21	not-applicable		Merge pull request #33 from Dr-Emann/push-yqlronxmuwrx. Not applicable: a merge, whose changes are in the commits that it merges
 fee18913a5b02e0def229cfad7d26e76cd90001a	2026-05-22	not-applicable		chore: add migration script. It changes .gitignore, scripts/. Not applicable: it changes no code of binwalk-ng
-f0e9c503ae86f487c568d54b3969a5e369480363	2026-05-22	pending		refactor!: organize modules by format rather than by layer. It changes scripts/, src/, tests/
-043692e8bb078c6e18e770193ed69a6f0c511b92	2026-05-22	pending		refactor: move tests module to bottom of program_store format file. It changes src/
+f0e9c503ae86f487c568d54b3969a5e369480363	2026-05-22	ported	c5ef6dc	refactor!: organize modules by format rather than by layer. It changes scripts/, src/, tests/
+043692e8bb078c6e18e770193ed69a6f0c511b92	2026-05-22	ported	c5ef6dc	refactor: move tests module to bottom of program_store format file. It changes src/
 f819975adf62b93def0c87543f472673586b5d48	2026-05-29	not-applicable		Merge pull request #34 from Dr-Emann/push-ymussrxrvytz. Not applicable: a merge, whose changes are in the commits that it merges
-7b11f0b82d725577f05963b8f6d2f2d15b77fe0c	2026-05-29	pending		Add more clippy lints. It changes Cargo.toml, src/
+7b11f0b82d725577f05963b8f6d2f2d15b77fe0c	2026-05-29	ported	c5ef6dc	Add more clippy lints. It changes Cargo.toml, src/
 956011a18fa6902304c94fa27eacbe573b9d6b64	2026-05-29	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-da085108d8df11ae15b30e5b209942934314e545	2026-05-29	pending		Add nursery clippy warnings. It changes Cargo.lock, Cargo.toml, src/
-7ca2dcc11573f16e76a90e165014a1b58c6f2ffa	2026-05-29	pending		Fix chroot function call. It changes src/
+da085108d8df11ae15b30e5b209942934314e545	2026-05-29	ported	c5ef6dc	Add nursery clippy warnings. It changes Cargo.lock, Cargo.toml, src/
+7ca2dcc11573f16e76a90e165014a1b58c6f2ffa	2026-05-29	ported	c5ef6dc	Fix chroot function call. It changes src/
 25d7fc82478bb1fa550aa08b3ba0bd83fe09b8d8	2026-05-30	not-applicable		Merge pull request #35 from binwalk-ng/extra-lint. Not applicable: a merge, whose changes are in the commits that it merges
-90ecd8a51388eb48f003f6afe485aa48c2a01e33	2026-05-31	pending		chore: migrate matter_ota to zerocopy. It changes src/
-75c2329570f99fd9a3bef4df85dd5554cdb99d0f	2026-06-01	pending		remove useless (incorrect) comment. It changes src/
-88e6ec39d5b949ce9bf01a1048491a9be6019b09	2026-06-01	pending		simplify split_off_variable_integer. It changes src/
+90ecd8a51388eb48f003f6afe485aa48c2a01e33	2026-05-31	ported	c5ef6dc	chore: migrate matter_ota to zerocopy. It changes src/
+75c2329570f99fd9a3bef4df85dd5554cdb99d0f	2026-06-01	ported	c5ef6dc	remove useless (incorrect) comment. It changes src/
+88e6ec39d5b949ce9bf01a1048491a9be6019b09	2026-06-01	ported	c5ef6dc	simplify split_off_variable_integer. It changes src/
 e0ef169863e0e8c3c017c9348985c9966792c31b	2026-06-02	not-applicable		Merge pull request #37 from Dr-Emann/push-kkxxxqsmnupu. Not applicable: a merge, whose changes are in the commits that it merges
-91befd107b6cf70354e8cf0b5c0fa8b22e8812e5	2026-06-02	pending		tests: add tiny tests for csman. It changes src/
-4a66e8e65ce74a3970c71fe45f2830d380ed321f	2026-06-02	pending		feat: add Endianness enum, and dyn_endian types. It changes src/
-1bf1ef316c779c5cbbd086f7108d04a8a3bca979	2026-06-02	pending		chore: migrate csman to zerocopy. It changes src/
+91befd107b6cf70354e8cf0b5c0fa8b22e8812e5	2026-06-02	ported	c5ef6dc	tests: add tiny tests for csman. It changes src/
+4a66e8e65ce74a3970c71fe45f2830d380ed321f	2026-06-02	ported	c5ef6dc	feat: add Endianness enum, and dyn_endian types. It changes src/
+1bf1ef316c779c5cbbd086f7108d04a8a3bca979	2026-06-02	ported	c5ef6dc	chore: migrate csman to zerocopy. It changes src/
 f2e3958e1444b16b6c273434c38c36e0194d2c72	2026-06-05	not-applicable		Merge pull request #39 from Dr-Emann/push-qnxlmvswpzro. Not applicable: a merge, whose changes are in the commits that it merges
-d137b8b73a3507b5dfb781da594bd6fcb6974601	2026-06-05	pending		Use dyn_endian for elf parsing. It changes src/
-6e41d51e82ff96ff7f889bd6a31e7a831b52ae0b	2026-06-05	pending		Remove unneeded hashmaps that were used only once from elf. It changes src/
-fc4986e78eacd356c43a7f335ffd4cb0803aec55	2026-06-05	pending		Make the sevenzip extractor use 7z instead of 7zz. It changes Dockerfile, dependencies/, src/
+d137b8b73a3507b5dfb781da594bd6fcb6974601	2026-06-05	ported	c5ef6dc	Use dyn_endian for elf parsing. It changes src/
+6e41d51e82ff96ff7f889bd6a31e7a831b52ae0b	2026-06-05	ported	c5ef6dc	Remove unneeded hashmaps that were used only once from elf. It changes src/
+fc4986e78eacd356c43a7f335ffd4cb0803aec55	2026-06-05	ported	c5ef6dc	Make the sevenzip extractor use 7z instead of 7zz. It changes Dockerfile, dependencies/, src/
 34fbbaf5d635502b9c2142b3b0ebd294263748af	2026-06-05	not-applicable		Merge remote-tracking branch 'upstream/master' into port-androidsparse-fix. Not applicable: a merge, whose changes are in the commits that it merges
-1826e61e89c3a4d72387d42363d8a10d5ec897ed	2026-06-05	pending		Port everything and fix the tests. It changes Cargo.toml, src/, tests/
-57d2768d90d3bdc5c749926efc5c7a1e0e325815	2026-06-05	pending		Make the check slightly shorter. It changes src/
-024479a20813cfcb3998ee006808572fe8776a1c	2026-06-05	pending		Migrate structures::seama to zerocopy. It changes src/
-f907a6a7ab37a51c11d5fb9c86842b72d720c086	2026-06-05	pending		Use correct function for pasrsing, and fix comment. It changes src/
-eab556e54e0e252e25cb0d6c07bb0cd1aff2e18f	2026-06-05	pending		Migrate formats::yaffs to zerocopy. It changes src/
-265b58f4fe0b9e6b7627785bdf97dfc6dcc11786	2026-06-06	pending		Migrate formats::vxworks to zerocopy. It changes src/
-3e26d854f658ab599dd62885902bac2eaf32f899	2026-06-06	pending		Migrate formats::cramfs to zerocopy. It changes src/
-3937e1fc5cad2a0c5b0446883dd60f0fbf287cd6	2026-06-06	pending		Migrate formats::jffs2 to zerocopy. It changes src/
-694883ab4cc5462e3697f40adc88c28a21128b91	2026-06-06	pending		test(tarball): add extraction tests and ustar fixture. It changes src/, tests/
-ad25b03d05736ae07896aab1680403d1497df92b	2026-06-06	pending		feat(tarball): replace external `tar` with internal Rust extractor. It changes Cargo.lock, Cargo.toml, Dockerfile, dependencies/, src/, tests/
-07ee40590014bb27a3451d2c1fbbd958380093cf	2026-06-06	pending		fix(extractors): prevent symlink-traversal escape in Chroot. It changes src/, tests/
+1826e61e89c3a4d72387d42363d8a10d5ec897ed	2026-06-05	ported	c5ef6dc	Port everything and fix the tests. It changes Cargo.toml, src/, tests/
+57d2768d90d3bdc5c749926efc5c7a1e0e325815	2026-06-05	ported	c5ef6dc	Make the check slightly shorter. It changes src/
+024479a20813cfcb3998ee006808572fe8776a1c	2026-06-05	ported	c5ef6dc	Migrate structures::seama to zerocopy. It changes src/
+f907a6a7ab37a51c11d5fb9c86842b72d720c086	2026-06-05	ported	c5ef6dc	Use correct function for pasrsing, and fix comment. It changes src/
+eab556e54e0e252e25cb0d6c07bb0cd1aff2e18f	2026-06-05	ported	c5ef6dc	Migrate formats::yaffs to zerocopy. It changes src/
+265b58f4fe0b9e6b7627785bdf97dfc6dcc11786	2026-06-06	ported	c5ef6dc	Migrate formats::vxworks to zerocopy. It changes src/
+3e26d854f658ab599dd62885902bac2eaf32f899	2026-06-06	ported	c5ef6dc	Migrate formats::cramfs to zerocopy. It changes src/
+3937e1fc5cad2a0c5b0446883dd60f0fbf287cd6	2026-06-06	ported	c5ef6dc	Migrate formats::jffs2 to zerocopy. It changes src/
+694883ab4cc5462e3697f40adc88c28a21128b91	2026-06-06	ported	c5ef6dc	test(tarball): add extraction tests and ustar fixture. It changes src/, tests/
+ad25b03d05736ae07896aab1680403d1497df92b	2026-06-06	ported	c5ef6dc	feat(tarball): replace external `tar` with internal Rust extractor. It changes Cargo.lock, Cargo.toml, Dockerfile, dependencies/, src/, tests/
+07ee40590014bb27a3451d2c1fbbd958380093cf	2026-06-06	ported	c5ef6dc	fix(extractors): prevent symlink-traversal escape in Chroot. It changes src/, tests/
 29a8449193a8f87c15665937e875653689999d72	2026-06-06	not-applicable		Update CI action versions and add cache. It changes .github/. Not applicable: it changes no code of binwalk-ng
 68c5b31f47d32ef47d904a30b63bad3c638e04f8	2026-06-06	not-applicable		Merge pull request #45 from binwalk-ng/update-ci. Not applicable: a merge, whose changes are in the commits that it merges
-46482845074c590f9ade903dbf9c686fca11cc02	2026-06-06	pending		Remove obsolete comment and make code more consistent. It changes src/
+46482845074c590f9ade903dbf9c686fca11cc02	2026-06-06	ported	c5ef6dc	Remove obsolete comment and make code more consistent. It changes src/
 b08e2109db3ccaabb680b53390a1022796711dbe	2026-06-06	not-applicable		Merge branch 'main' into zerocopy-phase-5. Not applicable: a merge, whose changes are in the commits that it merges
 b9dde9545b2dbec88dab2cb9739bc3050cb8339f	2026-06-06	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-2a0fe8f8b7c7968db90f154ce3d6cb3ffb5a8e00	2026-06-06	pending		Migrate formats::pcap to zerocopy. It changes src/
-c16290ee3e74dda1f3eb483ba93666baf523ab7f	2026-06-06	pending		Migrate formats::dkbs to zerocopy. It changes src/
-176e495a417da18d3c71a3cb7611e7b609424e0c	2026-06-06	pending		Migrate formats::squashfs to zerocopy and remove old parser code. It changes src/
-2a4b35de891525cd1eb080fc8280fc052a1a3092	2026-06-06	pending		Remove single field structs and use U32 directly. It changes src/
-846e1e53a13743c07060f328c1a6ff822c19af5e	2026-06-06	pending		Fix formatting. It changes src/
-fa30beb893194a86cbb6e41fbf2f40458fc94d7e	2026-06-06	pending		Remove single field structs and use U32 directly. It changes src/
-4c1963c755c59b844d7dd7fe86802019d59ccb22	2026-06-06	pending		Remove unneeded use of a HashMap and an owned String. It changes src/
-d0a5f2ac728805f5dd0ed5f472dc2f051274d09c	2026-06-06	pending		Use native rar extraction using the rars crate. It changes Cargo.lock, Cargo.toml, Dockerfile, dependencies/, src/
-a3f20fecdc27580c48a492c65be9b9db7b5db969	2026-06-06	pending		Add doctest. It changes src/
-c5c6ff49692f64128803e42d47d87b78ff6534f9	2026-06-07	pending		Fix typo. It changes src/
-f32bedc23e8ea0fd473ed7149866b9b9121520b9	2026-06-07	pending		Some optimizations according to CR. It changes src/
-3c9ccf7c3f43a5c0d5eb25cc3d3ccef5026f6a66	2026-06-08	pending		Make check nicer. It changes src/
-6b5179ebeb071357981ac7800037c029273dfd2c	2026-06-08	pending		Make if nicer using a match. It changes src/
-217479278cc180085bbbf102e1e41ec48dd8803a	2026-06-07	pending		refactor(androidsparse): use a ChunkType enum rather than 4 booleans. It changes src/
-8f1e37108b6896f972dadda4f049d7b18f5be23e	2026-06-07	pending		perf(androindsparse): better extract_chunk for fill chunks. It changes src/
+2a0fe8f8b7c7968db90f154ce3d6cb3ffb5a8e00	2026-06-06	ported	c5ef6dc	Migrate formats::pcap to zerocopy. It changes src/
+c16290ee3e74dda1f3eb483ba93666baf523ab7f	2026-06-06	ported	c5ef6dc	Migrate formats::dkbs to zerocopy. It changes src/
+176e495a417da18d3c71a3cb7611e7b609424e0c	2026-06-06	ported	c5ef6dc	Migrate formats::squashfs to zerocopy and remove old parser code. It changes src/
+2a4b35de891525cd1eb080fc8280fc052a1a3092	2026-06-06	ported	c5ef6dc	Remove single field structs and use U32 directly. It changes src/
+846e1e53a13743c07060f328c1a6ff822c19af5e	2026-06-06	ported	c5ef6dc	Fix formatting. It changes src/
+fa30beb893194a86cbb6e41fbf2f40458fc94d7e	2026-06-06	ported	c5ef6dc	Remove single field structs and use U32 directly. It changes src/
+4c1963c755c59b844d7dd7fe86802019d59ccb22	2026-06-06	ported	c5ef6dc	Remove unneeded use of a HashMap and an owned String. It changes src/
+d0a5f2ac728805f5dd0ed5f472dc2f051274d09c	2026-06-06	ported	c5ef6dc	Use native rar extraction using the rars crate. It changes Cargo.lock, Cargo.toml, Dockerfile, dependencies/, src/
+a3f20fecdc27580c48a492c65be9b9db7b5db969	2026-06-06	ported	c5ef6dc	Add doctest. It changes src/
+c5c6ff49692f64128803e42d47d87b78ff6534f9	2026-06-07	ported	c5ef6dc	Fix typo. It changes src/
+f32bedc23e8ea0fd473ed7149866b9b9121520b9	2026-06-07	ported	c5ef6dc	Some optimizations according to CR. It changes src/
+3c9ccf7c3f43a5c0d5eb25cc3d3ccef5026f6a66	2026-06-08	ported	c5ef6dc	Make check nicer. It changes src/
+6b5179ebeb071357981ac7800037c029273dfd2c	2026-06-08	ported	c5ef6dc	Make if nicer using a match. It changes src/
+217479278cc180085bbbf102e1e41ec48dd8803a	2026-06-07	ported	c5ef6dc	refactor(androidsparse): use a ChunkType enum rather than 4 booleans. It changes src/
+8f1e37108b6896f972dadda4f049d7b18f5be23e	2026-06-07	ported	c5ef6dc	perf(androindsparse): better extract_chunk for fill chunks. It changes src/
 06a14626d9c9b85f3135433e778110d6d99d8c4a	2026-06-07	not-applicable		tests: add insta snapshot tests to all format tests. It changes Cargo.lock, Cargo.toml, Dockerfile, tests/. Not applicable: it changes no code of binwalk-ng
 30c4dd880f3ee5744e249276b54fa1b922b5d795	2026-06-07	not-applicable		ci: run tests via dev container with mounted code. It changes .github/, Dockerfile. Not applicable: it changes no code of binwalk-ng
 b291640b74f3287e7cfb70c79f114c1ac300a1ad	2026-06-08	not-applicable		Merge pull request #47 from Dr-Emann/push-rllpoqnplkvu. Not applicable: a merge, whose changes are in the commits that it merges
@@ -226,32 +226,32 @@ b104398b0b38c45118c62a198d0c75febef91210	2026-06-09	not-applicable		Merge pull r
 acb595b793a1753ab045b64e05dd79abe8d4ccea	2026-06-09	not-applicable		Merge pull request #40 from DanielBotnik/internal-tarball-extractor. Not applicable: a merge, whose changes are in the commits that it merges
 678f30a10cbf0aa190e4b15b63bd7006eeca1e74	2026-06-09	not-applicable		Fix dockerfile and add tar insta tests snaps. It changes Dockerfile, tests/. Not applicable: it changes no code of binwalk-ng
 7c3cdba1ca72c9e06dbae7641c971b377b0e18e4	2026-06-09	not-applicable		Merge branch 'main' into native-unrar-2. Not applicable: a merge, whose changes are in the commits that it merges
-14a07c5a1be6be4ed37507620bfd798d06897177	2026-06-09	pending		fix: don't let symlinks in the output path block extraction. It changes src/
+14a07c5a1be6be4ed37507620bfd798d06897177	2026-06-09	ported	c5ef6dc	fix: don't let symlinks in the output path block extraction. It changes src/
 639b35faeb31929cdb2a6d6b5fdd2d977b24a86b	2026-06-13	not-applicable		Merge pull request #48 from Dr-Emann/push-qwksssxxkrwx. Not applicable: a merge, whose changes are in the commits that it merges
 f997094d4945a40ec7e15b2bab83aa605be803a0	2026-06-13	not-applicable		Merge branch 'main' into native-unrar-2. Not applicable: a merge, whose changes are in the commits that it merges
 0981249a67d87525fb2230c0da3f22de96181675	2026-06-13	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-dff307b0cc9add05b01b9eee8ed22b0c3edbba28	2026-06-13	pending		Apply CR fixes. It changes src/
+dff307b0cc9add05b01b9eee8ed22b0c3edbba28	2026-06-13	ported	c5ef6dc	Apply CR fixes. It changes src/
 284a39054b5caa91405e03851f6ee38c7c8137c4	2026-06-13	not-applicable		Update docker tag to binwalk-ng. It changes .github/. Not applicable: it changes no code of binwalk-ng
-85a67c65b63be4609fad56d213bbbede2f4d1ce6	2026-06-13	pending		Resolve chroot paths physically to prevent symlink escapes. It changes src/
-3e9c62c1cdab1eccb544d1300a2058daa9e28a2b	2026-06-14	pending		refactor: use the library crate from the binary. It changes src/
-71d8ced49edca89849dfcf9787ddb33c06f46b4f	2026-06-14	pending		chore: remove unused `#[allow`s, now that things are only compiled once. It changes src/
+85a67c65b63be4609fad56d213bbbede2f4d1ce6	2026-06-13	ported	c5ef6dc	Resolve chroot paths physically to prevent symlink escapes. It changes src/
+3e9c62c1cdab1eccb544d1300a2058daa9e28a2b	2026-06-14	ported	c5ef6dc	refactor: use the library crate from the binary. It changes src/
+71d8ced49edca89849dfcf9787ddb33c06f46b4f	2026-06-14	ported	c5ef6dc	chore: remove unused `#[allow`s, now that things are only compiled once. It changes src/
 817712921845acaa6081bc9d8990a40cfac2cc00	2026-06-15	not-applicable		chore(docker): remove apt packages unused by build, runtime, or code. It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
 e8ddd2c6e3a735d9f977833ab88c3c9aeb1645e3	2026-06-21	not-applicable		Merge pull request #51 from Dr-Emann/push-knvokzoyktmw. Not applicable: a merge, whose changes are in the commits that it merges
 097e6f1127651b4c1e8fd19f2861ded8b3ccea80	2026-06-21	not-applicable		Merge branch 'main' into native-unrar-2. Not applicable: a merge, whose changes are in the commits that it merges
 e4b64d3f7c30d02accb028ce1c4b0c6ff5105b11	2026-06-21	not-applicable		Merge pull request #50 from Dr-Emann/push-nnmpxrrqlzkt. Not applicable: a merge, whose changes are in the commits that it merges
 b0d60262ba3b2aa46f0dc8d8e3c2fd897a7ab92f	2026-06-21	not-applicable		Merge branch 'main' into native-unrar-2. Not applicable: a merge, whose changes are in the commits that it merges
-257fdc2696cce86609d2889766130906cae62e83	2026-06-21	pending		Add rar tests. It changes src/, tests/
-f266b8978774ee112749445b3c354536bc8831df	2026-06-21	pending		Fix tests. It changes src/, tests/
+257fdc2696cce86609d2889766130906cae62e83	2026-06-21	ported	c5ef6dc	Add rar tests. It changes src/, tests/
+f266b8978774ee112749445b3c354536bc8831df	2026-06-21	ported	c5ef6dc	Fix tests. It changes src/, tests/
 070dc3310330c8cb690cfb015272f48d5f746059	2026-06-21	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 5fe553c4c2f543632757714c667fb48704ed38c4	2026-06-21	not-applicable		Update .gitattributes. It changes .gitattributes. Not applicable: it changes no code of binwalk-ng
 363ae9e5d046fc82f0de6b6406cffbe8af907707	2026-06-21	not-applicable		fix line endings. It changes tests/. Not applicable: it changes no code of binwalk-ng
-133621abe81489747a650e7f70d94d8efe769d95	2026-06-22	pending		Remove bloat. It changes .gitattributes, src/, tests/
+133621abe81489747a650e7f70d94d8efe769d95	2026-06-22	ported	c5ef6dc	Remove bloat. It changes .gitattributes, src/, tests/
 0ece7e64bf3a6e40eac1e43e2dcd004174807224	2026-06-22	not-applicable		Merge pull request #52 from DanielBotnik/chore/dockerfile-prune-unused-deps. Not applicable: a merge, whose changes are in the commits that it merges
 c4efa13a9977d43c399dc61dd463afac1760e9ef	2026-06-25	not-applicable		Merge branch 'main' into native-unrar-2. Not applicable: a merge, whose changes are in the commits that it merges
-022bf1edebec53982c3a951c4b0d264a61be0924	2026-06-25	pending		Address CR comments. It changes Cargo.lock, Cargo.toml, src/
+022bf1edebec53982c3a951c4b0d264a61be0924	2026-06-25	ported	c5ef6dc	Address CR comments. It changes Cargo.lock, Cargo.toml, src/
 8b6cf2a8d28fe85ac96d5d349f24a157b661a343	2026-06-25	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 79d1a58a5bb197c35f735cd5378a2d59a6941ee0	2026-06-27	not-applicable		Merge pull request #46 from binwalk-ng/native-unrar-2. Not applicable: a merge, whose changes are in the commits that it merges
-399754e9146daddb4fc994c7aec4810a84c3e310	2026-07-02	pending		Make logs be with local time zone. It changes src/
+399754e9146daddb4fc994c7aec4810a84c3e310	2026-07-02	ported	c5ef6dc	Make logs be with local time zone. It changes src/
 e28f9ab977eb58e03640089cf7ce5645ea2a37cc	2026-07-02	not-applicable		Update dependencies. It changes Cargo.lock, Cargo.toml. Not applicable: it changes no code of binwalk-ng
 4e561528c2667f6bceb2284744c732272994fdc2	2026-07-02	not-applicable		Don't force UTC timezone in docker image. It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
 df6604f43170bc24eb1d94c1ba25210bb397fc18	2026-07-02	not-applicable		Update github actions versions. It changes .github/. Not applicable: it changes no code of binwalk-ng
@@ -259,23 +259,23 @@ d0617b2a39bf3faf9abc21817ac1f5199af598d7	2026-07-02	not-applicable		Add dependab
 82818ca9cb5f2906b075366e22b04a3194319c51	2026-07-02	not-applicable		Use newer sasquatch, and use a temp dir for building. It changes dependencies/. Not applicable: it changes no code of binwalk-ng
 a8c95031b32803987117fc54f3918ecb332d601f	2026-07-02	not-applicable		Fix fuzzing stuff. It changes fuzzing/. Not applicable: it changes no code of binwalk-ng
 918c3c10723960e0030b790b1336626683453e77	2026-07-02	not-applicable		Fix binwalk-ui and rename to binwalk-ng-ui. It changes scripts/. Not applicable: it changes no code of binwalk-ng
-87fd8f06b296a950a5f90a9e81332bdb62568f3d	2026-07-02	pending		Migrate from unmaintained dependencies to maintained alternatives. It changes Cargo.lock, Cargo.toml, src/
+87fd8f06b296a950a5f90a9e81332bdb62568f3d	2026-07-02	ported	c5ef6dc	Migrate from unmaintained dependencies to maintained alternatives. It changes Cargo.lock, Cargo.toml, src/
 d832a31c530293569bf0974584432343c9d031ba	2026-07-02	not-applicable		Minor fix to shell script. It changes scripts/. Not applicable: it changes no code of binwalk-ng
-a9220012d46188731171b0e412f75340e0fbeb79	2026-07-02	pending		Migrate from threadpool to rayon. It changes Cargo.lock, Cargo.toml, src/
-d290c27fdebb5b6b888e0b251c4637b81bc3f904	2026-07-02	pending		Backport csman bomb fixes. It changes src/, tests/
-54d0b02338ad0f1aa59f5d11a4710c7427e05915	2026-07-02	pending		Be consistent with endianness and fix strings like Little Endian endian. It changes src/, tests/
-7771dcfd7b0786cd754c6e16409ca5f71b6d3538	2026-07-02	pending		Bump dev dependencies and fix a typo. It changes Cargo.toml, src/
+a9220012d46188731171b0e412f75340e0fbeb79	2026-07-02	ported	c5ef6dc	Migrate from threadpool to rayon. It changes Cargo.lock, Cargo.toml, src/
+d290c27fdebb5b6b888e0b251c4637b81bc3f904	2026-07-02	ported	c5ef6dc	Backport csman bomb fixes. It changes src/, tests/
+54d0b02338ad0f1aa59f5d11a4710c7427e05915	2026-07-02	ported	c5ef6dc	Be consistent with endianness and fix strings like Little Endian endian. It changes src/, tests/
+7771dcfd7b0786cd754c6e16409ca5f71b6d3538	2026-07-02	ported	c5ef6dc	Bump dev dependencies and fix a typo. It changes Cargo.toml, src/
 12cac55f59463a0fa9facc87d06396f77857fd26	2026-07-02	not-applicable		Bump uuid and remove deprecated feature. It changes Cargo.toml. Not applicable: it changes no code of binwalk-ng
 e106c79c41a90e3e3020a3ea19b96854fc5b44f3	2026-07-02	not-applicable		Update version name (for consistency with the removed feature). It changes Cargo.toml. Not applicable: it changes no code of binwalk-ng
 d7648ac56f6e5a96948e3bad42835a1fb4df6fe2	2026-07-03	not-applicable		Merge pull request #56 from binwalk-ng/misc-fixes-2. Not applicable: a merge, whose changes are in the commits that it merges
-c3e303c93e90643071bf7966630a639540c34108	2026-07-03	pending		Create AnalysisFlags struct. It changes src/
-628390a80b126b0280c32fc18c9353b2037ce768	2026-07-03	pending		Optimize loop. It changes src/
-d565753db6523e8adb4afd6115abdb365432652b	2026-07-03	pending		Add support for the new dlink format. It changes Cargo.lock, Cargo.toml, src/
-a92b6b78e4363d442f51c7cfd68d4a4b0540dfe8	2026-07-03	pending		Implement native zstd and lz4 extractors. It changes Cargo.lock, Cargo.toml, Dockerfile, dependencies/, src/, tests/
-4d4410725c1aa12ab2176a83f3d0c0bc5e508ea2	2026-07-04	pending		Don't use cursor where not needed. It changes src/
-5832bf9b5c949cc3e06523aeb1d93b7b8849aaa8	2026-07-04	pending		Add trailing data handling and tests. It changes src/, tests/
+c3e303c93e90643071bf7966630a639540c34108	2026-07-03	ported	c5ef6dc	Create AnalysisFlags struct. It changes src/
+628390a80b126b0280c32fc18c9353b2037ce768	2026-07-03	ported	c5ef6dc	Optimize loop. It changes src/
+d565753db6523e8adb4afd6115abdb365432652b	2026-07-03	ported	c5ef6dc	Add support for the new dlink format. It changes Cargo.lock, Cargo.toml, src/
+a92b6b78e4363d442f51c7cfd68d4a4b0540dfe8	2026-07-03	ported	c5ef6dc	Implement native zstd and lz4 extractors. It changes Cargo.lock, Cargo.toml, Dockerfile, dependencies/, src/, tests/
+4d4410725c1aa12ab2176a83f3d0c0bc5e508ea2	2026-07-04	ported	c5ef6dc	Don't use cursor where not needed. It changes src/
+5832bf9b5c949cc3e06523aeb1d93b7b8849aaa8	2026-07-04	ported	c5ef6dc	Add trailing data handling and tests. It changes src/, tests/
 02442e4f51d70e4e9fd4a33171513362310937ac	2026-07-04	not-applicable		Run cargo fmt. It changes tests/. Not applicable: it changes no code of binwalk-ng
-88a310df89be715ae4256f2fb06b95da27320ec4	2026-07-04	pending		Add prek. It changes images/, prek.toml, scripts/, src/
+88a310df89be715ae4256f2fb06b95da27320ec4	2026-07-04	ported	c5ef6dc	Add prek. It changes images/, prek.toml, scripts/, src/
 8d410f3cc269eb969a646a1b067bcf7218c1e121	2026-07-04	not-applicable		Merge pull request #63 from binwalk-ng/add-prek. Not applicable: a merge, whose changes are in the commits that it merges
 c611eabd54e5cc60a7b6aae47c19b3fa48a0bf26	2026-07-04	not-applicable		Merge pull request #57 from binwalk-ng/backport-csman-fixes. Not applicable: a merge, whose changes are in the commits that it merges
 3f3ebc8158e1e73df94e14cb227b1a055c476d5b	2026-07-05	not-applicable		Merge branch 'main' into dlink-dap-1325. Not applicable: a merge, whose changes are in the commits that it merges
@@ -284,24 +284,24 @@ fc4b574220f3602a54c1e8d73116eb8241b2f2bc	2026-07-05	not-applicable		Run cargo up
 b52d907ede93c9ba6d51d42da520cf667532f7fb	2026-07-09	not-applicable		Bump docker/login-action from 4.3.0 to 4.4.0. It changes .github/. Not applicable: it changes no code of binwalk-ng
 8a0a20def778208b8b6de7dce42c87202bd755f1	2026-07-09	not-applicable		Merge branch 'main' into native-zstd-lz4. Not applicable: a merge, whose changes are in the commits that it merges
 03a042fef6e4da72fc1c361ea1f49aa6ee5b17c7	2026-07-09	not-applicable		cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-c24d7409e7e0df2e4ea54156e56eb18d85084b8a	2026-07-09	pending		Fix clippy warning. It changes src/
+c24d7409e7e0df2e4ea54156e56eb18d85084b8a	2026-07-09	ported	c5ef6dc	Fix clippy warning. It changes src/
 75aa634001090abec5897fbe7c364f819db09c8e	2026-07-09	not-applicable		Merge pull request #61 from binwalk-ng/native-zstd-lz4. Not applicable: a merge, whose changes are in the commits that it merges
 8ccdc2bf2713e98692a3b93890d7ba05ddfa0ba6	2026-07-09	not-applicable		Merge pull request #64 from binwalk-ng/dependabot/github_actions/docker/login-action-4.4.0. Not applicable: a merge, whose changes are in the commits that it merges
 7120c07011fa38a438c9a9f74c5f9f846f26c851	2026-07-09	not-applicable		Merge branch 'main' into migrate-threadpool-to-rayon. Not applicable: a merge, whose changes are in the commits that it merges
 54a6ce13df21e858b0cef399b3ec2dcc5f57a9b3	2026-07-09	not-applicable		cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 8f8d628a131625d925517cfd23319884ace76a92	2026-07-09	not-applicable		Merge pull request #59 from binwalk-ng/migrate-threadpool-to-rayon. Not applicable: a merge, whose changes are in the commits that it merges
-3aad649e8a5a33cbd62fff72b691f9a2dad7ad32	2026-07-11	pending		Implement native srecord extractor. It changes Dockerfile, dependencies/, src/, tests/
+3aad649e8a5a33cbd62fff72b691f9a2dad7ad32	2026-07-11	ported	c5ef6dc	Implement native srecord extractor. It changes Dockerfile, dependencies/, src/, tests/
 bc761cc57a6e2fdda942568e5e86dd4aaae5425e	2026-07-11	not-applicable		Make CI run on PRs to any branch. It changes .github/. Not applicable: it changes no code of binwalk-ng
 f8c366829bbc1b783d47efedc20c94b5d69350a1	2026-07-11	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 99a027a365ca4a52f16e95928845da4d81e7195b	2026-07-11	not-applicable		Update snaps and change Dockerfile doc. It changes Dockerfile, tests/. Not applicable: it changes no code of binwalk-ng
 d30d277062d83c41dfeead00b5739916dea3a2c1	2026-07-11	not-applicable		Try to fix failing CI. It changes .gitattributes. Not applicable: it changes no code of binwalk-ng
 d4298bc02cd92dce84e2ab461f944cb5be8abfa1	2026-07-11	not-applicable		Try to fix failing CI v2. It changes tests/. Not applicable: it changes no code of binwalk-ng
-ef3bdaee213e65e51142dc5b4b4a7224d5d7497d	2026-07-14	pending		Fix srec CR comments. It changes src/
+ef3bdaee213e65e51142dc5b4b4a7224d5d7497d	2026-07-14	ported	c5ef6dc	Fix srec CR comments. It changes src/
 73fb4a22962ce8e685cd50c5154edf3294e36bd5	2026-07-14	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-1d191f088b39cef7eba86e514d672fa90b5c22f1	2026-07-14	pending		Try to address another issue in srec parsing. It changes src/
-3c47b99d247791da91ffbad4e1c542704933bdad	2026-07-14	pending		feat(srec): rewrite to rely on zerocopy for more things. It changes src/
-a0205aacfdd1c9258eeae8d712953c2cf8ea1d6a	2026-07-14	pending		Try to address all CR comments. It changes src/
-42ba0cc17460bf1251eb5223d2d093b0a67b8d56	2026-07-14	pending		Revert "Try to address all CR comments". It changes src/
+1d191f088b39cef7eba86e514d672fa90b5c22f1	2026-07-14	ported	c5ef6dc	Try to address another issue in srec parsing. It changes src/
+3c47b99d247791da91ffbad4e1c542704933bdad	2026-07-14	ported	c5ef6dc	feat(srec): rewrite to rely on zerocopy for more things. It changes src/
+a0205aacfdd1c9258eeae8d712953c2cf8ea1d6a	2026-07-14	ported	c5ef6dc	Try to address all CR comments. It changes src/
+42ba0cc17460bf1251eb5223d2d093b0a67b8d56	2026-07-14	ported	c5ef6dc	Revert "Try to address all CR comments". It changes src/
 0740b2f7a845e93d589f0601efe465f176096dab	2026-07-14	not-applicable		Merge pull request #70 from Dr-Emann/push-xnuynqoxxupz. Not applicable: a merge, whose changes are in the commits that it merges
 6b473cab5725681df9799178d3ee429719d946eb	2026-07-16	not-applicable		Bump lycheeverse/lychee-action from 2.8.0 to 2.9.0. It changes .github/. Not applicable: it changes no code of binwalk-ng
 eeec206cd0c71175d139a86558792d48a684e138	2026-07-18	not-applicable		Merge pull request #71 from binwalk-ng/dependabot/github_actions/lycheeverse/lychee-action-2.9.0. Not applicable: a merge, whose changes are in the commits that it merges
@@ -309,78 +309,78 @@ cab0db9563bc190399440c8ec5637dcd19d8bc77	2026-07-18	not-applicable		Build and pu
 7e5184d2ee9c7ad841fa5beebe5b7b8e88a2110f	2026-07-18	not-applicable		fix(ci): attest the digest of the manifest created by this run, not re-resolved from the tag. It changes .github/. Not applicable: it changes no code of binwalk-ng
 353dce4804fa54eb7bcb325f7a3689fb2bf5f51f	2026-07-21	not-applicable		chore(ci): update action versions. It changes .github/. Not applicable: it changes no code of binwalk-ng
 3c783a0f5908e40d57b04e7c35af8a0eee5acfc8	2026-07-21	not-applicable		Merge pull request #77 from Dr-Emann/push-zuoroszsytrq. Not applicable: a merge, whose changes are in the commits that it merges
-0f54811aea06a226c6aee379fc0ddbcf832e1a0f	2026-07-22	pending		perf(program_store): require nonzero vals for program store header vals early. It changes src/
+0f54811aea06a226c6aee379fc0ddbcf832e1a0f	2026-07-22	ported	c5ef6dc	perf(program_store): require nonzero vals for program store header vals early. It changes src/
 362f4d4a426185db0642fd5b2ea3a54a7dd30947	2026-07-22	not-applicable		Run cargo update. It changes Cargo.lock, Cargo.toml. Not applicable: it changes no code of binwalk-ng
-4ab116debcbb57b89e320ce6b2adf77e2e6ff900	2026-07-22	pending		Allow parsing and extracting non terminated srecord files. It changes src/
+4ab116debcbb57b89e320ce6b2adf77e2e6ff900	2026-07-22	ported	c5ef6dc	Allow parsing and extracting non terminated srecord files. It changes src/
 ca8174e651119572f21786896e6bcb89c30cc4a2	2026-07-22	not-applicable		Revert pwd change. It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
 17700350c406596f4195dadfe17512b3fca19d18	2026-07-22	not-applicable		Merge pull request #69 from binwalk-ng/native-srecord. Not applicable: a merge, whose changes are in the commits that it merges
-6343213a87876b408a0a1ddd875a39aa90e0d518	2026-07-22	pending		perf(scan): skip ahead through runs of zero bytes. It changes src/
-50d416a84937fba1edbb087bb280361fdf580970	2026-07-22	pending		fix(zip): correct available_data bound in corrupted-ZIP header walk. It changes src/
-304dbd833df4fdafb0ae82a1f6446cd70a05445d	2026-07-22	pending		fix(zip): check magic in header parser and treat EOF as valid archive end. It changes src/, tests/
-0be7e8702a3b86d35d2fc427b20533ded539fa26	2026-07-22	pending		refactor(lzma): decompress via XzDecoder + io::copy. It changes src/
+6343213a87876b408a0a1ddd875a39aa90e0d518	2026-07-22	ported	c5ef6dc	perf(scan): skip ahead through runs of zero bytes. It changes src/
+50d416a84937fba1edbb087bb280361fdf580970	2026-07-22	ported	c5ef6dc	fix(zip): correct available_data bound in corrupted-ZIP header walk. It changes src/
+304dbd833df4fdafb0ae82a1f6446cd70a05445d	2026-07-22	ported	c5ef6dc	fix(zip): check magic in header parser and treat EOF as valid archive end. It changes src/, tests/
+0be7e8702a3b86d35d2fc427b20533ded539fa26	2026-07-22	ported	c5ef6dc	refactor(lzma): decompress via XzDecoder + io::copy. It changes src/
 1701798d524a2cadfa8a31add1b091e34acd2812	2026-07-23	not-applicable		Merge pull request #85 from Dr-Emann/push-otsqxqzuqzsp. Not applicable: a merge, whose changes are in the commits that it merges
-d7b0d0cac54c0b319a98733af3a82495e639cc6b	2026-07-23	pending		refactor(program_store): use offeset_of! to compute magic offset. It changes src/
-faa822e7eeafd08e321eed705919bbe15afe1739	2026-07-23	pending		refactor(zip): Define and use constants for local file magic for zip/dahua_zip. It changes src/
+d7b0d0cac54c0b319a98733af3a82495e639cc6b	2026-07-23	ported	c5ef6dc	refactor(program_store): use offeset_of! to compute magic offset. It changes src/
+faa822e7eeafd08e321eed705919bbe15afe1739	2026-07-23	ported	c5ef6dc	refactor(zip): Define and use constants for local file magic for zip/dahua_zip. It changes src/
 a5a543582037c733715618121ca03c5717383a67	2026-07-24	not-applicable		Merge pull request #84 from Dr-Emann/push-lwpnyxwzzrzv. Not applicable: a merge, whose changes are in the commits that it merges
-01af919192957425a2689114343b9ff481b4fa5c	2026-07-24	pending		Add crc32 check to arj, add more fields. It changes src/, tests/
-eacf6ae569dc41881853739d27a9f0d11c03e476	2026-07-24	pending		Address CR comment. It changes src/
+01af919192957425a2689114343b9ff481b4fa5c	2026-07-24	ported	c5ef6dc	Add crc32 check to arj, add more fields. It changes src/, tests/
+eacf6ae569dc41881853739d27a9f0d11c03e476	2026-07-24	ported	c5ef6dc	Address CR comment. It changes src/
 6cb2196794bd9db82af2feaed4b31048dda7d706	2026-07-24	not-applicable		Update snapshot. It changes tests/. Not applicable: it changes no code of binwalk-ng
-500d34e252bfd427e3383d36d90a98170243b175	2026-07-26	pending		feat(androidsparse): create actually sparse files. It changes src/
-813995c38aead2ff459e69c7bd0c20b5d11ae564	2026-07-26	pending		perf(scan): use a signature reference, rather than a clone. It changes src/
+500d34e252bfd427e3383d36d90a98170243b175	2026-07-26	ported	c5ef6dc	feat(androidsparse): create actually sparse files. It changes src/
+813995c38aead2ff459e69c7bd0c20b5d11ae564	2026-07-26	ported	c5ef6dc	perf(scan): use a signature reference, rather than a clone. It changes src/
 c50ce6f1089ab90c6bbc24a386fb5dc87951a003	2026-07-26	not-applicable		Merge pull request #91 from Dr-Emann/push-vmmtynxtyzxs. Not applicable: a merge, whose changes are in the commits that it merges
-dc9432d4b2435c299a8e717442b7957e4e0212ae	2026-07-26	pending		fix(cli): fix the --threads argument, which was unusable. It changes src/
-7c33feda8d2e5078ac3412e20b6c717ebe0b0ab1	2026-07-26	pending		logs: more detailed logging about what extractors are running against. It changes src/
-b1fb71203901b12f0e54a57f5b159b1dbb8dace6	2026-07-26	pending		fix(main): share the Binwalk instance across workers via Arc. It changes src/
+dc9432d4b2435c299a8e717442b7957e4e0212ae	2026-07-26	ported	c5ef6dc	fix(cli): fix the --threads argument, which was unusable. It changes src/
+7c33feda8d2e5078ac3412e20b6c717ebe0b0ab1	2026-07-26	ported	c5ef6dc	logs: more detailed logging about what extractors are running against. It changes src/
+b1fb71203901b12f0e54a57f5b159b1dbb8dace6	2026-07-26	ported	c5ef6dc	fix(main): share the Binwalk instance across workers via Arc. It changes src/
 70743a385e4ef6fc20e07da8fdd0806a21b38959	2026-07-27	not-applicable		Merge pull request #93 from Dr-Emann/push-uoxurqsppzlr. Not applicable: a merge, whose changes are in the commits that it merges
-44fe6fa697c17c1b9dedb09395418d149e392d42	2026-07-27	pending		Fix typo. It changes src/
-84b4520159dbb0c726e5a137478c41cbc8ffec0c	2026-07-27	pending		feat(io): read files via mmap, with --no-mmap opt-out. It changes Cargo.lock, Cargo.toml, src/
-6afc3f668de9ac1116497e2e308a9ee22b8b39ea	2026-07-27	pending		fix(androindsparse): additional validations. It changes src/
-dd20578471d6febcc2e62530f01e6a3bf0b2a477	2026-07-27	pending		refactor(androidsparse): remove dead check in chunk extractor. It changes src/
-320a41a6a556d07da206bfad81f9f169947fbac3	2026-07-27	pending		refactor(main): replace busy-wait main loop with recv_timeout. It changes src/
-b615f06ad55b4cadbbe64ed3b324bbf013f16370	2026-07-27	pending		fix(main): report progress every time, not just if we timeout. It changes src/
+44fe6fa697c17c1b9dedb09395418d149e392d42	2026-07-27	ported	c5ef6dc	Fix typo. It changes src/
+84b4520159dbb0c726e5a137478c41cbc8ffec0c	2026-07-27	ported	c5ef6dc	feat(io): read files via mmap, with --no-mmap opt-out. It changes Cargo.lock, Cargo.toml, src/
+6afc3f668de9ac1116497e2e308a9ee22b8b39ea	2026-07-27	ported	c5ef6dc	fix(androindsparse): additional validations. It changes src/
+dd20578471d6febcc2e62530f01e6a3bf0b2a477	2026-07-27	ported	c5ef6dc	refactor(androidsparse): remove dead check in chunk extractor. It changes src/
+320a41a6a556d07da206bfad81f9f169947fbac3	2026-07-27	ported	c5ef6dc	refactor(main): replace busy-wait main loop with recv_timeout. It changes src/
+b615f06ad55b4cadbbe64ed3b324bbf013f16370	2026-07-27	ported	c5ef6dc	fix(main): report progress every time, not just if we timeout. It changes src/
 0e1a39cc567873aeceeb98f457e99344b6c86a2d	2026-07-28	not-applicable		Merge pull request #94 from Dr-Emann/push-mukkywstlopw. Not applicable: a merge, whose changes are in the commits that it merges
 aa184a5dcebd308ab5af6109e53a4a09872d62f2	2026-07-28	not-applicable		Merge pull request #90 from Dr-Emann/sparse-anddroid-sparse. Not applicable: a merge, whose changes are in the commits that it merges
-1f8bb14132e7b4378eead66119ebe187a68c9a27	2026-07-28	pending		No need for an explicit lifetime in read_or_map_file anymore. It changes src/
+1f8bb14132e7b4378eead66119ebe187a68c9a27	2026-07-28	ported	c5ef6dc	No need for an explicit lifetime in read_or_map_file anymore. It changes src/
 cccef6d52a7094d63c6ef7f7dc001288cc783a92	2026-07-29	not-applicable		Merge pull request #92 from Dr-Emann/mmap_reads. Not applicable: a merge, whose changes are in the commits that it merges
 78053253290e1993bf7df9f7d2608c76d0a02f0e	2026-07-30	not-applicable		Bump base64 from 0.22.1 to 0.23.0. It changes Cargo.lock, Cargo.toml. Not applicable: it changes no code of binwalk-ng
 6c7b837afb7b42265b25b669108d02fce040dc3a	2026-07-30	not-applicable		Bump rars from 0.4.6 to 0.4.7. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 7716eae1665decb679c6e6bcd4fef914f4408ae2	2026-07-30	not-applicable		Bump jiff from 0.2.34 to 0.2.35. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-9edfb3c36aad86f6c96f6383956cc28dab5995b8	2026-07-30	pending		try to clarify zkippable_zeros. effectively rewritten, hopefully clearer. It changes src/
+9edfb3c36aad86f6c96f6383956cc28dab5995b8	2026-07-30	ported	c5ef6dc	try to clarify zkippable_zeros. effectively rewritten, hopefully clearer. It changes src/
 b8d06a03be70e1ba4b1b66bee2b5a51cb56fcc6a	2026-07-30	not-applicable		Merge branch 'main' into push-uvxvnnoqsyrv. Not applicable: a merge, whose changes are in the commits that it merges
-f421075a2cd955917df5e3f4d572db2acbdaeb29	2026-07-30	pending		cargo clippy requests .map_or. It changes src/
+f421075a2cd955917df5e3f4d572db2acbdaeb29	2026-07-30	ported	c5ef6dc	cargo clippy requests .map_or. It changes src/
 1bca7796675128d3b55fcef6d0333b5b6984da34	2026-07-30	not-applicable		Merge pull request #95 from binwalk-ng/dependabot/cargo/base64-0.23.0. Not applicable: a merge, whose changes are in the commits that it merges
 3a9e862516b9585c327a78bdd6a1d996449b26c8	2026-07-30	not-applicable		Merge pull request #96 from binwalk-ng/dependabot/cargo/rars-0.4.7. Not applicable: a merge, whose changes are in the commits that it merges
 a91055577b7bad5c7c60d6c09386128be0a28270	2026-07-30	not-applicable		Merge pull request #97 from binwalk-ng/dependabot/cargo/jiff-0.2.35. Not applicable: a merge, whose changes are in the commits that it merges
 829c32f31255edba19a03a6036d946ee480b7e37	2026-07-31	not-applicable		Merge branch 'main' into stricter-arj. Not applicable: a merge, whose changes are in the commits that it merges
 a7161b2ac524826f6e9658a545210637caf37bcf	2026-07-31	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-7c827f6ef1054722645cb425868f4cbff2b5ab94	2026-07-31	pending		Remove duplication. It changes src/
-5d6db1a52b282ac262cfccd01ac86267680033d3	2026-07-31	pending		Add upper bound to name slice. It changes src/
+7c827f6ef1054722645cb425868f4cbff2b5ab94	2026-07-31	ported	c5ef6dc	Remove duplication. It changes src/
+5d6db1a52b282ac262cfccd01ac86267680033d3	2026-07-31	ported	c5ef6dc	Add upper bound to name slice. It changes src/
 78039fedf7af21c2d7c07b250fa90d9acc635c35	2026-07-30	not-applicable		Merge pull request #86 from binwalk-ng/stricter-arj. Not applicable: a merge, whose changes are in the commits that it merges
 d7428653dd8eeae457aa258b5703ad07bfddd33c	2026-07-30	not-applicable		Bump docker/login-action from 4 to 4.5.2. It changes .github/. Not applicable: it changes no code of binwalk-ng
 6c2bda8c188749ddbfcd5e00f91d45d7f7d3c62f	2026-07-30	not-applicable		Merge pull request #98 from binwalk-ng/dependabot/github_actions/docker/login-action-4.5.2. Not applicable: a merge, whose changes are in the commits that it merges
-7beace7f6755bdc4efae3c5c3b662d103ca9fae8	2026-07-31	pending		fix(scan): don't skip zeros past a match that hasn't been reported yet. It changes src/, tests/
+7beace7f6755bdc4efae3c5c3b662d103ca9fae8	2026-07-31	ported	c5ef6dc	fix(scan): don't skip zeros past a match that hasn't been reported yet. It changes src/, tests/
 b6e8dde06f87f61b590eab6176ae35c8efc3330c	2026-07-31	not-applicable		Merge pull request #83 from Dr-Emann/push-uvxvnnoqsyrv. Not applicable: a merge, whose changes are in the commits that it merges
-71767f5387d88244401b394f758c997a5297614c	2026-08-01	pending		Use a vec for storing signatures and not a hashmap. It changes src/
+71767f5387d88244401b394f758c997a5297614c	2026-08-01	ported	c5ef6dc	Use a vec for storing signatures and not a hashmap. It changes src/
 a99141db2c295a5ba5ff1c98610eacd22538e96a	2026-08-01	not-applicable		Merge pull request #99 from binwalk-ng/signatures-vec. Not applicable: a merge, whose changes are in the commits that it merges
-ae6f9caa00b998fea94cfa5fa2fc1136f1005658	2026-08-01	pending		Reduce unneeded clones and heap allocations. It changes src/
-57a2827f11c0095619bfbf1c5889678816720029	2026-08-01	pending		Bring back comment and fix typo. It changes src/
+ae6f9caa00b998fea94cfa5fa2fc1136f1005658	2026-08-01	ported	c5ef6dc	Reduce unneeded clones and heap allocations. It changes src/
+57a2827f11c0095619bfbf1c5889678816720029	2026-08-01	ported	c5ef6dc	Bring back comment and fix typo. It changes src/
 f9cc42357dca7f49efa022d9dae156669bca51b4	2026-08-01	not-applicable		First try of adding benchmarks for PRs. It changes .dockerignore, .github/, Dockerfile, benchmark/. Not applicable: it changes no code of binwalk-ng
 ed69c39f727a9a13ca465815b014baeacab90d4e	2026-08-01	not-applicable		Try to fix CR comments. It changes .github/, benchmark/. Not applicable: it changes no code of binwalk-ng
-ae7bd47ed8bf2a7065d55c5fe8718f589a8b82c7	2026-08-01	pending		Don't clone signatures when resolving conflicting signatures. It changes src/
-d21ad4df113897a13176c9328d2ec513b6345adc	2026-08-01	pending		Add tests, phase 1. It changes src/, tests/
-56963a868de444a2ae4c447ae145b60ee934a502	2026-08-01	pending		Add more tests. It changes src/
-98eb411366e0ddc9a04a77cf96d64f6edccc9dfb	2026-08-01	pending		Add more tests. It changes src/
-b221ef7341bb10622786aa986f936ab783e8b2b5	2026-08-01	pending		Don't do a full clone for json logging, use a reference. It changes src/
-3f3d818c612d00899d4278bf4db11f4750598a40	2026-08-01	pending		Reduce clones in signature results. It changes src/
-de7df8cd9f731e206152e9bc19baabfadf84af3e	2026-08-01	pending		Optimize and reduce allocations in pem.rs. It changes src/
-ea98686b9841ab64a697d3164d1b36d19a44247c	2026-08-01	pending		Remove a clone in execute(). It changes src/
-90df569a32048cbe7d5ad6e916cee786e0cbac78	2026-08-02	pending		Fix wrong vec logged. It changes src/
-ae895f46ac2a59aa2707f31a261807a0be732e39	2026-08-02	pending		Remove a clone in cramfs. It changes src/
-bc942e207a5386b73f33d20f1b60875a6c1122d9	2026-08-02	pending		Remove unneeded to_vec. It changes src/
-ac412aaebaf2b3751b8a02726f17815986be25aa	2026-08-02	pending		Remove two additional heap allocations. It changes src/
-cbd9a23b50b02cfab3c176d41426a77a87e55e2a	2026-08-03	pending		fix(svg): don't require the xmlns magic to terminate an image. It changes src/
-91eab25d9d7d6277e46f0ac8d863ef654adc1494	2026-08-03	pending		use memchr::memmem instead of AhoCorasick when searching for a single pattern. It changes src/
-e03da511e5d30497f993b6d2b2694c1be8c1338e	2026-08-03	pending		use LazyLock to build the PEM ending AhoCorasick only once. It changes src/
+ae7bd47ed8bf2a7065d55c5fe8718f589a8b82c7	2026-08-01	ported	c5ef6dc	Don't clone signatures when resolving conflicting signatures. It changes src/
+d21ad4df113897a13176c9328d2ec513b6345adc	2026-08-01	ported	c5ef6dc	Add tests, phase 1. It changes src/, tests/
+56963a868de444a2ae4c447ae145b60ee934a502	2026-08-01	ported	c5ef6dc	Add more tests. It changes src/
+98eb411366e0ddc9a04a77cf96d64f6edccc9dfb	2026-08-01	ported	c5ef6dc	Add more tests. It changes src/
+b221ef7341bb10622786aa986f936ab783e8b2b5	2026-08-01	ported	c5ef6dc	Don't do a full clone for json logging, use a reference. It changes src/
+3f3d818c612d00899d4278bf4db11f4750598a40	2026-08-01	ported	c5ef6dc	Reduce clones in signature results. It changes src/
+de7df8cd9f731e206152e9bc19baabfadf84af3e	2026-08-01	ported	c5ef6dc	Optimize and reduce allocations in pem.rs. It changes src/
+ea98686b9841ab64a697d3164d1b36d19a44247c	2026-08-01	ported	c5ef6dc	Remove a clone in execute(). It changes src/
+90df569a32048cbe7d5ad6e916cee786e0cbac78	2026-08-02	ported	c5ef6dc	Fix wrong vec logged. It changes src/
+ae895f46ac2a59aa2707f31a261807a0be732e39	2026-08-02	ported	c5ef6dc	Remove a clone in cramfs. It changes src/
+bc942e207a5386b73f33d20f1b60875a6c1122d9	2026-08-02	ported	c5ef6dc	Remove unneeded to_vec. It changes src/
+ac412aaebaf2b3751b8a02726f17815986be25aa	2026-08-02	ported	c5ef6dc	Remove two additional heap allocations. It changes src/
+cbd9a23b50b02cfab3c176d41426a77a87e55e2a	2026-08-03	ported	c5ef6dc	fix(svg): don't require the xmlns magic to terminate an image. It changes src/
+91eab25d9d7d6277e46f0ac8d863ef654adc1494	2026-08-03	ported	c5ef6dc	use memchr::memmem instead of AhoCorasick when searching for a single pattern. It changes src/
+e03da511e5d30497f993b6d2b2694c1be8c1338e	2026-08-03	ported	c5ef6dc	use LazyLock to build the PEM ending AhoCorasick only once. It changes src/
 b30b8c6146be695d60c6a5ca3f3faf37da69f7b5	2026-08-04	not-applicable		Fix CR comments. It changes .github/, benchmark/. Not applicable: it changes no code of binwalk-ng
 3ffa2c386e0eba4699150af79ea38f5e857865c9	2026-08-04	not-applicable		Benchmark polish. It changes .github/, benchmark/. Not applicable: it changes no code of binwalk-ng
 868611d9282f4f10067f94b96ddb97c5a9c9d020	2026-08-04	not-applicable		Fix valgrind json parsing. It changes benchmark/. Not applicable: it changes no code of binwalk-ng
@@ -389,19 +389,19 @@ f18a750b38da1475923e1cda1ca0061d860f9083	2026-08-04	not-applicable		Try to fix E
 62fd5d6c85bf32707c8d57d4b6781ef8c1cc49c2	2026-08-04	not-applicable		Fix benchmark ci. It changes .github/. Not applicable: it changes no code of binwalk-ng
 74d9fd8f53a70f956ce3a72451782fb2359ddf61	2026-08-04	not-applicable		Merge branch 'main' into heap-optimizations. Not applicable: a merge, whose changes are in the commits that it merges
 390cdf65a3c8c149e08c0f6764e26e9756206af3	2026-08-04	not-applicable		Merge pull request #106 from Dr-Emann/push-rlvxvuzovsry. Not applicable: a merge, whose changes are in the commits that it merges
-78a4380c56403ddcb9e9cd4118a1b8e43e38305c	2026-08-05	pending		Address some CR comments. It changes src/
-c9342b5fe68ddb719a487a12175ee00ec07651db	2026-08-04	pending		refactor: take an explicit extraction directory, drop base_target_file. It changes src/, tests/
-ff23f27720a6069f002144e7daf86027bbcc54d6	2026-08-04	pending		refactor: make Binwalk fields private, configure it with a builder. It changes src/, tests/
-b08e253751851088cf0b1cb6bb95640e08e53805	2026-08-04	pending		perf: build the Aho-Corasick automaton once per Binwalk instance. It changes fuzzing/, src/, tests/
-115f28a765327cd930bd2ff7092002bdf6a1c19e	2026-08-04	pending		don't silently use an existing file in the output, ensure it's a link. It changes src/
-33fd7a23bbd9e53e3a14323aa98af14b5e7e461e	2026-08-04	pending		don't panic on trying to make a symlink to a path without a file name. It changes src/
-8ad9dc5eabc984b520b7168c28487233c17df470	2026-08-04	pending		when spawning, fall back to carving if symlinks fail. It changes src/
-0abcb64290bb3c0102b7b76eb7bb13d20d675daa	2026-08-04	pending		refactor: use Option<NonZeroUsize> for zero_run_pattern_len. It changes fuzzing/, src/
-8b456dead1cc4c21105440211dcbe34c00a6cd69	2026-08-04	pending		refactor: use a MmapUsage enum. It changes src/
-e7a740c1ebca2b3dc7cdfc0dec042b64d835a9bd	2026-08-04	pending		refactor: no need for functions for symlink_file, we can just import. It changes src/
-2721d988e95efb5b6b7df576761a3768d2e1d1f8	2026-08-04	pending		chore: reorder comment. It changes src/
+78a4380c56403ddcb9e9cd4118a1b8e43e38305c	2026-08-05	ported	c5ef6dc	Address some CR comments. It changes src/
+c9342b5fe68ddb719a487a12175ee00ec07651db	2026-08-04	ported	c5ef6dc	refactor: take an explicit extraction directory, drop base_target_file. It changes src/, tests/
+ff23f27720a6069f002144e7daf86027bbcc54d6	2026-08-04	ported	c5ef6dc	refactor: make Binwalk fields private, configure it with a builder. It changes src/, tests/
+b08e253751851088cf0b1cb6bb95640e08e53805	2026-08-04	ported	c5ef6dc	perf: build the Aho-Corasick automaton once per Binwalk instance. It changes fuzzing/, src/, tests/
+115f28a765327cd930bd2ff7092002bdf6a1c19e	2026-08-04	ported	c5ef6dc	don't silently use an existing file in the output, ensure it's a link. It changes src/
+33fd7a23bbd9e53e3a14323aa98af14b5e7e461e	2026-08-04	ported	c5ef6dc	don't panic on trying to make a symlink to a path without a file name. It changes src/
+8ad9dc5eabc984b520b7168c28487233c17df470	2026-08-04	ported	c5ef6dc	when spawning, fall back to carving if symlinks fail. It changes src/
+0abcb64290bb3c0102b7b76eb7bb13d20d675daa	2026-08-04	ported	c5ef6dc	refactor: use Option<NonZeroUsize> for zero_run_pattern_len. It changes fuzzing/, src/
+8b456dead1cc4c21105440211dcbe34c00a6cd69	2026-08-04	ported	c5ef6dc	refactor: use a MmapUsage enum. It changes src/
+e7a740c1ebca2b3dc7cdfc0dec042b64d835a9bd	2026-08-04	ported	c5ef6dc	refactor: no need for functions for symlink_file, we can just import. It changes src/
+2721d988e95efb5b6b7df576761a3768d2e1d1f8	2026-08-04	ported	c5ef6dc	chore: reorder comment. It changes src/
 e72282a4a1ff589bd278f07a91b18a590f35bd6d	2026-08-05	not-applicable		Move to another benchmarking system. It changes .github/, BENCHMARKS.md, Cargo.lock, Cargo.toml, Dockerfile, benches/, benchmark/, scripts/. Not applicable: it changes no code of binwalk-ng
-3aaee777f10bf9b415e7c0ce0280f10639311eac	2026-08-06	pending		Additioanl optimizations. It changes src/
+3aaee777f10bf9b415e7c0ce0280f10639311eac	2026-08-06	ported	c5ef6dc	Additioanl optimizations. It changes src/
 3ca3276fd707a545ea3fec20a7206b74e7ac6b2e	2026-08-06	not-applicable		Fix CR issues. It changes .github/. Not applicable: it changes no code of binwalk-ng
 db22d0df988595cd12d0086b2126fe545c44e542	2026-08-06	not-applicable		build(deps): bump docker/login-action from 4.5.2 to 4.6.0. It changes .github/. Not applicable: it changes no code of binwalk-ng
 3bd1e0bbc95d35d78b64ff9c3eebc9cb4ea5fa06	2026-08-07	not-applicable		Additional fixes. It changes .dockerignore, .github/, BENCHMARKS.md, Dockerfile, scripts/. Not applicable: it changes no code of binwalk-ng
@@ -409,8 +409,8 @@ db22d0df988595cd12d0086b2126fe545c44e542	2026-08-06	not-applicable		build(deps):
 f2f60e9ff94c1f34da21a1aa689a1b595bea8a13	2026-08-07	not-applicable		Merge pull request #107 from binwalk-ng/benchmark-ci. Not applicable: a merge, whose changes are in the commits that it merges
 84076c37ee93ed96337dd9fcce9aad06f5d0f3c6	2026-08-07	not-applicable		Merge pull request #105 from Dr-Emann/push-uszyrrzmrvvq. Not applicable: a merge, whose changes are in the commits that it merges
 0a639cba4c2095ca49fa9bb9913d46ceecf2c96b	2026-08-07	not-applicable		Merge branch 'main' into heap-optimizations. Not applicable: a merge, whose changes are in the commits that it merges
-701aa401832d426f01290a44c2ea458317188702	2026-08-07	pending		Sort without heap allocations. It changes src/
-2f82f4df5c377f9eb098e79db45d246281b56348	2026-08-07	pending		Don't allow both -q and -v, and move some trivial checks to the callers. It changes Cargo.toml, benches/, src/
+701aa401832d426f01290a44c2ea458317188702	2026-08-07	ported	c5ef6dc	Sort without heap allocations. It changes src/
+2f82f4df5c377f9eb098e79db45d246281b56348	2026-08-07	ported	c5ef6dc	Don't allow both -q and -v, and move some trivial checks to the callers. It changes Cargo.toml, benches/, src/
 ae1d54d7e1cfc9220980242bb6a68ea393685c29	2026-08-07	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 f9e58b60049bfa69e336423e1bc1302eeb440176	2026-08-08	not-applicable		Allow benchamrk comments from forks. It changes .github/, BENCHMARKS.md. Not applicable: it changes no code of binwalk-ng
 7b789f88376df73834b332f9e26ab01ec9889da2	2026-08-08	not-applicable		Fix CR comment. It changes .github/. Not applicable: it changes no code of binwalk-ng
@@ -430,12 +430,12 @@ ff0e265c3f80b1ee6402ffc157afedeedc75da01	2026-08-08	not-applicable		fix: Use com
 b9a0e8c77882cbfbb98aa9bd0d6abb6ae31aeffd	2026-08-08	not-applicable		Merge pull request #118 from binwalk-ng/fix/benchmark-pr-lookup. Not applicable: a merge, whose changes are in the commits that it merges
 6e8923a9b76c6729ac43bec70e6e12ed5cc0850f	2026-08-08	not-applicable		Merge pull request #101 from Dr-Emann/binwalk_builder. Not applicable: a merge, whose changes are in the commits that it merges
 928448b5e7d6cfe4c5f0fc186387f07f260c9039	2026-08-08	not-applicable		Merge branch 'main' into heap-optimizations. Not applicable: a merge, whose changes are in the commits that it merges
-0fbc8ed175f1468ac3fdeb308c67c95df0b7ee4d	2026-08-08	pending		Fix cli parsing error. It changes src/
-552fea99b05f482ab5a8c76574ed2c0fedb97d1a	2026-08-08	pending		Few minor optimizations. It changes src/
+0fbc8ed175f1468ac3fdeb308c67c95df0b7ee4d	2026-08-08	ported	c5ef6dc	Fix cli parsing error. It changes src/
+552fea99b05f482ab5a8c76574ed2c0fedb97d1a	2026-08-08	ported	c5ef6dc	Few minor optimizations. It changes src/
 10e8dd8110241c6177bbd85ee03e6b4838459d49	2026-08-10	not-applicable		Merge pull request #103 from binwalk-ng/heap-optimizations. Not applicable: a merge, whose changes are in the commits that it merges
-8fe232c131ff1b40625ed47baa39503db62e4749	2026-08-10	pending		Harden zip version acceptance. It changes src/
-c9dacf6b37c7eaa8097d4b170f7dc2f173f54b25	2026-08-10	pending		Fix some bugs in dpapi. It changes src/
-f91b5c2945c0e943943cc52484bdfeca977fda99	2026-08-11	pending		no need to allocate a vec and a string just to check for utf16 + null termination. It changes src/
+8fe232c131ff1b40625ed47baa39503db62e4749	2026-08-10	ported	c5ef6dc	Harden zip version acceptance. It changes src/
+c9dacf6b37c7eaa8097d4b170f7dc2f173f54b25	2026-08-10	ported	c5ef6dc	Fix some bugs in dpapi. It changes src/
+f91b5c2945c0e943943cc52484bdfeca977fda99	2026-08-11	ported	c5ef6dc	no need to allocate a vec and a string just to check for utf16 + null termination. It changes src/
 3279b1aab0a7f0cc42a8b4ae3167dd6c7b766d74	2026-08-12	not-applicable		build(deps): bump rars from 0.4.8 to 0.4.9. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 93a5b9555144516d0d8eebb18d6a6221a99ab22e	2026-08-12	not-applicable		build(deps): bump liblzma from 0.4.7 to 0.4.8. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 6e34703a1883f0c0671c8464f10e3067f3cb209d	2026-08-12	not-applicable		Merge pull request #121 from binwalk-ng/dependabot/cargo/rars-0.4.9. Not applicable: a merge, whose changes are in the commits that it merges
@@ -443,37 +443,37 @@ f91b5c2945c0e943943cc52484bdfeca977fda99	2026-08-11	pending		no need to allocate
 b1e9adef1194f18e756682c758be10062ab5e667	2026-08-12	not-applicable		Merge pull request #120 from Dr-Emann/push-lytvrstpqonz. Not applicable: a merge, whose changes are in the commits that it merges
 10ee1119e2dbbe3008a619db328f6cfd0a0f75af	2026-08-13	not-applicable		Merge branch 'main' into formats-fixes. Not applicable: a merge, whose changes are in the commits that it merges
 b3b585e34515dcab89c2697640090d9844f337d9	2026-08-15	not-applicable		Merge branch 'main' into add-tests. Not applicable: a merge, whose changes are in the commits that it merges
-475bc7b33ff7d41c922da09c9eda093ef0730803	2026-08-15	pending		Adapt builder changes. It changes src/
+475bc7b33ff7d41c922da09c9eda093ef0730803	2026-08-15	ported	c5ef6dc	Adapt builder changes. It changes src/
 3e7483279e26ee2ac0662c2482317669cd90dc76	2026-08-15	not-applicable		Merge pull request #119 from binwalk-ng/formats-fixes. Not applicable: a merge, whose changes are in the commits that it merges
 255424badddfe67ca15f807a7bfbb3c05275bf11	2026-08-15	not-applicable		Merge branch 'main' into add-tests. Not applicable: a merge, whose changes are in the commits that it merges
-fe2e26764c4b335db119a876eb7db3e00d50e78e	2026-08-15	pending		Fix 2 tests. It changes src/
-88808c1100acb2b46146fb144f6ad172b3d51993	2026-08-21	pending		Update rust version and dependencies. It changes Cargo.lock, Cargo.toml, rust-toolchain.toml, src/
+fe2e26764c4b335db119a876eb7db3e00d50e78e	2026-08-15	ported	c5ef6dc	Fix 2 tests. It changes src/
+88808c1100acb2b46146fb144f6ad172b3d51993	2026-08-21	ported	c5ef6dc	Update rust version and dependencies. It changes Cargo.lock, Cargo.toml, rust-toolchain.toml, src/
 4106fbfc0d6a9d879d853c24f12d8c7d3cad1613	2026-08-21	not-applicable		Merge pull request #127 from binwalk-ng/update-deps. Not applicable: a merge, whose changes are in the commits that it merges
 7184ac4db9660041181a7277f0f6523c52d2a978	2026-08-21	not-applicable		Merge branch 'main' into add-tests. Not applicable: a merge, whose changes are in the commits that it merges
-c89ef940199e99a3ee1dffa16b1de279a53b950a	2026-08-21	pending		Move the samples to binwalk-ng-samples. It changes .github/, .gitmodules, BENCHMARKS.md, benches/, src/, tests/
+c89ef940199e99a3ee1dffa16b1de279a53b950a	2026-08-21	ported	c5ef6dc	Move the samples to binwalk-ng-samples. It changes .github/, .gitmodules, BENCHMARKS.md, benches/, src/, tests/
 d1e994ac0254ace48cd6d331d8d9b5a065208b5f	2026-08-22	not-applicable		Fix CR comments. It changes .github/, BENCHMARKS.md, benches/, tests/. Not applicable: it changes no code of binwalk-ng
 3c92f1964e096d9bf11b55d87620eb434b5caa18	2026-08-22	not-applicable		tests: add hostile-tarball containment test; derive cpio size from format spec. It changes tests/. Not applicable: it changes no code of binwalk-ng
-61a316f69e19837ea5a86a97a18f616af3201649	2026-08-22	pending		WIP. It changes src/
-6494c2cb67afc7cd3701571252fbd4e64adb13d7	2026-08-28	pending		Harden format parsers against integer overflow and out-of-bounds. It changes src/
+61a316f69e19837ea5a86a97a18f616af3201649	2026-08-22	ported	c5ef6dc	WIP. It changes src/
+6494c2cb67afc7cd3701571252fbd4e64adb13d7	2026-08-28	ported	c5ef6dc	Harden format parsers against integer overflow and out-of-bounds. It changes src/
 b1ac7325e0b0ea41a26d1c2b073c76f13d208033	2026-08-28	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
-921f7b4aae8c5042aa758ac0afe1c3bd9f64e1c8	2026-08-28	pending		Address CR comments. It changes src/
-f5a0173086de0d67e9d49301cdb959017708d972	2026-08-29	pending		Drop plotly, make entropy plotting not open a page, and make the feature on by default. It changes Cargo.lock, Cargo.toml, src/
-da9d00af7c58238a6d4868efe481613a655edc18	2026-08-29	pending		Propagate font registration errors instead of silently ignoring them. It changes src/
-f42e338e83a28c45f928d70d892b0c273031a3ca	2026-08-29	pending		Resolve CR comments. It changes src/
+921f7b4aae8c5042aa758ac0afe1c3bd9f64e1c8	2026-08-28	ported	c5ef6dc	Address CR comments. It changes src/
+f5a0173086de0d67e9d49301cdb959017708d972	2026-08-29	ported	c5ef6dc	Drop plotly, make entropy plotting not open a page, and make the feature on by default. It changes Cargo.lock, Cargo.toml, src/
+da9d00af7c58238a6d4868efe481613a655edc18	2026-08-29	ported	c5ef6dc	Propagate font registration errors instead of silently ignoring them. It changes src/
+f42e338e83a28c45f928d70d892b0c273031a3ca	2026-08-29	ported	c5ef6dc	Resolve CR comments. It changes src/
 c7925010f085127c86ad7ab90a1201b6505709aa	2026-08-30	not-applicable		Merge pull request #134 from binwalk-ng/fix-entropy. Not applicable: a merge, whose changes are in the commits that it merges
-c3bf500076f26d419f087a259dcb1b7a266b2dd2	2026-09-12	pending		Additional format fixes. It changes Cargo.lock, Cargo.toml, rust-toolchain.toml, src/
+c3bf500076f26d419f087a259dcb1b7a266b2dd2	2026-09-12	ported	c5ef6dc	Additional format fixes. It changes Cargo.lock, Cargo.toml, rust-toolchain.toml, src/
 1d99ac21f5aeed2758affc9ddef532e04fc939cb	2026-09-12	not-applicable		Merge branch 'main' into formats-fixes. Not applicable: a merge, whose changes are in the commits that it merges
-0471632171dd97b5f9c9249ed5dd1a0662497dd3	2026-09-12	pending		Address CR comments. It changes src/
-d71a35a5530ae6809aca7f903aaaa4b4ad2e580c	2026-09-12	pending		Improve zip parser. It changes Cargo.lock, src/
-6d30ff342f8a5a8f3d20f85c49a0569ed8323eec	2026-09-12	pending		Fix benchmarks regression and add additional validation to lzma. It changes src/
+0471632171dd97b5f9c9249ed5dd1a0662497dd3	2026-09-12	ported	c5ef6dc	Address CR comments. It changes src/
+d71a35a5530ae6809aca7f903aaaa4b4ad2e580c	2026-09-12	ported	c5ef6dc	Improve zip parser. It changes Cargo.lock, src/
+6d30ff342f8a5a8f3d20f85c49a0569ed8323eec	2026-09-12	ported	c5ef6dc	Fix benchmarks regression and add additional validation to lzma. It changes src/
 54734e3559f5388ef9e84abf85513efc0fc3bb9e	2026-09-13	not-applicable		Merge pull request #132 from binwalk-ng/formats-fixes. Not applicable: a merge, whose changes are in the commits that it merges
 b2d494defe312d1637db6a67a7d87f816677e1fc	2026-09-13	not-applicable		Merge branch 'main' into add-tests. Not applicable: a merge, whose changes are in the commits that it merges
-f12149105e4312334dd9a3c865c33432b3a74257	2026-09-13	pending		Some test fixes - common function renames, remove duplications, etc. It changes src/, tests/
+f12149105e4312334dd9a3c865c33432b3a74257	2026-09-13	ported	c5ef6dc	Some test fixes - common function renames, remove duplications, etc. It changes src/, tests/
 5ad35f0825b8d742adab3098f9dd88b88d894fea	2026-09-13	not-applicable		Add tests for all the formats in the samples dir. It changes Cargo.lock, tests/. Not applicable: it changes no code of binwalk-ng
-76b0a5115dcefd0032e3ea45269d8e8ad0b8ce37	2026-09-13	pending		Fix entropy filename slicing and tar counting. It changes src/
-5bc4788b3a285586f108bf6971c0994efd9ce46c	2026-09-15	pending		Few minor optimizations. It changes src/
-68f30cdd0e5977d68fcbb8a0c10808129f79d16e	2026-09-19	pending		Fix CR comment. It changes Cargo.lock, src/
-bc0061ce9efad3cbc03ea7bd009ef73133fa9057	2026-09-19	pending		Use memchr-n for find_first_nonzero. It changes Cargo.lock, Cargo.toml, src/
+76b0a5115dcefd0032e3ea45269d8e8ad0b8ce37	2026-09-13	ported	c5ef6dc	Fix entropy filename slicing and tar counting. It changes src/
+5bc4788b3a285586f108bf6971c0994efd9ce46c	2026-09-15	ported	c5ef6dc	Few minor optimizations. It changes src/
+68f30cdd0e5977d68fcbb8a0c10808129f79d16e	2026-09-19	ported	c5ef6dc	Fix CR comment. It changes Cargo.lock, src/
+bc0061ce9efad3cbc03ea7bd009ef73133fa9057	2026-09-19	ported	c5ef6dc	Use memchr-n for find_first_nonzero. It changes Cargo.lock, Cargo.toml, src/
 84fccfd2e8add06fdcca38fc22260d22305adceb	2026-09-25	not-applicable		Run cargo update. It changes Cargo.lock. Not applicable: it changes no code of binwalk-ng
 9810ea9131525f1a2f2b480bcd20076329fa8358	2026-09-25	not-applicable		Merge pull request #138 from binwalk-ng/some-optimizations. Not applicable: a merge, whose changes are in the commits that it merges
 49cb60c5bd310a70c35cbddf52785303ec9e29c3	2026-09-26	not-applicable		Migrate benchmarks to gungraun 0.20 (summary schema v7). It changes BENCHMARKS.md, Cargo.lock, Cargo.toml, scripts/. Not applicable: it changes no code of binwalk-ng
@@ -481,7 +481,7 @@ bc0061ce9efad3cbc03ea7bd009ef73133fa9057	2026-09-19	pending		Use memchr-n for fi
 6cea6425a188d8f5035c9812526366fddd6e7e41	2026-09-26	not-applicable		Merge pull request #141 from binwalk-ng/gungraun-v0.20. Not applicable: a merge, whose changes are in the commits that it merges
 3766a7200f63fdeb546280fd1c9785d6d4985062	2026-09-26	not-applicable		Merge branch 'main' into add-tests. Not applicable: a merge, whose changes are in the commits that it merges
 ac357547ef3280b2073c061b430d5fa220c0cc9b	2026-09-28	not-applicable		Merge pull request #104 from binwalk-ng/add-tests. Not applicable: a merge, whose changes are in the commits that it merges
-34adc1d98c45e2a0e8190a904ed0476774c352dd	2026-09-29	pending		Use the published delink-ng crate. It changes Cargo.lock, Cargo.toml, src/
+34adc1d98c45e2a0e8190a904ed0476774c352dd	2026-09-29	ported	c5ef6dc	Use the published delink-ng crate. It changes Cargo.lock, Cargo.toml, src/
 825cf9ec4836c0f706480b10c17a2aa3a4cdfce2	2026-09-29	not-applicable		Bump the version to 4.0.0. It changes Cargo.lock, Cargo.toml. Not applicable: it changes no code of binwalk-ng
 20287903f07f68e18600920b10c028ea2b98e9c4	2026-09-29	not-applicable		Add the binwalk-ng contributors to the MIT copyright notice. It changes LICENSE. Not applicable: it changes no code of binwalk-ng
 c156dc5cb1e95e08212bd30eb61d83fb1e6ded43	2026-09-29	not-applicable		Revamp the README. It changes CARGO_README.md, README.md, images/, scripts/. Not applicable: it changes no code of binwalk-ng
@@ -509,16 +509,16 @@ bb3541fb6de4ebd9c65f74c14baa2abefe8f0bc4	2026-10-10	not-applicable		Merge pull r
 4c9f0de36806696c2746c87d34adf4188c94e878	2026-10-17	not-applicable		Update rust toolchain to 1.99.1. It changes rust-toolchain.toml. Not applicable: it changes no code of binwalk-ng
 81ab7597c7c77f5478beea1758b99725d5c37f1a	2026-10-17	not-applicable		Use latest cargo-binstall. It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
 845806c163747eb524d66b5fe3de2ed86ea3aaad	2026-10-17	not-applicable		Merge pull request #155 from binwalk-ng/update-deps. Not applicable: a merge, whose changes are in the commits that it merges
-f7453754bc40524fb4cf02dc8e68610c67bf25d3	2026-10-24	pending		Drop the external dumpifs extractor and parse QNX IFS with qnx-ifs. It changes BENCHMARKS.md, Cargo.lock, Cargo.toml, Dockerfile, dependencies/, src/, tests/
-f7e3dde13c29ebdf0f1e402936ec602c2ee29f23	2026-10-27	pending		Remove unneeded tests and make code simpler. It changes CHANGELOG.md, src/, tests/
-d03d0f10aaefc19cdb69a025a3e8125da9d8b95b	2026-10-27	pending		Use the image header exported by qnx-ifs. It changes Cargo.lock, Cargo.toml, src/
-aa37d9c0eb863c646144d12a904a3f86452a0812	2026-10-27	pending		Let qnx-ifs validate bare imagefs headers. It changes src/
+f7453754bc40524fb4cf02dc8e68610c67bf25d3	2026-10-24	ported	c5ef6dc	Drop the external dumpifs extractor and parse QNX IFS with qnx-ifs. It changes BENCHMARKS.md, Cargo.lock, Cargo.toml, Dockerfile, dependencies/, src/, tests/
+f7e3dde13c29ebdf0f1e402936ec602c2ee29f23	2026-10-27	ported	c5ef6dc	Remove unneeded tests and make code simpler. It changes CHANGELOG.md, src/, tests/
+d03d0f10aaefc19cdb69a025a3e8125da9d8b95b	2026-10-27	ported	c5ef6dc	Use the image header exported by qnx-ifs. It changes Cargo.lock, Cargo.toml, src/
+aa37d9c0eb863c646144d12a904a3f86452a0812	2026-10-27	ported	c5ef6dc	Let qnx-ifs validate bare imagefs headers. It changes src/
 a715db19a6c8d956f7a38fbdc23d43423bfb79c3	2026-10-29	not-applicable		build(deps): bump docker/login-action from 4.6.0 to 4.7.0. It changes .github/. Not applicable: it changes no code of binwalk-ng
-6e35e3a32d0c5adde7988f85d4783b54807020cd	2026-10-29	pending		Upgrade qnx-ifs to 0.2.0. It changes Cargo.lock, Cargo.toml, src/
+6e35e3a32d0c5adde7988f85d4783b54807020cd	2026-10-29	ported	c5ef6dc	Upgrade qnx-ifs to 0.2.0. It changes Cargo.lock, Cargo.toml, src/
 d38927a2bc80de033b9ddcda23056f19fdbb5766	2026-10-30	not-applicable		Merge pull request #159 from binwalk-ng/dependabot/github_actions/docker/login-action-4.7.0. Not applicable: a merge, whose changes are in the commits that it merges
-5e5580a5b93b3b9694e71ca0f0b6d51b3c09c149	2026-10-30	pending		Extract non-UTF-8 QNX IFS paths byte-exactly. It changes src/
-760b88c13e38c1dae57a01b3a29a21fbf6b7f87e	2026-10-30	pending		Detect bare QNX IFS images from the header. It changes src/
-6fd7c40429efc41e6e93dd638383ed8c72f0524f	2026-10-31	pending		Confirm bare QNX IFS images before claiming their extent. It changes src/
+5e5580a5b93b3b9694e71ca0f0b6d51b3c09c149	2026-10-30	ported	c5ef6dc	Extract non-UTF-8 QNX IFS paths byte-exactly. It changes src/
+760b88c13e38c1dae57a01b3a29a21fbf6b7f87e	2026-10-30	ported	c5ef6dc	Detect bare QNX IFS images from the header. It changes src/
+6fd7c40429efc41e6e93dd638383ed8c72f0524f	2026-10-31	ported	c5ef6dc	Confirm bare QNX IFS images before claiming their extent. It changes src/
 52e35cf5581d67442abf825a888d979043faf740	2026-10-31	not-applicable		Merge pull request #156 from binwalk-ng/qnx-ifs-integration. Not applicable: a merge, whose changes are in the commits that it merges
 049ef66884b6d683afcdbf1bcb86dcdaa1ff778e	2026-10-31	not-applicable		Run cargo update. It changes Cargo.lock, Cargo.toml. Not applicable: it changes no code of binwalk-ng
 9c30cf8abca82413e94b90bb7f6a86bd6a7e2628	2026-10-31	not-applicable		Update docker base image to ubuntu:26.10. It changes Dockerfile. Not applicable: it changes no code of binwalk-ng

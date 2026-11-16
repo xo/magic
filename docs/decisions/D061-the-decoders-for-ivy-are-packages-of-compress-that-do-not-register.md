@@ -1,6 +1,6 @@
 # D61. The decoders for ivy are packages of compress that do not register
 
-Status: Proposed.
+Status: Decided.
 
 On 2026-11-16, ivy needed three decoders to read MOBI books and CHM help
 files:
@@ -13,11 +13,11 @@ files:
 
 The maintainers decided in ivy D21 that magic holds these decoders, and that
 each change waits in magic for the review of a maintainer. ivy D8 says that
-ivy takes its decoders of compressed data from magic. This decision proposes
-where the decoders go and what they look like. Question 24 at the end of
-`docs/PLAN.md` asks the maintainers to accept it.
+ivy takes its decoders of compressed data from magic. This decision says
+where the decoders go and what they look like. The maintainers accepted it
+on 2026-11-17, as the answer to question 24.
 
-## The proposal
+## The decision
 
 1. Each decoder is a package of its own in the root module:
    `compress/palmdoc`, `compress/huffcdic` and `compress/lzx`. Each one uses

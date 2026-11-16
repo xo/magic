@@ -81,4 +81,4 @@ D32 set the project up as a port of libmagic.
 | D58 | [CI runs no oracle](D058-ci-runs-no-oracle.md) | Decided. Amends D30. Amends D48. Amends D49 |
 | D59 | [The walker fixes a bug of binwalk with a decision, and so does the oracle](D059-the-walker-fixes-a-bug-of-binwalk-with-a-decision-and-so-does-the-oracle.md) | Decided. Amends D49. Amended by D60 |
 | D60 | [The walker follows binwalk-ng](D060-the-walker-follows-binwalk-ng.md) | Decided. Amends D49. Amends D59 |
-| D61 | [The decoders for ivy are packages of compress that do not register](D061-the-decoders-for-ivy-are-packages-of-compress-that-do-not-register.md) | Proposed |
+| D61 | [The decoders for ivy are packages of compress that do not register](D061-the-decoders-for-ivy-are-packages-of-compress-that-do-not-register.md) | Decided |

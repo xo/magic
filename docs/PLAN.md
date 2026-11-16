@@ -322,4 +322,9 @@ settled. Questions 2 and 6 were about the archives, which D47 removed: the
 runner, and no archive holds libgnurx. Question 3 was answered by D53,
 questions 4, 5, 7 and 8 by D54 to D57, and questions 17 to 22, about the
 binary walker, by D49 to D52, question 23 by D60, and question 24 by D61.
-The next question is question 25.
+The next question is question 26.
+
+25. D62 makes the reader of Compound Files for ivy the package `cfb` in the
+    root module. It reads the directory, the streams and the property sets
+    of MS-OLEPS, and magic does not import it. The engine keeps its own
+    reader, which copies libmagic. Do the maintainers accept D62?

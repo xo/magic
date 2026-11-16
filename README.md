@@ -131,6 +131,32 @@ formats (D61):
 `compress/huffcdic` the Huffman compression of Mobipocket, and `compress/lzx`
 the LZX of CAB and CHM files.
 
+## Read a Compound File
+
+The package `cfb` reads Compound Files, the container of Word, Excel and
+PowerPoint files before 2007, of Outlook messages, of Windows Installer
+packages and of encrypted Office documents. It reads the tree of storages
+and streams, each stream, and the property sets that hold the title, the
+author and the thumbnail of a document. magic does not import it (D62):
+
+```go
+f, err := cfb.Open(r, size, cfb.Limits{})
+if err != nil {
+	return err
+}
+b, err := f.ReadFile("\x05SummaryInformation")
+if err != nil {
+	return err
+}
+ps, err := cfb.ParsePropertySet(b)
+if err != nil {
+	return err
+}
+if thumb, ok := ps.Thumbnail(); ok && thumb.Format == cfb.CFEnhMetafile {
+	// thumb.Data holds an EMF image.
+}
+```
+
 ## Walk a firmware image
 
 The package `walk` finds the files that are embedded in a binary file, such

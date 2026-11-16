@@ -106,7 +106,7 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     the mode before its comma. The port copies both until upstream fixes them.
     Source: phase 5.
 
-## The decoders for ivy
+## The packages for ivy
 
 18. No test reads a MOBI book that Mobipocket wrote, or a CHM file that the
     compiler of Microsoft wrote. The tests read data that the compressors of
@@ -124,6 +124,14 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     windows over 2 MiB and matches over 257 bytes. Source: D61.
 21. The walker finds a cabinet with LZX and does not extract it, as item 2 of
     the binary walker says. `compress/lzx` can decode it now. Source: D61.
+22. No test of `cfb` reads a document with a thumbnail, or an encrypted
+    document, that Office wrote. The tests read property sets that the
+    writer of the tests made, and the summaries of the corpus, which have
+    no thumbnail. Source: D62.
+23. `cfb` decodes the text of four code pages. A string in another code
+    page, such as 932 for Japanese, keeps its bytes, and the program
+    converts them. Source: D62.
+24. `cfb` reads no value of type VT_ARRAY, and keeps its bytes. Source: D62.
 
 ## The binary walker
 

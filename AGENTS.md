@@ -45,6 +45,7 @@ of `docs/PLAN.md`. Ask a maintainer.
 | changing the API in `magic.go` or `options.go` | D39, D40, D42, D46 and D47, then `docs/API.md` and Go conventions below |
 | changing an expected value in a test | D11 and D48. The test module checks the value against the oracle |
 | changing a decoder of compressed data, or its dependency | D27, D28 and D45, then the package in `compress/`. For `palmdoc`, `huffcdic` and `lzx`, D61 |
+| changing `cfb`, the reader of Compound Files and property sets, or the reader of the engine in `internal/engine/cdf.go` | D62. The engine keeps its own reader, which copies libmagic |
 | translating a file of libmagic | D29: the Go file opens with the notice of the C file, and names it |
 | tagging a release | D39, D47 and D57, then `CONTRIBUTING.md`, under Release. Tag only when a maintainer says so, and only after CI passes on the commit |
 | changing CI | D12, then `.github/workflows/test.yml` |
@@ -115,6 +116,7 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `internal/engine/` | the port: the engine that runs the compiled rules, and the detectors of the formats that rules cannot read. It translates each regular expression for Go (D44) |
 | `internal/table/` | the rules of file, at the commit that the ledger names (D48), as the port embeds them, `rules.flate`, and `gen/`, which writes it from `upstream/file` with `go generate` (D35). Do not edit `rules.flate` |
 | `compress/` | the registry of the decoders of compressed data, and one package for each library of libmagic: `zlib` and `bzip2` in the root module, `xz` and `zstd` as modules of their own (D45). It also holds `palmdoc`, `huffcdic` and `lzx`, the decoders of MOBI books and CHM files for ivy, which do not register (D61). `lzx` is a port of lzxd, with its `LICENSE`, and its `testdata/` holds a CAB file and a CHM file that its tests wrote |
+| `cfb/` | the reader of Compound Files and of their property sets, for ivy (D62). magic does not import it. Its tests write their own Compound Files |
 | `testdata/` | the sample files that the tests read |
 | `.github/workflows/test.yml` | CI |
 | `docs/PLAN.md` | the plan of the port, the reviews and the open questions |

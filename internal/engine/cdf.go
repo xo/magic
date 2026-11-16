@@ -66,7 +66,8 @@ import (
 // sectors anywhere in the file.
 //
 // The reader fails at the same step as libmagic on a damaged file, because
-// the output names the step.
+// the output names the step. So it does not use the package cfb, which
+// follows the specification of Microsoft and not libmagic (D62).
 
 const (
 	cdfLoopLimit    = 10000

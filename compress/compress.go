@@ -13,6 +13,9 @@
 // the place of one library, and registers the formats that the library
 // decodes. For a format with no decoder, magic answers as libmagic does when
 // it was built without the library and finds no program that decodes it.
+//
+// The packages palmdoc, huffcdic and lzx decode formats that libmagic does
+// not decode, for MOBI books and CHM files. They do not register (D61).
 package compress
 
 import (

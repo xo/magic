@@ -106,6 +106,25 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     the mode before its comma. The port copies both until upstream fixes them.
     Source: phase 5.
 
+## The decoders for ivy
+
+18. No test reads a MOBI book that Mobipocket wrote, or a CHM file that the
+    compiler of Microsoft wrote. The tests read data that the compressors of
+    the tests wrote. cabextract and 7z read the CAB file and the CHM file of
+    `compress/lzx/testdata` as the decoder does. With a book with HUFF/CDIC
+    and a CHM file that the repository can hold, a test can compare the
+    decoders with the programs that write the formats. The limit of
+    64 phrases that hold one another, in `compress/huffcdic`, is not measured
+    on such a book either. Source: D61.
+19. lzxd moved from GitHub to codeberg.org on 2026-02-09, and its last commit
+    on GitHub says so. The ledger follows the copy on GitHub, which gets no
+    new commit. A maintainer decides whether the ledger follows codeberg.org.
+    Source: D61.
+20. `compress/lzx` does not decode LZX DELTA, the form of [MS-PATCH] with
+    windows over 2 MiB and matches over 257 bytes. Source: D61.
+21. The walker finds a cabinet with LZX and does not extract it, as item 2 of
+    the binary walker says. `compress/lzx` can decode it now. Source: D61.
+
 ## The binary walker
 
 The maintainers want magic to do the work of binwalk too: walk a binary file,

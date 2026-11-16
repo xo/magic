@@ -184,7 +184,7 @@ func TestEveryDecisionReferenceExists(t *testing.T) {
 	// The repositories whose decisions a document here can cite.
 	repos := map[string]bool{
 		"dbmeta": true, "dbimp": true, "usql": true, "dburl": true, "tblfmt": true,
-		"okage": true, "transit": true, "resvg": true,
+		"okage": true, "transit": true, "resvg": true, "ivy": true,
 	}
 	var paths []string
 	for _, pattern := range []string{

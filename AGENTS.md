@@ -44,7 +44,7 @@ of `docs/PLAN.md`. Ask a maintainer.
 | asking why something is the way it is | the index in `docs/decisions/README.md` |
 | changing the API in `magic.go` or `options.go` | D39, D40, D42, D46 and D47, then `docs/API.md` and Go conventions below |
 | changing an expected value in a test | D11 and D48. The test module checks the value against the oracle |
-| changing a decoder of compressed data, or its dependency | D27, D28 and D45, then the package in `compress/` |
+| changing a decoder of compressed data, or its dependency | D27, D28 and D45, then the package in `compress/`. For `palmdoc`, `huffcdic` and `lzx`, D61 |
 | translating a file of libmagic | D29: the Go file opens with the notice of the C file, and names it |
 | tagging a release | D39, D47 and D57, then `CONTRIBUTING.md`, under Release. Tag only when a maintainer says so, and only after CI passes on the commit |
 | changing CI | D12, then `.github/workflows/test.yml` |
@@ -114,7 +114,7 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `internal/rules/` | the port: the compiler of the rules, which gives the entries of `magic.mgc` (D35) |
 | `internal/engine/` | the port: the engine that runs the compiled rules, and the detectors of the formats that rules cannot read. It translates each regular expression for Go (D44) |
 | `internal/table/` | the rules of file, at the commit that the ledger names (D48), as the port embeds them, `rules.flate`, and `gen/`, which writes it from `upstream/file` with `go generate` (D35). Do not edit `rules.flate` |
-| `compress/` | the registry of the decoders of compressed data, and one package for each library of libmagic: `zlib` and `bzip2` in the root module, `xz` and `zstd` as modules of their own (D45) |
+| `compress/` | the registry of the decoders of compressed data, and one package for each library of libmagic: `zlib` and `bzip2` in the root module, `xz` and `zstd` as modules of their own (D45). It also holds `palmdoc`, `huffcdic` and `lzx`, the decoders of MOBI books and CHM files for ivy, which do not register (D61). `lzx` is a port of lzxd, with its `LICENSE`, and its `testdata/` holds a CAB file and a CHM file that its tests wrote |
 | `testdata/` | the sample files that the tests read |
 | `.github/workflows/test.yml` | CI |
 | `docs/PLAN.md` | the plan of the port, the reviews and the open questions |
@@ -128,7 +128,7 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `walk/` | the binary walker (D50): the scan of binwalk, the API, the output of extractors, and `internal/binwalk`, the helpers that the parsers share |
 | `walk/internal/flate`, `walk/internal/bzip2` | copies of the inflater and the bzip2 decoder of the Go standard library, changed to decode as the libraries of binwalk. Each has the BSD `LICENSE` of Go. golangci-lint skips them |
 | `walk/format/` | the formats of the walker, one package for each group, `internal/zipsig`, the ZIP parser that two groups share, and `all`, which imports every one |
-| `upstream/file/`, `upstream/binwalk-ng/` | the checkouts of file and of binwalk-ng, the references for the port and the walker. git ignores them. Do not edit them (D25). The samples of binwalk-ng are a submodule of its checkout |
+| `upstream/file/`, `upstream/binwalk-ng/`, `upstream/lzxd/` | the checkouts of file, of binwalk-ng and of lzxd, the references for the port, the walker and `compress/lzx`. git ignores them. Do not edit them (D25). The samples of binwalk-ng are a submodule of its checkout |
 | `test/` | the test module, with its own `go.mod` (D30): the oracle program in `test/cmd/oracle`, its client and the tests of file in `test/oracle`, the corpus in `test/corpus`, the tests of the compiler and the table in `test/rules`, and the gates of the port and of the walker in `test/diff` |
 | `test/.oracle/`, `test/.binwalk/` | what `test/oracle/build.sh` and `test/oracle/build-binwalk.sh` build. git ignores them |
 | `test/corpus/testdata/walk/` | the samples of the formats of the walker, made for this repository |

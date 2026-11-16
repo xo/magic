@@ -1,6 +1,6 @@
 # D62. The reader of Compound Files for ivy is the package cfb
 
-Status: Proposed.
+Status: Decided.
 
 A Compound File is a container of Microsoft. It holds a tree of storages and
 streams, as a file system holds folders and files. On 2026-11-17, ivy needed
@@ -20,7 +20,8 @@ The engine reads Compound Files in `internal/engine/cdf.go`, a translation of
 cdf.c of libmagic, but no program outside magic can import it. The
 maintainers decided in ivy D24 that magic makes its reader of Compound Files a
 public package, and that the change waits in magic for the review of a
-maintainer, as D61 did.
+maintainer, as D61 did. The maintainers accepted it on 2026-11-17, as the
+answer to question 25.
 
 ## The decision
 

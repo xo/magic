@@ -82,4 +82,4 @@ D32 set the project up as a port of libmagic.
 | D59 | [The walker fixes a bug of binwalk with a decision, and so does the oracle](D059-the-walker-fixes-a-bug-of-binwalk-with-a-decision-and-so-does-the-oracle.md) | Decided. Amends D49. Amended by D60 |
 | D60 | [The walker follows binwalk-ng](D060-the-walker-follows-binwalk-ng.md) | Decided. Amends D49. Amends D59 |
 | D61 | [The decoders for ivy are packages of compress that do not register](D061-the-decoders-for-ivy-are-packages-of-compress-that-do-not-register.md) | Decided |
-| D62 | [The reader of Compound Files for ivy is the package cfb](D062-the-reader-of-compound-files-for-ivy-is-the-package-cfb.md) | Proposed |
+| D62 | [The reader of Compound Files for ivy is the package cfb](D062-the-reader-of-compound-files-for-ivy-is-the-package-cfb.md) | Decided |

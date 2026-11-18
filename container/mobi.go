@@ -10,13 +10,16 @@ import (
 // The parts of a Mobipocket book that Detect reads. A Mobipocket book is a
 // database of Palm OS: a header of 78 bytes, a list of records of 8 bytes
 // each, and the records. The first record holds the header of PalmDOC, 16
-// bytes, and the MOBI header after it.
+// bytes, and the MOBI header after it. Each offset of a field of the MOBI
+// header counts from the start of the MOBI header, so it is 16 less than
+// the offset in the record. calibre and KindleUnpack read the flags of the
+// EXTH header at 0x80 of the record.
 const (
 	pdbHeaderLen   = 78
 	pdbRecordLen   = 8
 	palmDOCLen     = 16
 	mobiVersionOff = 0x14 // the version of the format in the MOBI header
-	mobiFlagsOff   = 0x80 // the flags of the EXTH header in the MOBI header
+	mobiFlagsOff   = 0x70 // the flags of the EXTH header in the MOBI header
 	mobiHasEXTH    = 0x40
 	exthKF8        = 121 // the record of the EXTH that names the KF8 part
 	exthNone       = 0xFFFFFFFF

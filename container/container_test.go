@@ -433,6 +433,8 @@ func TestMOBI(t *testing.T) {
 		{"kf8 is mobi", mobiFile(6, 121, 0, false), container.Unknown},
 		{"other exth", mobiFile(6, 100, 2, false), container.Unknown},
 		{"version 8", mobiFile(8, 0, 0, false), container.AZW3},
+		{"calibre", calibreBook(0x850), container.AZW3},
+		{"calibre with no exth flag", calibreBook(0x810), container.Unknown},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -461,7 +463,7 @@ func mobiFile(version, exth, kf8 uint32, boundary bool) []byte {
 		be.PutUint32(rec[16+0x04:], 0xE8)
 		be.PutUint32(rec[16+0x14:], version)
 		if exth != 0 {
-			be.PutUint32(rec[16+0x80:], 0x40)
+			be.PutUint32(rec[0x80:], 0x40) // the flags of the EXTH header
 			rec = append(rec, "EXTH"...)
 			rec = be.AppendUint32(rec, 12+12)
 			rec = be.AppendUint32(rec, 1)
@@ -481,6 +483,83 @@ func mobiFile(version, exth, kf8 uint32, boundary bool) []byte {
 	be.PutUint16(b[76:], uint16(len(records)))
 	for i, rec := range records {
 		be.PutUint32(b[78+8*i:], uint32(len(b)))
+		b = append(b, rec...)
+	}
+	return b
+}
+
+// calibreBook makes a book with both forms, MOBI and KF8, as calibre writes
+// it with --mobi-file-type both. Its records are the ones of such a book,
+// mobi/testdata/book-both.mobi of ivy, with fewer bytes. Record 0 has a MOBI
+// header of version 6 and 0x108 bytes, with flags, the flags of the EXTH
+// header, at 0x80 of the record. calibre writes 0x850. Its EXTH header
+// has records of odd lengths, and the record 121 comes late and gives 8,
+// the record after BOUNDARY. Record 8 has a MOBI header of version 8.
+func calibreBook(flags uint32) []byte {
+	be := binary.BigEndian
+	const headerLen = 0x108
+	exth := func(typ uint32, data []byte) []byte {
+		b := be.AppendUint32(nil, typ)
+		b = be.AppendUint32(b, uint32(8+len(data)))
+		return append(b, data...)
+	}
+	header := func(version, flags uint32, exths ...[]byte) []byte {
+		rec := make([]byte, 16+headerLen)
+		be.PutUint16(rec[0:], 2)     // PalmDOC compression
+		be.PutUint32(rec[4:], 931)   // the length of the text
+		be.PutUint16(rec[8:], 1)     // one text record
+		be.PutUint16(rec[10:], 4096) // the size of a text record
+		copy(rec[16:], "MOBI")       // the MOBI header
+		be.PutUint32(rec[20:], headerLen)
+		be.PutUint32(rec[24:], 2)     // a book
+		be.PutUint32(rec[28:], 65001) // UTF-8
+		be.PutUint32(rec[36:], version)
+		be.PutUint32(rec[0x80:], flags)
+		var recs []byte
+		for _, e := range exths {
+			recs = append(recs, e...)
+		}
+		rec = append(rec, "EXTH"...)
+		rec = be.AppendUint32(rec, uint32(12+len(recs)))
+		rec = be.AppendUint32(rec, uint32(len(exths)))
+		rec = append(rec, recs...)
+		// calibre pads the record after the EXTH header.
+		return append(rec, make([]byte, 64)...)
+	}
+	u32 := func(v uint32) []byte { return be.AppendUint32(nil, v) }
+	records := [][]byte{
+		header(6, flags,
+			exth(503, []byte("Sample Book")),
+			exth(524, []byte("de")),
+			exth(100, []byte("Ann Author")),
+			exth(501, []byte("EBOK")),
+			exth(129, []byte("kindle:embed:0002")),
+			exth(121, u32(8)),
+			exth(125, u32(3)),
+			exth(131, u32(0)),
+		),
+		[]byte("<html><body><p>The text of the book.</p></body></html>"),
+		{0, 0},
+		[]byte("INDX\x00\x00\x00\xc0"),
+		[]byte("\xff\xd8\xff\xe0\x00\x10JFIF"),
+		[]byte("FLIS\x00\x00\x00\x08"),
+		[]byte("FCIS\x00\x00\x00\x14"),
+		[]byte("BOUNDARY"),
+		header(8, 0x50,
+			exth(503, []byte("Sample Book")),
+			exth(125, u32(3)),
+		),
+		[]byte("<?xml version=\"1.0\"?>"),
+		[]byte("FDST\x00\x00\x00\x0c"),
+		[]byte("\xe9\x8e\r\n"),
+	}
+	b := make([]byte, 78+8*len(records)+2)
+	copy(b, "Sample_Book")
+	copy(b[60:], "BOOKMOBI")
+	be.PutUint16(b[76:], uint16(len(records)))
+	for i, rec := range records {
+		be.PutUint32(b[78+8*i:], uint32(len(b)))
+		be.PutUint32(b[78+8*i+4:], uint32(2*i))
 		b = append(b, rec...)
 	}
 	return b
@@ -527,9 +606,10 @@ func damaged(b []byte, yield func([]byte)) {
 func TestDamaged(t *testing.T) {
 	t.Parallel()
 	files := map[string][]byte{
-		"cfb":   cfbFile("EncryptionInfo", "EncryptedPackage"),
-		"joint": mobiFile(6, 121, 3, true),
-		"xps":   zipFile(t, member{name: "_rels/.rels/[0].piece", data: rels(xpsType, `"`, "")}),
+		"calibre": calibreBook(0x850),
+		"cfb":     cfbFile("EncryptionInfo", "EncryptedPackage"),
+		"joint":   mobiFile(6, 121, 3, true),
+		"xps":     zipFile(t, member{name: "_rels/.rels/[0].piece", data: rels(xpsType, `"`, "")}),
 	}
 	for _, s := range samples[:12] {
 		files[s.file] = readSample(t, s.file)
@@ -554,6 +634,7 @@ func FuzzDetect(f *testing.F) {
 	}
 	f.Add(cfbFile("EncryptionInfo", "EncryptedPackage"))
 	f.Add(mobiFile(6, 121, 3, true))
+	f.Add(calibreBook(0x850))
 	f.Fuzz(func(t *testing.T, b []byte) {
 		if _, err := detect(b); err != nil && !errors.Is(err, container.ErrCorrupt) && !errors.Is(err, container.ErrLimit) {
 			t.Fatalf("expected %v or %v, got: %v", container.ErrCorrupt, container.ErrLimit, err)

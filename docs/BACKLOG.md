@@ -132,6 +132,19 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     page, such as 932 for Japanese, keeps its bytes, and the program
     converts them. Source: D62.
 24. `cfb` reads no value of type VT_ARRAY, and keeps its bytes. Source: D62.
+25. No test reads a DMG file that Apple wrote. The tests of `compress/lzfse`
+    read streams that the reference encoder wrote, and the tests of
+    `compress/adc` read chunks that the compressor of the tests wrote. With
+    a DMG file that the repository can hold, made by hdiutil with ADC and
+    with LZFSE, a test can compare the decoders with the chunks of Apple.
+    Source: D63.
+26. The walker finds `lzfse` and `dmg` and does not extract them, as item 1
+    of the binary walker says. `compress/lzfse` and `compress/adc` can
+    decode their data now. Source: D63.
+27. magic does not tell XPS, OpenXPS, CBZ, every APK and every IPA from a
+    zip file, and gives Krita, OpenRaster and AZW3 only in the description.
+    D64 decides that a package of its own names them. Write the package.
+    `TestContainers` holds what libmagic reports today. Source: D64.
 
 ## The binary walker
 

@@ -83,3 +83,5 @@ D32 set the project up as a port of libmagic.
 | D60 | [The walker follows binwalk-ng](D060-the-walker-follows-binwalk-ng.md) | Decided. Amends D49. Amends D59 |
 | D61 | [The decoders for ivy are packages of compress that do not register](D061-the-decoders-for-ivy-are-packages-of-compress-that-do-not-register.md) | Decided |
 | D62 | [The reader of Compound Files for ivy is the package cfb](D062-the-reader-of-compound-files-for-ivy-is-the-package-cfb.md) | Decided |
+| D63 | [The decoders of LZFSE and ADC for ivy follow D61](D063-the-decoders-of-lzfse-and-adc-for-ivy-follow-d61.md) | Decided |
+| D64 | [A package for ivy names the formats that libmagic names as their container](D064-a-package-for-ivy-names-the-formats-that-libmagic-names-as-their-container.md) | Decided |

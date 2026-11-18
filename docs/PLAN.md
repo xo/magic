@@ -321,5 +321,5 @@ settled. Questions 2 and 6 were about the archives, which D47 removed: the
 `cross` job of CI now builds linux/arm with the other targets that have no
 runner, and no archive holds libgnurx. Question 3 was answered by D53,
 questions 4, 5, 7 and 8 by D54 to D57, and questions 17 to 22, about the
-binary walker, by D49 to D52, question 23 by D60, question 24 by D61, and
-question 25 by D62. The next question is question 26.
+binary walker, by D49 to D52, question 23 by D60, question 24 by D61, question
+25 by D62, and question 26 by D64. The next question is question 27.

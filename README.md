@@ -124,12 +124,13 @@ need other modules. Get them with `go get` as well. For a format with no
 decoder, magic answers as libmagic does when it was built without the
 library and finds no program that decodes it. magic never runs a program.
 
-Three more packages decode formats of books and help files.
+Five more packages decode formats of books, help files and disk images.
 `WithDecompress` does not use them, because libmagic does not decode these
-formats (D61):
+formats (D61, D63):
 `compress/palmdoc` decodes the text of PalmDOC and MOBI books,
 `compress/huffcdic` the Huffman compression of Mobipocket, and `compress/lzx`
-the LZX of CAB and CHM files.
+the LZX of CAB and CHM files, `compress/lzfse` the LZFSE of Apple, and
+`compress/adc` the ADC of older DMG files.
 
 ## Read a Compound File
 

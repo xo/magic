@@ -22,9 +22,11 @@ these columns, separated by a tab:
 | `base` | the full hash of the base commit |
 | `matched` | the full hash of the last commit that magic matches, or empty before the base port is done |
 
-There are three upstreams. file is the upstream of the port of libmagic,
+There are four upstreams. file is the upstream of the port of libmagic,
 binwalk-ng is the upstream of the walker (D49, D60), and lzxd is the upstream
-of `compress/lzx`, the LZX decoder for ivy (D61). binwalk-ng is the fork of
+of `compress/lzx`, the LZX decoder for ivy (D61). lzfse is the upstream of
+`compress/lzfse` (D63). It has its checkout in `upstream/lzfse/` and its
+ledger in `docs/upstream/lzfse.tsv`, and has no oracle. binwalk-ng is the fork of
 binwalk that is maintained. The compression libraries are not upstreams,
 because magic replaces them (D27). The rules below name file. They hold for
 binwalk-ng in the same way, with its checkout in `upstream/binwalk-ng/`, its
@@ -46,6 +48,7 @@ If the checkout is missing, make it in the root of the repository:
 git clone https://github.com/file/file.git upstream/file
 git clone --recurse-submodules https://github.com/binwalk-ng/binwalk-ng.git upstream/binwalk-ng
 git clone https://github.com/Lonami/lzxd.git upstream/lzxd
+git clone https://github.com/lzfse/lzfse.git upstream/lzfse
 ```
 
 Before you port anything, make sure that the checkout is clean. This command

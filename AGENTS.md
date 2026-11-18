@@ -46,6 +46,7 @@ of `docs/PLAN.md`. Ask a maintainer.
 | changing an expected value in a test | D11 and D48. The test module checks the value against the oracle |
 | changing a decoder of compressed data, or its dependency | D27, D28 and D45, then the package in `compress/`. For `palmdoc`, `huffcdic` and `lzx`, D61. For `lzfse` and `adc`, D63 |
 | changing `cfb`, the reader of Compound Files and property sets, or the reader of the engine in `internal/engine/cdf.go` | D62. The engine keeps its own reader, which copies libmagic |
+| changing `container`, which names the format inside a zip file, a Compound File or a Mobipocket book | D64, then D65 |
 | translating a file of libmagic | D29: the Go file opens with the notice of the C file, and names it |
 | tagging a release | D39, D47 and D57, then `CONTRIBUTING.md`, under Release. Tag only when a maintainer says so, and only after CI passes on the commit |
 | changing CI | D12, then `.github/workflows/test.yml` |
@@ -117,6 +118,7 @@ and `dbmeta`. List them with `ListAgents`, and send a message with
 | `internal/table/` | the rules of file, at the commit that the ledger names (D48), as the port embeds them, `rules.flate`, and `gen/`, which writes it from `upstream/file` with `go generate` (D35). Do not edit `rules.flate` |
 | `compress/` | the registry of the decoders of compressed data, and one package for each library of libmagic: `zlib` and `bzip2` in the root module, `xz` and `zstd` as modules of their own (D45). It also holds `palmdoc`, `huffcdic` and `lzx`, the decoders of MOBI books and CHM files for ivy, which do not register (D61). `lzx` is a port of lzxd, with its `LICENSE`, and its `testdata/` holds a CAB file and a CHM file that its tests wrote. It also holds `lzfse` and `adc`, the decoders of DMG files for ivy (D63). `lzfse` is a port of the reference code of Apple, with its `LICENSE`, and its `testdata/` holds streams that the reference encoder wrote. The `testdata/` of `adc` holds a DMG file that its tests wrote |
 | `cfb/` | the reader of Compound Files and of their property sets, for ivy (D62). magic does not import it. Its tests write their own Compound Files |
+| `container/` | the package that names the format inside a zip file, a Compound File or a Mobipocket book, for ivy (D64, D65). magic does not import it. Its tests read the samples of `TestContainers` and write their own containers |
 | `testdata/` | the sample files that the tests read, and the samples of formats in containers that `TestContainers` writes (D64) |
 | `.github/workflows/test.yml` | CI |
 | `docs/PLAN.md` | the plan of the port, the reviews and the open questions |

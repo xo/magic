@@ -158,6 +158,30 @@ if thumb, ok := ps.Thumbnail(); ok && thumb.Format == cfb.CFEnhMetafile {
 }
 ```
 
+## Name the format inside a container
+
+libmagic names some formats only by their container. It names an XPS
+document, a comic book archive (CBZ) and most Android packages as a zip file,
+an encrypted Office Open XML file as an encrypted Compound File, and an AZW3
+book as a Mobipocket book. The package `container` reads the container and
+names the format inside: XPS, OpenXPS, an encrypted Office Open XML file,
+AZW3, CBZ, APK, IPA, Krita and OpenRaster. It reads only the directory of
+the container and at most two small members. magic does not import it
+(D64, D65):
+
+```go
+f, err := container.Detect(r, size, container.Limits{})
+if err != nil {
+	return err
+}
+if f != container.Unknown {
+	fmt.Println(f.MIME(), f.Description()) // application/oxps OpenXPS document
+}
+```
+
+For a file that holds none of the formats, `Detect` returns
+`container.Unknown`, and the result of `magic.Detect` stands.
+
 ## Walk a firmware image
 
 The package `walk` finds the files that are embedded in a binary file, such

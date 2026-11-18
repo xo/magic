@@ -141,10 +141,12 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
 26. The walker finds `lzfse` and `dmg` and does not extract them, as item 1
     of the binary walker says. `compress/lzfse` and `compress/adc` can
     decode their data now. Source: D63.
-27. magic does not tell XPS, OpenXPS, CBZ, every APK and every IPA from a
-    zip file, and gives Krita, OpenRaster and AZW3 only in the description.
-    D64 decides that a package of its own names them. Write the package.
-    `TestContainers` holds what libmagic reports today. Source: D64.
+27. No test of `container` reads a file that the programs of its formats
+    wrote, such as an XPS document of the XPS Document Writer, an APK of
+    the Android Gradle plugin or an AZW3 book of KindleGen. The tests read
+    the samples of D64 and the files that the tests write. With such files
+    that the repository can hold, a test can check the rules of D65 on
+    them. Source: D65.
 
 ## The binary walker
 

@@ -147,6 +147,65 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     the samples of D64 and the files that the tests write. With such files
     that the repository can hold, a test can check the rules of D65 on
     them. Source: D65.
+28. On 2026-11-20 `magic.DetectFile` and `container.Detect` read the 292 files
+    of the corpus of the review of ivy. They name most files as ivy does.
+    Items 29 to 35 hold the files where they do not. The program that read
+    them is a short loop over `test/review/corpus.tsv` of ivy, and the files
+    are in the cache of that review. Source: the corpus of ivy.
+29. `container` does not name an OpenDocument file whose first member is not
+    `mimetype`. libmagic then says `application/zip`. In the corpus of ivy,
+    `libreoffice/odt/ooo96040-2.odt`, `libreoffice/odt/landscape-a4-table.odt`
+    and `libreoffice/odg/rhbz1870501.odg` are such files. The first member of
+    `ooo96040-2.odt` is `Versions/`. The member `mimetype`, or the media type
+    of the root in `META-INF/manifest.xml`, names the format. Source: the
+    corpus of ivy.
+30. `container` does not name an Office Open XML file whose first member is
+    not `[Content_Types].xml`. libmagic then says "Microsoft OOXML" with
+    `application/octet-stream`. `libreoffice/docx/landscape-a4-table.docx` and
+    `libreoffice/docx/mixed-orientation.docx` start with `styles.xml` and
+    `customXml/`. The content type of the main part in `[Content_Types].xml`
+    names the format: a Word document, a sheet of Excel, a presentation or a
+    drawing of Visio. ivy now finds them with rules of its own in
+    `internal/ooxml`, which ivy D8 says belong in magic. Source: the corpus of
+    ivy.
+31. `container` does not name the files of iWork: Pages, Numbers and Keynote.
+    libmagic says `application/zip`. A file of iWork 2013 and later holds
+    `Index/Document.iwa` and other members under `Index/`, and an older bundle
+    holds `index.apxl` or `index.xml`. The corpus of ivy has
+    `tika/pages/sample-2013.pages`, `tika/numbers/checking-2013.numbers`,
+    `tika/key/sample-2013.key` and `tika/key/bundle-2018.key`.
+    shared-mime-info gives the MIME types `application/vnd.apple.pages`,
+    `application/vnd.apple.numbers` and `application/vnd.apple.keynote`.
+    Source: the corpus of ivy.
+32. `container` does not name a drawing of Visio 2003 to 2010 (`.vsd`) or a
+    file of Publisher (`.pub`). Both are Compound Files. The port says
+    `application/x-ole-storage` and "Composite Document File V2 Document,
+    Cannot read section info". The `file` 5.48 of the machine of the review
+    says `application/vnd.ms-office` for the same files, probably because of
+    the fault of item 17. The class ID of the root storage, or the stream
+    `VisioDocument` of Visio and the streams `Contents` and `Quill` of
+    Publisher, name the format. The corpus of ivy has `poi/vsd/44501e.vsd`,
+    `poi/vsd/visio-with-embedded.vsd` and three files under `poi/pub/`.
+    Source: the corpus of ivy.
+33. The 12 FictionBook files of the corpus of ivy (`.fb2`) are `text/xml`.
+    libmagic has no rule for the root element `FictionBook` of the namespace
+    `http://www.gribuser.ru/xml/fictionbook/2.0`. shared-mime-info gives
+    `application/x-fictionbook+xml`. Such a rule is not a container, so it
+    needs a decision of the maintainers on where magic puts a rule that
+    libmagic does not have. Source: the corpus of ivy.
+34. An EMF file is `application/octet-stream`, with the description "Windows
+    Enhanced Metafile (EMF) image data", as in libmagic. The MIME type
+    `image/emf` is registered with IANA. The corpus of ivy has 5 EMF files.
+    This change also needs a decision, because it differs from libmagic.
+    Source: the corpus of ivy.
+35. An XPS file whose first member is not `[Content_Types].xml` is
+    `application/octet-stream` in `magic.Detect`, and `container.Detect` names
+    it `xps`. A program that asks both gets the right answer, as D65 says. The
+    corpus of ivy has `poi/xps/test-ppt.xps`, `microsoft/xps/mb07.xps` and
+    `repo/xps/example.xps`. A note in the documentation of `DetectFile` can
+    say that a program asks `container` for a file of
+    `application/octet-stream` with the description "Microsoft OOXML". Source:
+    the corpus of ivy.
 
 ## The binary walker
 

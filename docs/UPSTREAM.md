@@ -47,8 +47,18 @@ If the checkout is missing, make it in the root of the repository:
 ```bash
 git clone https://github.com/file/file.git upstream/file
 git clone --recurse-submodules https://github.com/binwalk-ng/binwalk-ng.git upstream/binwalk-ng
-git clone https://github.com/Lonami/lzxd.git upstream/lzxd
+git clone https://codeberg.org/Lonami/lzxd.git upstream/lzxd
 git clone https://github.com/lzfse/lzfse.git upstream/lzfse
+```
+
+lzxd moved from GitHub to codeberg.org on 2026-02-09, and its ledger follows
+codeberg.org. Its base commit, `4f477bd`, is the last commit on GitHub, and
+codeberg.org does not hold it. That commit changes only `README.md`. After
+you clone lzxd, fetch the base commit from GitHub, so that
+`TestTheLedgerIsComplete` finds it:
+
+```bash
+git -C upstream/lzxd fetch https://github.com/Lonami/lzxd.git master:refs/remotes/github/master
 ```
 
 Before you port anything, make sure that the checkout is clean. This command

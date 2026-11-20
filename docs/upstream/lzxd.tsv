@@ -1,1 +1,2 @@
 upstream	date	status	magic	note
+aa723fd8135d556b3f0ea9c32d60a43eadebe8df	2026-06-25	pending		Fix errors from fuzzer (#1). The first commit on codeberg.org. It changes the decoder in src/. With 1 byte left, the bit reader of src/bitstream.rs panicked. Now it returns UnexpectedEof when it loads a word, and peeks 0. decompress_next in src/lib.rs returns UnexpectedEof where it panicked when an uncompressed block could not go on. It also changes the fuzz target and adds 3 tests

@@ -7,45 +7,78 @@ import (
 )
 
 // relTypes returns the attribute Type of each element Relationship in b, the
-// relationships of a package of the Open Packaging Conventions. It does not
-// parse XML. It reads the tags of b and their attributes, and skips the
-// declaration, comments and other markup that starts with "<?" or "<!". A
-// part of the relationships holds no other markup. It skips the prefix of a
-// namespace, so "r:Relationship" is an element Relationship. It decodes
-// UTF-16 with a byte order mark, which the Open Packaging Conventions allow.
-// It decodes no entity, because no type of relationship holds one.
+// relationships of a package of the Open Packaging Conventions.
 func relTypes(b []byte) []string {
-	b = utf8Text(b)
 	var types []string
+	elements(b, func(name string, attrs []xmlAttr) bool {
+		if localName(name) == "Relationship" {
+			if v, ok := attr(attrs, "Type"); ok {
+				types = append(types, strings.TrimSpace(v))
+			}
+		}
+		return true
+	})
+	return types
+}
+
+// xmlAttr is an attribute of a tag that elements reads.
+type xmlAttr struct {
+	name, value string
+}
+
+// attr returns the value of the attribute name in attrs. It compares the
+// names without the prefix of a namespace.
+func attr(attrs []xmlAttr, name string) (string, bool) {
+	for _, a := range attrs {
+		if localName(a.name) == name {
+			return a.value, true
+		}
+	}
+	return "", false
+}
+
+// elements calls fn with the name and the attributes of each start tag of
+// b, until fn returns false. The name and the names of the attributes keep
+// the prefix of their namespace, such as "r:Relationship" and "xmlns:sl".
+//
+// elements does not parse XML. It reads the tags of b and their attributes,
+// and skips the declaration, comments and other markup that starts with "<?"
+// or "<!". The parts that Detect reads, such as the relationships of a
+// package, hold no other markup before the tags that Detect needs. It
+// decodes UTF-16 with a byte order mark, which the Open Packaging
+// Conventions allow. It decodes no entity, because no value that Detect
+// compares holds one.
+func elements(b []byte, fn func(name string, attrs []xmlAttr) bool) {
+	b = utf8Text(b)
+	var attrs []xmlAttr
 	for {
 		i := bytes.IndexByte(b, '<')
 		if i < 0 {
-			return types
+			return
 		}
 		b = b[i+1:]
 		switch {
 		case bytes.HasPrefix(b, []byte("!--")):
 			b = skipPast(b, "-->")
 			continue
-		case len(b) > 0 && (b[0] == '?' || b[0] == '!'):
+		case len(b) > 0 && (b[0] == '?' || b[0] == '!' || b[0] == '/'):
 			b = skipPast(b, ">")
 			continue
 		}
 		var name string
 		name, b = tagName(b)
-		if localName(name) != "Relationship" {
-			continue
-		}
+		attrs = attrs[:0]
 		for {
-			var attr, value string
+			var a xmlAttr
 			var ok bool
-			attr, value, b, ok = nextAttr(b)
+			a.name, a.value, b, ok = nextAttr(b)
 			if !ok {
 				break
 			}
-			if localName(attr) == "Type" {
-				types = append(types, strings.TrimSpace(value))
-			}
+			attrs = append(attrs, a)
+		}
+		if !fn(name, attrs) {
+			return
 		}
 	}
 }

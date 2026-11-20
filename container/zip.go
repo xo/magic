@@ -43,6 +43,10 @@ const (
 	openRasterMIME = "image/openraster"
 )
 
+// mimetypeLen is the most bytes of the member mimetype that Detect reads.
+// The longest type of OpenDocument has 55 bytes.
+const mimetypeLen = 128
+
 // The types of the relationship that names the sequence of the documents of
 // an XPS document, and of an OpenXPS document.
 const (
@@ -64,6 +68,14 @@ type zipScan struct {
 	rels     *zipMember
 	pieces   map[int]*zipMember // the pieces of _rels/.rels, by number
 	last     int                // the number of the last piece, or -1
+	types    *zipMember         // [Content_Types].xml
+	odf      *zipMember         // META-INF/manifest.xml of OpenDocument
+	head     []zipHead          // the first members, for libmagicOOXML
+
+	iwa         *zipMember // Index/Document.iwa of iWork 2013 and later
+	slides      bool       // the slides of Keynote in Index/
+	iworkIndex  *zipMember // the index of iWork 2005 to 2009
+	iworkFolder Format     // the format of a folder of a package of iWork
 
 	manifest bool // AndroidManifest.xml in the root
 	dex      bool // classes.dex in the root
@@ -83,7 +95,7 @@ type zipFile struct {
 }
 
 // detectZip reads the central directory of the zip file, and the members
-// mimetype and _rels/.rels when it holds them.
+// that the rules of format need.
 func detectZip(r io.ReaderAt, size int64, lim Limits) (Format, error) {
 	z := &zipFile{r: r, size: size, lim: lim}
 	start, n, err := z.directory()
@@ -99,21 +111,42 @@ func detectZip(r io.ReaderAt, size int64, lim Limits) (Format, error) {
 
 // format names the format from s. The member mimetype comes first, because
 // it names the format of an Open Container. Then the relationship of XPS,
-// then APK and IPA, which have their own members. CBZ comes last, because
-// any zip file of images is one.
+// the content types of Office Open XML, the manifest of OpenDocument and
+// the members of iWork, then APK and IPA, which have their own members. CBZ
+// comes last, because any zip file of images is one.
 func (z *zipFile) format(s *zipScan) Format {
 	if s.mimetype != nil {
-		b := z.read(s.mimetype, int64(len(kritaMIME)+64))
+		b := z.read(s.mimetype, min(mimetypeLen, int64(z.lim.MemberSize)))
 		switch strings.TrimSpace(string(b)) {
 		case kritaMIME:
 			return Krita
 		case openRasterMIME:
 			return OpenRaster
 		}
-		// An EPUB or an OpenDocument file, which libmagic names.
+		if f := odfMimetype(b); f != Unknown && !z.libmagicNamesMimetype() {
+			return f
+		}
+		// An EPUB, or an OpenDocument file that libmagic names.
 		return Unknown
 	}
 	if f := relType(z.rels(s)); f != Unknown {
+		return f
+	}
+	if s.types != nil {
+		if f := mainType(z.read(s.types, int64(z.lim.MemberSize))); f != Unknown {
+			if z.libmagicOOXML(s) {
+				return Unknown
+			}
+			return f
+		}
+	}
+	// With no member mimetype, libmagic does not name an OpenDocument file.
+	if s.odf != nil {
+		if f := odfManifestType(z.read(s.odf, int64(z.lim.MemberSize))); f != Unknown {
+			return f
+		}
+	}
+	if f := z.iwork(s); f != Unknown {
 		return f
 	}
 	switch {
@@ -250,7 +283,11 @@ func (z *zipFile) scan(s *zipScan, start, n int64) error {
 			offset: uint64(le.Uint32(h[42:])),
 		}
 		zip64(m, uint64(le.Uint32(h[24:])), extra)
-		s.add(strings.ReplaceAll(string(name), `\`, "/"), m)
+		n := strings.ReplaceAll(string(name), `\`, "/")
+		if count < msooxmlKeep {
+			s.head = append(s.head, newZipHead(n, m.offset))
+		}
+		s.add(n, m)
 	}
 }
 
@@ -302,14 +339,21 @@ func (s *zipScan) add(name string, m *zipMember) {
 	case "resources.arsc":
 		s.arsc = true
 	}
-	// The names of the parts of an XPS document compare without case
-	// (Open Packaging Conventions).
+	// The names of the parts of a package of the Open Packaging
+	// Conventions, such as an XPS document, compare without case.
 	lower := strings.ToLower(name)
-	if lower == "_rels/.rels" {
+	switch {
+	case lower == "_rels/.rels":
 		s.rels = m
-	} else if rest, ok := strings.CutPrefix(lower, "_rels/.rels/["); ok {
+	case lower == "[content_types].xml":
+		s.types = m
+	case name == "META-INF/manifest.xml":
+		s.odf = m
+	}
+	if rest, ok := strings.CutPrefix(lower, "_rels/.rels/["); ok {
 		s.addPiece(rest, m)
 	}
+	s.addIWork(name, m)
 	if rest, ok := strings.CutPrefix(name, "Payload/"); ok {
 		if dir, _, ok := strings.Cut(rest, "/"); ok && len(dir) > len(".app") && strings.HasSuffix(dir, ".app") {
 			s.app = true

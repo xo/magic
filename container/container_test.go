@@ -94,7 +94,7 @@ func TestSamples(t *testing.T) {
 func TestFormats(t *testing.T) {
 	t.Parallel()
 	seen := map[string]bool{}
-	for f := container.XPS; f <= container.OpenRaster; f++ {
+	for f := container.XPS; f <= container.Keynote; f++ {
 		if f.String() == "" || strings.HasPrefix(f.String(), "Format(") || f.MIME() == "" || f.Description() == "" {
 			t.Errorf("%d: expected a name, a MIME type and a description, got: %q, %q, %q", int(f), f.String(), f.MIME(), f.Description())
 		}
@@ -119,6 +119,7 @@ type member struct {
 	name  string
 	data  string
 	store bool
+	extra []byte
 }
 
 // zipFile makes a zip file of members.
@@ -127,7 +128,7 @@ func zipFile(t testing.TB, members ...member) []byte {
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
 	for _, m := range members {
-		h := &zip.FileHeader{Name: m.name, Method: zip.Deflate}
+		h := &zip.FileHeader{Name: m.name, Method: zip.Deflate, Extra: m.extra}
 		if m.store {
 			h.Method = zip.Store
 		}
@@ -352,10 +353,26 @@ func TestCFB(t *testing.T) {
 }
 
 // cfbFile makes a Compound File of version 3 with empty streams of the
-// names in its root, at most 3. Sector 0 holds the table of sectors, and
-// sector 1 the directory. Each stream is on the right of the one before it
-// in the tree of the root ([MS-CFB]).
+// names in its root, at most 3.
 func cfbFile(names ...string) []byte {
+	entries := make([]cfbEntry, len(names))
+	for i, name := range names {
+		entries[i] = cfbEntry{name: name}
+	}
+	return cfbFileOf([16]byte{}, entries...)
+}
+
+// cfbEntry is an entry of the root of a Compound File of cfbFileOf.
+type cfbEntry struct {
+	name    string
+	storage bool
+}
+
+// cfbFileOf makes a Compound File of version 3 whose root has the class ID
+// clsid and the empty streams and storages of entries, at most 3. Sector 0
+// holds the table of sectors, and sector 1 the directory. Each entry is on
+// the right of the one before it in the tree of the root ([MS-CFB]).
+func cfbFileOf(clsid [16]byte, entries ...cfbEntry) []byte {
 	const (
 		endOfChain = 0xFFFFFFFE
 		freeSect   = 0xFFFFFFFF
@@ -402,14 +419,19 @@ func cfbFile(names ...string) []byte {
 		le.PutUint32(e[0x74:], endOfChain)
 	}
 	entry(0, "Root Entry", 5, noStream, 1)
-	for i, name := range names {
+	copy(dir[0x50:], clsid[:])
+	for i, e := range entries {
 		right := uint32(i + 2)
-		if i == len(names)-1 {
+		if i == len(entries)-1 {
 			right = noStream
 		}
-		entry(i+1, name, 2, right, noStream)
+		typ := byte(2)
+		if e.storage {
+			typ = 1
+		}
+		entry(i+1, e.name, typ, right, noStream)
 	}
-	for i := len(names) + 1; i < 4; i++ {
+	for i := len(entries) + 1; i < 4; i++ {
 		e := dir[128*i : 128*(i+1)]
 		le.PutUint32(e[0x44:], noStream)
 		le.PutUint32(e[0x48:], noStream)
@@ -611,6 +633,9 @@ func TestDamaged(t *testing.T) {
 		"joint":   mobiFile(6, 121, 3, true),
 		"xps":     zipFile(t, member{name: "_rels/.rels/[0].piece", data: rels(xpsType, `"`, "")}),
 	}
+	for name, b := range extraSeeds(t) {
+		files[name] = b
+	}
 	for _, s := range samples[:12] {
 		files[s.file] = readSample(t, s.file)
 	}
@@ -626,6 +651,20 @@ func TestDamaged(t *testing.T) {
 	}
 }
 
+// extraSeeds returns small files of the formats of OpenDocument, Office
+// Open XML, iWork, Visio and Publisher, for TestDamaged and FuzzDetect.
+func extraSeeds(t testing.TB) map[string][]byte {
+	t.Helper()
+	return map[string][]byte{
+		"odt":     zipFile(t, part("content.xml"), odfManifest(odtType)),
+		"docx":    zipFile(t, part("a.xml"), contentTypes("word/document.xml", wordType), part("word/document.xml")),
+		"keynote": zipFile(t, member{name: "Index/Document.iwa", data: iwa(1), store: true}, part("Index/Slide.iwa")),
+		"numbers": zipFile(t, iworkIndex("index.xml", "ls", "document", "http://developer.apple.com/namespaces/ls")),
+		"vsd":     cfbFileOf(visio2003, cfbEntry{name: "VisioDocument"}),
+		"pub":     cfbFileOf([16]byte{}, cfbEntry{name: "Quill", storage: true}, cfbEntry{name: "Contents"}),
+	}
+}
+
 // FuzzDetect checks that Detect returns no error other than ErrCorrupt and
 // ErrLimit, and does not panic.
 func FuzzDetect(f *testing.F) {
@@ -635,6 +674,9 @@ func FuzzDetect(f *testing.F) {
 	f.Add(cfbFile("EncryptionInfo", "EncryptedPackage"))
 	f.Add(mobiFile(6, 121, 3, true))
 	f.Add(calibreBook(0x850))
+	for _, b := range extraSeeds(f) {
+		f.Add(b)
+	}
 	f.Fuzz(func(t *testing.T, b []byte) {
 		if _, err := detect(b); err != nil && !errors.Is(err, container.ErrCorrupt) && !errors.Is(err, container.ErrLimit) {
 			t.Fatalf("expected %v or %v, got: %v", container.ErrCorrupt, container.ErrLimit, err)

@@ -12,7 +12,9 @@ import (
 
 // A program asks magic for the type of a file. When magic names a zip
 // file, a Compound File or a Mobipocket book, the program asks container
-// for the format inside, and keeps the answer of magic for Unknown.
+// for the format inside, and keeps the answer of magic for Unknown. magic
+// names a drawing of Visio 2003 to 2010 and a Publisher document
+// application/x-ole-storage.
 func ExampleDetect() {
 	b, err := os.ReadFile("../testdata/oxps.oxps")
 	if err != nil {
@@ -26,7 +28,7 @@ func ExampleDetect() {
 	switch mime {
 	case "application/zip", "application/octet-stream", "application/encrypted",
 		"application/x-mobipocket-ebook", "application/vnd.android.package-archive",
-		"application/x-ios-app":
+		"application/x-ios-app", "application/x-ole-storage":
 		f, err := container.Detect(bytes.NewReader(b), int64(len(b)), container.Limits{})
 		if err == nil && f != container.Unknown {
 			mime = f.MIME()

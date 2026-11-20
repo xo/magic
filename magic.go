@@ -119,6 +119,13 @@ func bytesOf[S Source](src S) []byte {
 // are "empty". It returns an error when ctx is done or an option is not
 // valid, such as a negative limit. It does not keep src, and does not change
 // it.
+//
+// libmagic names some formats only by their container, and so does Detect.
+// For a result that is "application/octet-stream" with the description
+// "Microsoft OOXML", or that names a zip file, a Compound File or a
+// Mobipocket book, a program asks the package
+// github.com/xo/magic/container for the format inside (D65). An XPS
+// document is one such file.
 func Detect[S Source](ctx context.Context, src S, opts ...Option) (Result, error) {
 	o, err := apply(opts)
 	if err != nil {
@@ -131,6 +138,8 @@ func Detect[S Source](ctx context.Context, src S, opts ...Option) (Result, error
 	data := bytesOf(src)
 	return o.detect(func(c engine.Call) (string, error) {
 		return e.BufferContext(ctx, data, c)
+	}, func() ([]byte, error) {
+		return data[:min(len(data), o.headSize())], nil
 	})
 }
 
@@ -168,12 +177,19 @@ func DetectReaderAt(ctx context.Context, r io.ReaderAt, size int64, opts ...Opti
 	}
 	return o.detect(func(c engine.Call) (string, error) {
 		return e.ReaderAtContext(ctx, r, size, c)
+	}, func() ([]byte, error) {
+		return readHead(io.NewSectionReader(r, 0, size), o.headSize())
 	})
 }
 
 // DetectFile identifies the file at name. A directory, a link, a pipe or a
 // device is named by its kind, as file names it. A file that cannot be found
 // or opened is an error, which wraps the error of the os package.
+//
+// For a file that is "application/octet-stream" with the description
+// "Microsoft OOXML", a program asks the package github.com/xo/magic/container
+// for the format inside, such as XPS (D65). Detect names the other results
+// to ask about.
 func DetectFile(ctx context.Context, name string, opts ...Option) (Result, error) {
 	o, err := apply(opts)
 	if err != nil {
@@ -205,6 +221,14 @@ func DetectFile(ctx context.Context, name string, opts ...Option) (Result, error
 	o.kindOnly = !fi.Mode().IsRegular()
 	return o.detect(func(c engine.Call) (string, error) {
 		return e.FileContext(ctx, name, c)
+	}, func() ([]byte, error) {
+		f, err := os.Open(name)
+		if err != nil {
+			return nil, fmt.Errorf("magic: %w", err)
+		}
+		// The file is only read, so an error of Close changes nothing.
+		defer func() { _ = f.Close() }()
+		return readHead(f, o.headSize())
 	})
 }
 
@@ -222,8 +246,9 @@ func wrap(err error) error {
 
 // detect runs the engine for each form of the result. libmagic finds each
 // form with a walk of its own, and so does the port, so that each form is
-// the one of libmagic (D46).
-func (o *options) detect(run func(engine.Call) (string, error)) (Result, error) {
+// the one of libmagic (D46). With WithExtraRules, the rules of magic then
+// change the result, and read the start of the content with head (D67).
+func (o *options) detect(run func(engine.Call) (string, error), head func() ([]byte, error)) (Result, error) {
 	call := func(f engine.Flags) ([]string, error) {
 		f |= o.flags
 		if o.all {
@@ -281,6 +306,11 @@ func (o *options) detect(run func(engine.Call) (string, error)) (Result, error) 
 		}
 	}
 	r.Matches[0].MIME, r.Matches[0].Extensions, r.Matches[0].Apple = r.MIME, r.Extensions, r.Apple
+	if o.extra != nil && !o.kindOnly {
+		if err := o.extra(&r, head); err != nil {
+			return Result{}, err
+		}
+	}
 	return r, nil
 }
 

@@ -2,7 +2,7 @@
 
 This document holds the design of the API of the pure Go port (D22). Phase 4
 built it, in `magic.go` and `options.go` (D47). The code differs from the
-proposal below in five places:
+proposal below in six places:
 
 1. A `Result` comes from one walk of the engine for each form, not from one
    walk (D46).
@@ -13,6 +13,11 @@ proposal below in five places:
 4. `ErrStopped` is the error of a detection whose context is done.
 5. No `sync.Pool` reuses buffers yet, which answer 2 below expects.
    `docs/BACKLOG.md` holds the item.
+6. `WithExtraRules` adds the rules of magic that libmagic does not have, in
+   `extra.go` (D67). A rule starts from the answer of libmagic, and gives a
+   more exact MIME type, description or extensions. A form that the rule
+   does not give, and the charset, stay as libmagic gives them. Without the
+   option, the answer is the one of libmagic.
 
 The maintainers decided on 2026-11-15 (D40) that:
 
@@ -152,6 +157,11 @@ func WithDevices() Option
 
 // WithoutCheck turns off one built-in test, as a MAGIC_NO_CHECK_* flag does.
 func WithoutCheck(c Check) Option
+
+// WithExtraRules adds the rules of magic that libmagic does not have, such
+// as FictionBook and the MIME type of EMF. It is not in the proposal of
+// D42. D67 added it.
+func WithExtraRules() Option
 
 // Check is one built-in test.
 type Check int

@@ -15,6 +15,10 @@ type options struct {
 	flags engine.Flags
 	all   bool
 	bytes int
+	// extra applies the rules of WithExtraRules, or is nil. A func, not a
+	// bool, so that a program that does not call WithExtraRules does not
+	// link the rules (D38).
+	extra func(r *Result, head func() ([]byte, error)) error
 	// kindOnly is set for a file that is not regular, which libmagic names
 	// by its kind.
 	kindOnly bool
@@ -28,6 +32,11 @@ func (o *options) limit() int {
 		return limitDefault
 	}
 	return o.bytes
+}
+
+// headSize returns how many bytes a rule of WithExtraRules reads at most.
+func (o *options) headSize() int {
+	return min(o.limit(), headMax)
 }
 
 // apply returns the options of a call.

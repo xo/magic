@@ -1,6 +1,6 @@
 # D60. The walker follows binwalk-ng
 
-Status: Decided. Amends D49. Amends D59.
+Status: Decided. Amends D49. Amends D59. Amended by D68.
 
 The maintainers decided on 2026-11-16 that the walker follows binwalk-ng.
 

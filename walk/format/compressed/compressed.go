@@ -3,7 +3,7 @@
 // Package compressed registers the compressed data that binwalk-ng finds:
 // gzip, zlib, bzip2, xz, lzma, zstd, the zlib data of a GPG signed file,
 // LZ4, lzop, the LZW data of compress, and LZFSE. The walker extracts each
-// of them except LZFSE.
+// of them. It decodes LZFSE with github.com/xo/magic/compress/lzfse.
 //
 // The walker decodes xz and lzma with the decoder of
 // github.com/xo/magic/compress/xz, and extracts zstd with the decoder of

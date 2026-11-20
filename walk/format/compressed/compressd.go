@@ -43,8 +43,13 @@ const (
 	lzwMinBits    = 9
 	lzwMaxBits    = 16
 	lzwBlockMode  = 0x80
-	lzwCheckBytes = 1 << 10 // the bytes that 7zz checks to open the file
+	lzwCheckBytes = 64 // the bytes that 7zz checks to open the file
 )
+
+// 7-Zip 26.06 opens a .Z file whose first bad code starts at byte 64 or
+// later, and refuses one whose bad code starts before it. A damaged copy of
+// the corpus showed this on 2026-11-20, and a byte changed at each offset
+// from 56 to 66 of compressd-1.bin gave the limit.
 
 // extractCompressd writes what 7zz writes for a .Z file: its data, in a file
 // named after the signature and the offset. 7zz opens the file only when

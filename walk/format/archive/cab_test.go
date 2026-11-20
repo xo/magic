@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -187,16 +188,20 @@ func cabextract(t *testing.T, c []byte) ([]string, bool) {
 	return lines, true
 }
 
-// TestCABFails holds that a cabinet with a bad checksum, or a folder of
-// LZX, gives no file, as cabextract fails on it.
+// TestCABFails holds that a cabinet with a bad checksum, a folder of
+// Quantum, or a folder of LZX with a window that LZX does not have, gives no
+// file. cabextract fails on the first and the last, and the walker has no
+// decoder of Quantum.
 func TestCABFails(t *testing.T) {
 	t.Parallel()
 	files := cabTestFiles()[:1]
 	bad := makeCAB(t, files, cabMethodNone, false)
 	bad[len(bad)-1] ^= 1
-	lzx := makeCAB(t, files, cabMethodNone, false)
-	lzx[36+6] = 3
-	for name, c := range map[string][]byte{"checksum": bad, "lzx": lzx} {
+	quantum := makeCAB(t, files, cabMethodNone, false)
+	quantum[36+6] = 2
+	window := makeCAB(t, files, cabMethodNone, false)
+	window[36+6], window[36+7] = cabMethodLZX, 22
+	for name, c := range map[string][]byte{"checksum": bad, "quantum": quantum, "window": window} {
 		e := walkEntry(t, slices.Concat(noise(64), c), "cab")
 		var got error
 		for _, err := range e.Members(context.Background()) {
@@ -224,4 +229,130 @@ func walkEntry(t *testing.T, data []byte, format string) *walk.Entry {
 		t.Fatalf("expected %q, got: %q", format, "nothing")
 	}
 	return entry
+}
+
+// TestCABLZX extracts the cabinet of compress/lzx/testdata, which LZX
+// compresses with E8 translation, and a cabinet of LZX that the test writes.
+// Where cabextract is installed, the files are the files of cabextract.
+func TestCABLZX(t *testing.T) {
+	t.Parallel()
+	sample, err := os.ReadFile(filepath.Join("..", "..", "..", "compress", "lzx", "testdata", "sample.cab"))
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	_, lines := walkOne(t, slices.Concat(noise(100), sample, noise(30)), "cab")
+	if len(lines) != 1 || !strings.HasPrefix(lines[0], "sample.txt -rw-r--r-- ") {
+		t.Fatalf("expected %q, got: %q", "sample.txt", lines)
+	}
+	const want = "29e93885f6482a2b291341559d30ea92ac2fc9b88c516970a7a4b20b46742e67"
+	if got := fmt.Sprintf("%x", sha256.Sum256([]byte(strings.TrimPrefix(lines[0], "sample.txt -rw-r--r-- ")))); got != want {
+		t.Errorf("expected %q, got: %q", want, got)
+	}
+	if exp, ok := cabextract(t, sample); ok && !slices.Equal(lines, exp) {
+		t.Errorf("expected the files of cabextract, got: %d bytes", len(lines[0]))
+	}
+
+	files := cabTestFiles()
+	c := makeLZXCAB(files)
+	_, lines = walkOne(t, slices.Concat(noise(64), c), "cab")
+	var exp []string
+	for _, f := range files {
+		exp = append(exp, strings.ReplaceAll(f.name, `\`, "/")+" -rw-r--r-- "+f.data)
+	}
+	exp = slices.Insert(exp, 1, "dir drwxr-xr-x", "dir/sub drwxr-xr-x")
+	check(t, lines, exp...)
+	if want, ok := cabextract(t, c); ok {
+		got := slices.Clone(lines)
+		slices.Sort(got)
+		if !slices.Equal(got, want) {
+			t.Errorf("expected %q, got: %q", want, got)
+		}
+	}
+}
+
+// lzxWriter writes the bits of LZX: 16-bit words, little endian, from the
+// highest bit of each word.
+type lzxWriter struct {
+	out []byte
+	acc uint16
+	n   uint
+}
+
+func (w *lzxWriter) bits(v uint32, k uint) {
+	for i := int(k) - 1; i >= 0; i-- {
+		w.acc = w.acc<<1 | uint16(v>>uint(i)&1)
+		if w.n++; w.n == 16 {
+			w.out = binary.LittleEndian.AppendUint16(w.out, w.acc)
+			w.acc, w.n = 0, 0
+		}
+	}
+}
+
+// makeLZXCAB returns a cabinet of one folder of LZX, with a window of
+// 2^16 bytes, that holds files. The data is in uncompressed blocks of LZX.
+// The first block has an odd size and ends in the first frame, so a byte of
+// padding follows it. The second block holds the rest, over the other
+// frames. The stream has E8 translation, and the data has no byte 0xE8.
+func makeLZXCAB(files []cabTestFile) []byte {
+	var all []byte
+	for _, f := range files {
+		all = append(all, f.data...)
+	}
+	first := 1001
+	block := func(w *lzxWriter, size int) {
+		w.bits(3, 3)
+		w.bits(uint32(size), 24)
+		w.bits(0, 16-w.n) // to the next word, or a whole word
+		for range 3 {
+			w.out = binary.LittleEndian.AppendUint32(w.out, 1)
+		}
+	}
+	var data []byte
+	var blocks int
+	for p := 0; p < len(all); p += cabFrameSize {
+		chunk := all[p:min(p+cabFrameSize, len(all))]
+		w := &lzxWriter{}
+		if p == 0 {
+			w.bits(1, 1) // E8 translation
+			w.bits(0, 16)
+			w.bits(12000000, 16)
+			block(w, first)
+			w.out = append(w.out, chunk[:first]...)
+			w.out = append(w.out, 0)
+			block(w, len(all)-first)
+			w.out = append(w.out, chunk[first:]...)
+		} else {
+			w.out = append(w.out, chunk...)
+		}
+		h := make([]byte, 8)
+		binary.LittleEndian.PutUint16(h[4:], uint16(len(w.out)))
+		binary.LittleEndian.PutUint16(h[6:], uint16(len(chunk)))
+		binary.LittleEndian.PutUint32(h, cabChecksum(h[4:8], cabChecksum(w.out, 0)))
+		data = append(data, h...)
+		data = append(data, w.out...)
+		blocks++
+	}
+	h := make([]byte, 36)
+	copy(h, "MSCF")
+	h[24], h[25] = 3, 1
+	binary.LittleEndian.PutUint16(h[26:], 1)
+	binary.LittleEndian.PutUint16(h[28:], uint16(len(files)))
+	folder := make([]byte, 8)
+	binary.LittleEndian.PutUint16(folder[4:], uint16(blocks))
+	binary.LittleEndian.PutUint16(folder[6:], cabMethodLZX|16<<8)
+	var entries []byte
+	off := 0
+	for _, f := range files {
+		e := binary.LittleEndian.AppendUint32(nil, uint32(len(f.data)))
+		e = binary.LittleEndian.AppendUint32(e, uint32(off))
+		e = append(e, make([]byte, 8)...)
+		e = append(e, f.name...)
+		entries = append(entries, append(e, 0)...)
+		off += len(f.data)
+	}
+	binary.LittleEndian.PutUint32(h[16:], uint32(len(h)+len(folder)))
+	binary.LittleEndian.PutUint32(folder, uint32(len(h)+len(folder)+len(entries)))
+	b := slices.Concat(h, folder, entries, data)
+	binary.LittleEndian.PutUint32(b[8:], uint32(len(b)))
+	return b
 }

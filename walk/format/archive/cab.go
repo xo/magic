@@ -5,7 +5,7 @@
 // This file translates src/formats/cab.rs of binwalk-ng. binwalk-ng
 // extracts a cabinet with cabextract, and extractCAB writes the files that
 // cabextract writes, for the folders that are stored or compressed with
-// MSZIP.
+// MSZIP or LZX. It decodes LZX with github.com/xo/magic/compress/lzx (D68).
 
 package archive
 
@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/xo/magic/compress/lzx"
 	"github.com/xo/magic/walk"
 	"github.com/xo/magic/walk/internal/binwalk"
 )
@@ -106,6 +107,7 @@ func parseCAB(data []byte, off int) (walk.Match, error) {
 const (
 	cabMethodNone  = 0
 	cabMethodMSZIP = 1
+	cabMethodLZX   = 3
 
 	cabFlagPrev    = 1
 	cabFlagNext    = 2
@@ -119,6 +121,7 @@ type cabFolder struct {
 	start  int // the offset of its first CFDATA block
 	blocks int
 	method int
+	window int // the bits of the window of LZX
 }
 
 // cabFile is a CFFILE entry.
@@ -177,7 +180,9 @@ func cabName(b []byte) string {
 // cabHeader reads the folders and the files of the cabinet b, as libmspack
 // reads them for cabextract.
 func cabHeader(b []byte) (folders []cabFolder, files []cabFile, dataReserve int, ok bool) {
-	r := &cabReader{b: b, p: 16}
+	r := &cabReader{b: b, p: 8}
+	size := r.u32()
+	r.next(4) // reserved2
 	filesOffset := r.u32()
 	r.next(6) // reserved3, and the version
 	numFolders, numFiles, flags := r.u16(), r.u16(), r.u16()
@@ -200,11 +205,19 @@ func cabHeader(b []byte) (folders []cabFolder, files []cabFile, dataReserve int,
 		return nil, nil, 0, false
 	}
 	for range numFolders {
-		f := cabFolder{start: r.u32(), blocks: r.u16(), method: r.u16() & 0x0F}
+		f := cabFolder{start: r.u32(), blocks: r.u16()}
+		t := r.u16()
+		f.method, f.window = t&0x0F, t>>8&0x1F
 		r.next(folderReserve)
 		folders = append(folders, f)
 	}
-	r.p = filesOffset
+	// cabextract reads the files that follow the folders, whatever the
+	// offset of the files in the header, and fails when that offset is not
+	// inside the cabinet. A test of 18 offsets with cabextract 1.11 showed
+	// this.
+	if filesOffset >= size {
+		return nil, nil, 0, false
+	}
 	for range numFiles {
 		f := cabFile{size: r.u32(), offset: r.u32(), folder: r.u16()}
 		r.next(6) // the date, the time and the attributes
@@ -273,7 +286,15 @@ func (s *cabSink) add(b []byte) bool {
 func cabDecode(b []byte, f cabFolder, reserve, end int, s *cabSink) bool {
 	r := &cabReader{b: b, p: f.start}
 	var window []byte
-	for range f.blocks {
+	var dec *lzx.Decoder
+	if f.method == cabMethodLZX {
+		// The window of LZX in a cabinet has 2^15 to 2^21 bytes.
+		var err error
+		if dec, err = lzx.NewDecoder(1 << f.window); err != nil {
+			return false
+		}
+	}
+	for i := range f.blocks {
 		if s.pos >= end {
 			return true
 		}
@@ -314,6 +335,23 @@ func cabDecode(b []byte, f cabFolder, reserve, end int, s *cabSink) bool {
 				window = make([]byte, cabFrameSize)
 			}
 			copy(window, out)
+		case cabMethodLZX:
+			// cabextract reads the LZX data of the blocks of a folder as one
+			// stream, in frames of 32768 bytes. The walker decodes each
+			// block as one frame, which is the same when each block but the
+			// last holds a whole frame and nothing more. A block that holds
+			// fewer bytes fails, and the walker writes nothing for it. A
+			// block that holds a frame and more bytes cannot be found, because
+			// compress/lzx does not tell how many bytes a frame reads, so
+			// there the files of the walker differ from those of cabextract
+			// (D68).
+			if usize != cabFrameSize && i < f.blocks-1 {
+				return false
+			}
+			var err error
+			if out, err = dec.Decode(nil, block, usize); err != nil {
+				return false
+			}
 		default:
 			return false
 		}
@@ -326,21 +364,20 @@ func cabDecode(b []byte, f cabFolder, reserve, end int, s *cabSink) bool {
 
 // extractCAB writes the files of the cabinet at off, as cabextract writes
 // them from the bytes that binwalk carves. cabextract reads the folders
-// that are compressed with LZX or Quantum too, but the walker has no
-// decoder of them, so a cabinet that has one fails. A cabinet that
+// that are compressed with Quantum too, but the walker has no decoder of
+// Quantum, so a cabinet that has such a folder fails. A cabinet that
 // continues in another one fails too, as it does in cabextract.
 func extractCAB(data []byte, off int, out *walk.Output) walk.Extraction {
-	m, err := parseCAB(data, off)
-	if err != nil {
+	if _, err := parseCAB(data, off); err != nil {
 		return walk.Extraction{}
 	}
 	if out == nil {
 		return walk.Extraction{OK: true}
 	}
-	b, ok := binwalk.Range(data, off, off+m.Size)
-	if !ok {
-		return walk.Extraction{}
-	}
+	// binwalk gives cabextract the bytes of the match, and when that fails,
+	// all the bytes to the end of the input. cabextract reads past the size
+	// that the header gives, so the walker reads to the end of data too.
+	b := data[off:]
 	folders, files, reserve, ok := cabHeader(b)
 	if !ok {
 		return walk.Extraction{}
@@ -350,7 +387,7 @@ func extractCAB(data []byte, off int, out *walk.Output) walk.Extraction {
 		if f.folder >= len(folders) {
 			return walk.Extraction{}
 		}
-		if m := folders[f.folder].method; m != cabMethodNone && m != cabMethodMSZIP {
+		if m := folders[f.folder].method; m != cabMethodNone && m != cabMethodMSZIP && m != cabMethodLZX {
 			return walk.Extraction{}
 		}
 		byFolder[f.folder] = append(byFolder[f.folder], f)

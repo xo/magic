@@ -84,11 +84,11 @@ programs extract 24, and it finds the other 39 and does not extract them. In
 the tables, "binwalk-ng" means that its own code extracts the format, a
 program name means that program extracts it, and "none" means that
 binwalk-ng only finds it. A short signature has "(short)" after its name.
-The walker extracts every format of binwalk-ng's own code but `lzfse`, `rar`
-and `qnx_ifs`, which need decoders that the walker does not have (D60). It
-also extracts 15 of the 24 formats of the programs. It does not extract
-`arj`, `apfs`, `efigpt`, `ntfs`, `dmg`, `linux_kernel`, `pchrom`,
-`uefi_capsule` and `uefi_pi_volume`.
+The walker extracts every format of binwalk-ng's own code but `rar` and
+`qnx_ifs`, which need decoders that the walker does not have (D60). It
+decodes `lzfse` with `compress/lzfse` (D68). It also extracts 15 of the 24
+formats of the programs. It does not extract `arj`, `apfs`, `efigpt`, `ntfs`,
+`dmg`, `linux_kernel`, `pchrom`, `uefi_capsule` and `uefi_pi_volume`.
 
 Compressed data:
 
@@ -96,7 +96,7 @@ Compressed data:
 | --- | --- |
 | `gzip`, `zlib` (short), `bzip2`, `lzma`, `zstd`, `lz4` | binwalk-ng |
 | `xz` | binwalk-ng, or `7z` when a stream is not valid |
-| `lzfse` | binwalk-ng, with the crate `lzfse_rust`. The walker only finds it |
+| `lzfse` | binwalk-ng, with the crate `lzfse`. The walker decodes it with `compress/lzfse` (D68) |
 | `compressd` (short) | `7z` |
 | `lzop` | `lzop` |
 | `arcadyan` (LZMA with the bytes changed), `gpg_signed` (short, zlib inside) | binwalk-ng |
@@ -107,7 +107,7 @@ Archives:
 | --- | --- |
 | `zip`, `7zip`, `cpio`, `arj` | `7z`. The walker has no decoder for `arj` |
 | `tarball`, `dahua_zip` (a zip file with a changed header) | binwalk-ng |
-| `cab` | `cabextract` |
+| `cab` | `cabextract`. The walker reads the folders that are stored, or compressed with MSZIP or LZX. It decodes LZX with `compress/lzx`, one block as one frame, which gives the files of cabextract when each block but the last holds one whole frame (D68). It has no decoder of Quantum |
 | `rar` | binwalk-ng, with the crate `rars`. The walker only finds it |
 | `deb` | none |
 
@@ -125,7 +125,7 @@ File systems and disk images:
 | `ext`, `fat` (short), `ntfs` | `tsk_recover`, of The Sleuth Kit |
 | `romfs`, `mbr` (short), `android_sparse` | binwalk-ng |
 | `qnx_ifs` | binwalk-ng, with the crate `qnx-ifs`. The walker only finds it |
-| `dmg` | `dmg2img` |
+| `dmg` | `dmg2img`. The walker only finds it, because dmg2img keeps what it decodes from damaged data (D68) |
 | `btrfs`, `logfs`, `luks`, `qcow` (short) | none |
 
 Kernels, boot loaders and the headers of firmware:
@@ -381,6 +381,12 @@ time of the system. The limits hold from the first release:
    that leaves its folder, so a member named `../../etc/passwd` fails.
 6. `Extract` writes no device file. It writes a link only when the target
    stays inside the root, and otherwise writes nothing for it.
+7. A hole that an extractor leaves in a file, where binwalk-ng seeks past
+   the end, does not count against `WithMaxOutput`. Thus a header of a few
+   bytes can declare a file of up to 16 GiB. A `Member` keeps the hole with
+   no memory, and `Extract` writes a sparse file. The walk of members reads
+   a member into memory with its holes, so `WithMaxInput` limits each
+   member that it walks, and a larger member is not walked.
 
 ### How it is tested
 
@@ -392,7 +398,9 @@ The walker follows binwalk-ng as the port follows libmagic (D49, D60):
 2. `test/oracle/build-binwalk.sh` builds binwalk-ng at that commit into
    `test/.binwalk/`, with cargo. It needs the toolchain of Rust. It applies
    the patches in `test/oracle/patches/` first, if any, which fix the bugs
-   of binwalk-ng that the walker fixes too (D59). Today there are none.
+   of binwalk-ng that the walker fixes too (D59). Today there is one:
+   `0001-dtb-loop.patch` stops `extract_dtb` on a node that does not fit in
+   the data, where binwalk-ng loops without end.
 3. `TestWalkMatchesBinwalk` in `test/diff` runs binwalk on each input with
    `-l -` and `--include=` with the formats that the walker has. It compares
    the offset, the size, the name, the confidence and the description of each
@@ -402,10 +410,11 @@ The walker follows binwalk-ng as the port follows libmagic (D49, D60):
    the bytes, the target of a link and the bit of execution. It covers the
    formats that binwalk-ng extracts with its own code, and the formats that
    it extracts with 7z, sasquatch and cabextract, when they are installed.
-   The walker does not extract lzfse, rar and QNX IFS, which binwalk-ng
-   decodes with crates of its own (D60), so the gate leaves them out.
+   The walker does not extract rar and QNX IFS, which binwalk-ng decodes
+   with crates of its own (D60), so the gate leaves them out.
    `TestWalkDecodes` and the tests of
-   `walk/format/archive` check them against data that Go makes.
+   `walk/format/archive` check them against data that Go makes. The walker
+   decodes lzfse with `compress/lzfse`, and the gate compares it (D68).
 5. `TestWalkRecursesAsBinwalk` walks each input with `WithDepth`, and
    compares the matches of each file inside an extraction with binwalk.
 6. `TestWalkSquashFS` makes SquashFS images with mksquashfs, with each
@@ -477,9 +486,12 @@ phase W4 are the least sure.
 | W4 | the other file systems of firmware | `cramfs`, `jffs2`, `yaffs`, `ubi`, `ubifs`, `iso9660`, `fat`, `ext` | 10 to 20 |
 | W5 | the formats that binwalk decrypts or changes, and the rest | `encfw` and the others with keys, `7zip`, `cab`, `lz4`, `lzop`, `uefi_*`, `srecord`, `linux_kernel` | 5 to 10 |
 
-`rar`, `ntfs`, `apfs`, `dmg`, `lzfse`, `qnx_ifs`, `arj` and `efigpt` stay
-"find only" until a maintainer asks for them. Each one is a large parser, or
-needs a decoder that Go does not have. D60 adds no decoder.
+`rar`, `ntfs`, `apfs`, `dmg`, `qnx_ifs`, `arj` and `efigpt` stay "find only"
+until a maintainer asks for them. Each one is a large parser, or needs a
+decoder that Go does not have. D60 adds no decoder. D68 lets the walker use
+the decoders of `compress/` that exist: `lzfse` and the LZX of `cab` now
+extract. `dmg` stays "find only", because the walker cannot write the bytes
+that dmg2img writes from damaged data.
 
 ## The answers
 

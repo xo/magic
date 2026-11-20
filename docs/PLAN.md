@@ -323,4 +323,27 @@ runner, and no archive holds libgnurx. Question 3 was answered by D53,
 questions 4, 5, 7 and 8 by D54 to D57, and questions 17 to 22, about the
 binary walker, by D49 to D52, question 23 by D60, question 24 by D61, question
 25 by D62, question 26 by D64, and question 27 by D65. The next question is
-question 28.
+question 32.
+
+28. D67 adds the option `WithExtraRules`, which adds rules that libmagic does
+    not have, starting with FictionBook and EMF. The default output stays the
+    output of libmagic. Do the maintainers accept D67?
+29. `container` now names OpenDocument, Office Open XML, iWork, Visio and
+    Publisher files (backlog items 29 to 32). D65 does not say two things:
+    - How many formats it has. It now follows libmagic: one format for each
+      OpenDocument type, templates included, and one format for each program
+      of Office Open XML, so a template takes the format of its program. This
+      adds 27 formats.
+    - When it names a file that libmagic also names. It now names an Office
+      Open XML file only when `msooxml` of file does not find the folder of
+      its program, and copies that walk of the members to know. The other
+      way is to name every OpenDocument and Office Open XML file.
+    Do the maintainers accept these two rules for D65?
+30. The test module requires `github.com/ulikunitz/xz` and
+    `github.com/klauspost/compress`, and its tests import them. D28 and D45
+    approve them for the decoder modules. `TestEveryRequireIsApproved`
+    approves them for the test module too. Do the maintainers approve them
+    there, or does the test module need a decision of its own?
+31. The base of the ledger of lzxd, `4f477bd`, is only on GitHub, because
+    codeberg.org rewrote its history. `e38ce31` on codeberg.org has the same
+    `src/`. Does the base move to `e38ce31`?

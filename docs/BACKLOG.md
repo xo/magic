@@ -22,13 +22,6 @@ walker is next (D31).
 
 ## The package
 
-2. The text of an error of the engine is the text of libmagic, which is not
-   in the gerund form that `go-pedantry` asks for. The maintainers have not
-   decided which one wins. Source: the switch, D47.
-3. Add a test that reads the `go.mod` files and fails on a `require` line for
-   a module that the maintainers did not approve, as dburl does. D28 and D45
-   approve `github.com/ulikunitz/xz` and `github.com/klauspost/compress` for
-   the decoder modules only. Source: D14, D28 and D45.
 4. A `Result` comes from one walk of the engine for each of its forms (D46).
    One walk that records every form would be about four times faster, and
    must give the same answers to `TestAPIMatchesTheOracle`.
@@ -104,7 +97,8 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     of the header on the stack, so on Linux it reads no property of a Compound
     Document. Since `7fdb7bf9`, `file_fsmagic` prints the name of each flag of
     the mode before its comma. The port copies both until upstream fixes them.
-    Source: phase 5.
+    Both reports are drafted and wait for the maintainers to approve their
+    text. Source: phase 5.
 
 ## The packages for ivy
 
@@ -116,14 +110,18 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     decoders with the programs that write the formats. The limit of
     64 phrases that hold one another, in `compress/huffcdic`, is not measured
     on such a book either. Source: D61.
-19. lzxd moved from GitHub to codeberg.org on 2026-02-09, and its last commit
-    on GitHub says so. The ledger follows the copy on GitHub, which gets no
-    new commit. A maintainer decides whether the ledger follows codeberg.org.
-    Source: D61.
+19. lzxd has one commit on codeberg.org after the base, `aa723fd`, "Fix
+    errors from fuzzer". The ledger has it as `pending`. `compress/lzx`
+    already reads past the end as 0, and fails on a short block that is not
+    compressed, so the port can change little. Compare the two. Source: D61.
 20. `compress/lzx` does not decode LZX DELTA, the form of [MS-PATCH] with
     windows over 2 MiB and matches over 257 bytes. Source: D61.
-21. The walker finds a cabinet with LZX and does not extract it, as item 2 of
-    the binary walker says. `compress/lzx` can decode it now. Source: D61.
+21. The walker decodes cab with LZX with `compress/lzx`, one block of CFDATA
+    as one frame (D68). cabextract reads the LZX of a folder as one stream of
+    frames of 32768 bytes, so the two differ on a block that holds more than
+    its frame. To follow cabextract on every cabinet, `compress/lzx` needs a
+    method that gives the bytes of input that the last frame read. Source:
+    D61, D68.
 22. No test of `cfb` reads a document with a thumbnail, or an encrypted
     document, that Office wrote. The tests read property sets that the
     writer of the tests made, and the summaries of the corpus, which have
@@ -138,9 +136,9 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     a DMG file that the repository can hold, made by hdiutil with ADC and
     with LZFSE, a test can compare the decoders with the chunks of Apple.
     Source: D63.
-26. The walker finds `lzfse` and `dmg` and does not extract them, as item 1
-    of the binary walker says. `compress/lzfse` and `compress/adc` can
-    decode their data now. Source: D63.
+26. The walker extracts `lzfse` with `compress/lzfse` (D68). It does not
+    extract `dmg`, because dmg2img writes what it decodes from damaged
+    chunks, and its build on Arch has no lzfse (D68). Source: D63, D68.
 27. No test of `container` reads a file that the programs of its formats
     wrote, such as an XPS document of the XPS Document Writer, an APK of
     the Android Gradle plugin or an AZW3 book of KindleGen. The tests read
@@ -149,64 +147,23 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     them. Source: D65.
 28. On 2026-11-20 `magic.DetectFile` and `container.Detect` read the 292 files
     of the corpus of the review of ivy. They name most files as ivy does.
-    Items 29 to 35 hold the files where they do not. The program that read
+    Items 33 and 34 hold the files where they do not. The program that read
     them is a short loop over `test/review/corpus.tsv` of ivy, and the files
     are in the cache of that review. Source: the corpus of ivy.
-29. `container` does not name an OpenDocument file whose first member is not
-    `mimetype`. libmagic then says `application/zip`. In the corpus of ivy,
-    `libreoffice/odt/ooo96040-2.odt`, `libreoffice/odt/landscape-a4-table.odt`
-    and `libreoffice/odg/rhbz1870501.odg` are such files. The first member of
-    `ooo96040-2.odt` is `Versions/`. The member `mimetype`, or the media type
-    of the root in `META-INF/manifest.xml`, names the format. Source: the
-    corpus of ivy.
-30. `container` does not name an Office Open XML file whose first member is
-    not `[Content_Types].xml`. libmagic then says "Microsoft OOXML" with
-    `application/octet-stream`. `libreoffice/docx/landscape-a4-table.docx` and
-    `libreoffice/docx/mixed-orientation.docx` start with `styles.xml` and
-    `customXml/`. The content type of the main part in `[Content_Types].xml`
-    names the format: a Word document, a sheet of Excel, a presentation or a
-    drawing of Visio. ivy now finds them with rules of its own in
-    `internal/ooxml`, which ivy D8 says belong in magic. Source: the corpus of
-    ivy.
-31. `container` does not name the files of iWork: Pages, Numbers and Keynote.
-    libmagic says `application/zip`. A file of iWork 2013 and later holds
-    `Index/Document.iwa` and other members under `Index/`, and an older bundle
-    holds `index.apxl` or `index.xml`. The corpus of ivy has
-    `tika/pages/sample-2013.pages`, `tika/numbers/checking-2013.numbers`,
-    `tika/key/sample-2013.key` and `tika/key/bundle-2018.key`.
-    shared-mime-info gives the MIME types `application/vnd.apple.pages`,
-    `application/vnd.apple.numbers` and `application/vnd.apple.keynote`.
-    Source: the corpus of ivy.
-32. `container` does not name a drawing of Visio 2003 to 2010 (`.vsd`) or a
-    file of Publisher (`.pub`). Both are Compound Files. The port says
-    `application/x-ole-storage` and "Composite Document File V2 Document,
-    Cannot read section info". The `file` 5.48 of the machine of the review
-    says `application/vnd.ms-office` for the same files, probably because of
-    the fault of item 17. The class ID of the root storage, or the stream
-    `VisioDocument` of Visio and the streams `Contents` and `Quill` of
-    Publisher, name the format. The corpus of ivy has `poi/vsd/44501e.vsd`,
-    `poi/vsd/visio-with-embedded.vsd` and three files under `poi/pub/`.
-    Source: the corpus of ivy.
 33. The 12 FictionBook files of the corpus of ivy (`.fb2`) are `text/xml`.
     libmagic has no rule for the root element `FictionBook` of the namespace
     `http://www.gribuser.ru/xml/fictionbook/2.0`. shared-mime-info gives
     `application/x-fictionbook+xml`. Such a rule is not a container, so it
     needs a decision of the maintainers on where magic puts a rule that
-    libmagic does not have. Source: the corpus of ivy.
+    libmagic does not have. D67 proposes the option `WithExtraRules`, which
+    gives `application/x-fictionbook+xml`. Remove this item when the
+    maintainers accept D67. Source: the corpus of ivy.
 34. An EMF file is `application/octet-stream`, with the description "Windows
     Enhanced Metafile (EMF) image data", as in libmagic. The MIME type
     `image/emf` is registered with IANA. The corpus of ivy has 5 EMF files.
     This change also needs a decision, because it differs from libmagic.
-    Source: the corpus of ivy.
-35. An XPS file whose first member is not `[Content_Types].xml` is
-    `application/octet-stream` in `magic.Detect`, and `container.Detect` names
-    it `xps`. A program that asks both gets the right answer, as D65 says. The
-    corpus of ivy has `poi/xps/test-ppt.xps`, `microsoft/xps/mb07.xps` and
-    `repo/xps/example.xps`. A note in the documentation of `DetectFile` can
-    say that a program asks `container` for a file of
-    `application/octet-stream` with the description "Microsoft OOXML". Source:
-    the corpus of ivy.
-
+    With `WithExtraRules` of D67, EMF is `image/emf`. Remove this item when
+    the maintainers accept D67. Source: the corpus of ivy.
 ## The binary walker
 
 The maintainers want magic to do the work of binwalk too: walk a binary file,
@@ -217,24 +174,28 @@ offset, and extract them. It comes after the port of libmagic is finished
 Phases W1 to W5 of D52 ported the 111 signatures of binwalk 3, in the
 packages under `walk/format/`. D60 moved the walker to binwalk-ng, the fork
 that is maintained, with its 114 signatures and its fixes, and with no new
-decoder. The walker extracts 48 of the 51 formats that binwalk-ng extracts
-with its own code, and 15 of the 24 formats that it extracts with
-programs. The three gates in `test/diff` give the same
-matches, files and walks as binwalk-ng on 2301 inputs, and a test for each
+decoder. D68 lets it use the decoders of `compress/` that exist. The walker
+extracts 49 of the 51 formats that binwalk-ng extracts with its own code,
+and 15 of the 24 formats that it extracts with programs. The three gates in
+`test/diff` give the same matches, files and walks as binwalk-ng on 2339
+inputs, and a test for each
 file system and archive compares its files with a tool or with the tree
 that made it. These are left:
 
 1. Formats that the walker finds and does not extract:
-   - `lzfse`, `rar` and `qnx_ifs`, which binwalk-ng extracts with crates of
-     its own. They need decoders, which D60 leaves out. A bare QNX imagefs,
+   - `rar` and `qnx_ifs`, which binwalk-ng extracts with crates of its own.
+     They need decoders that `compress/` does not have (D60, D68). A bare QNX imagefs,
      and an image that is not compressed, need no decoder.
    - `arj`, `apfs` and `efigpt`, which binwalk-ng extracts with 7z.
      binwalk-ng runs 7z again on all the data to the end of the file when
      the first run fails, so it extracts `arj` now.
    - `ntfs`, `dmg`, `linux_kernel`, `pchrom`, `uefi_capsule` and
      `uefi_pi_volume`, which binwalk-ng extracts with other programs.
+     dmg2img keeps what it decodes from damaged data, so the walker cannot
+     write its bytes (D68).
 2. Parts of formats that the walker does not extract: 7-Zip with AES or
-   the filter RISCV; cab with LZX or Quantum. The walker reads SquashFS 1.x,
+   the filter RISCV; cab with Quantum. The walker decodes cab with LZX one
+   block as one frame, which item 21 says more of. The walker reads SquashFS 1.x,
    2.x and 3.x in both byte orders, with each decompressor that sasquatch
    tries, in its order: gzip, lzo, lz4, xz, zstd, LZMA, and the LZMA of
    vendors (adaptive, Broadcom and DD-WRT). sasquatch skips a file whose
@@ -250,15 +211,17 @@ that made it. These are left:
    walker writes nothing for a stream with an error, so the extraction gate
    accepts fewer members on a damaged copy of `7zip` or `xz` data. To write
    the same bytes, the walker needs a decoder that stops where 7z stops.
-4. Where binwalk-ng leaves a hole in a file, the walker writes zeros. The
-   bytes are the same, but the zeros count against `WithMaxOutput`, so a
-   large hole can stop an extraction that binwalk-ng completes. This holds
-   for the chunks of `android_sparse` that hold nothing or only zeros, and
-   for the gaps between the records of `srecord`. `Output` needs a write
-   at an offset, and a sink that keeps holes, to do better.
-5. binwalk-ng loops without end on a `dtb` whose node or property does not
-   fit in the data. The walker rejects the match. No input of the corpus
-   has such a node, so the oracle carries no patch for it (D59).
+4. binwalk-ng loops without end on a `dtb` whose node token or property
+   structure does not fit in the data. The walker rejects the match.
+   `test/oracle/patches/0001-dtb-loop.patch` makes the oracle reject it
+   too, and `test/corpus/testdata/walk/dtb-6.bin` and `dtb-7.bin` hold such
+   blobs (D59). The bug is not reported to binwalk-ng yet. When binwalk-ng
+   fixes it, the ledger takes the fix, and the patch goes.
+5. cabextract searches the carved file for every cabinet, so on the run
+   over the data to the end of the input it can extract a later cabinet
+   into the folder of a damaged one. The walker reads only the cabinet at
+   the offset. Some checks of the header in libmspack, such as on
+   `cbCabinet`, are not known.
 6. lzop, jefferson, unyaffs, ubireader and tsk_recover are not installed,
    so no test compares the walker with them. The tests compare with the
    tree that made each image, and with mksquashfs, unsquashfs, 7z,

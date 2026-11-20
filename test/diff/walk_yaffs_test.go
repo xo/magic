@@ -83,14 +83,15 @@ func TestWalkYAFFS(t *testing.T) {
 	}
 }
 
-// TestWalkYAFFSBinwalk extracts yaffs2.bin, the test input of binwalk. The
+// TestWalkYAFFSBinwalk extracts yaffs2.image, a sample of binwalk-ng. The
 // image holds 13 files of the source of the tools of YAFFS in its root
-// folder, each with data. It skips without the build of binwalk.
+// folder, each with data. It skips without the checkout of binwalk-ng and
+// its samples.
 func TestWalkYAFFSBinwalk(t *testing.T) {
 	t.Parallel()
-	b, err := os.ReadFile(filepath.Join("..", ".binwalk", "src", "tests", "inputs", "yaffs2.bin"))
+	b, err := os.ReadFile(filepath.Join("..", "..", "upstream", "binwalk-ng", "tests", "testdata", "samples", "yaffs2.image"))
 	if err != nil {
-		t.Skipf("no yaffs2.bin: %v", err)
+		t.Skipf("no yaffs2.image: %v", err)
 	}
 	n := 0
 	for e, err := range walk.WalkBytes(context.Background(), b, walk.WithFormats("yaffs")) {

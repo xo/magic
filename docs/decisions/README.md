@@ -34,7 +34,7 @@ D32 set the project up as a port of libmagic.
 | D11 | [The tests expect what libmagic 5.48 reports, and file(1) is the reference](D011-the-tests-expect-what-libmagic-5-48-reports-and-file-1-is-the-reference.md) | Decided. Amended by D48 |
 | D12 | [CI builds and tests only on hosted runners](D012-ci-builds-and-tests-only-on-hosted-runners.md) | Decided. Amended by D16. Amended by D47. Amended by D53. Amended by D54. Amended by D56 |
 | D13 | [The script builds against the newest stable release of each dependency](D013-the-script-builds-against-the-newest-stable-release-of-each-dependency.md) | Decided. Amended by D47 |
-| D14 | [The module has no Go dependencies](D014-the-module-has-no-go-dependencies.md) | Proposed. Amended by D28 |
+| D14 | [The module has no Go dependencies](D014-the-module-has-no-go-dependencies.md) | Decided. Amended by D28 |
 | D15 | [magic is set up for coding agents as every xo repository is](D015-magic-is-set-up-for-coding-agents-as-every-xo-repository-is.md) | Decided. Amended by D23 |
 | D16 | [windows/arm64 is a target](D016-windows-arm64-is-a-target.md) | Decided. Amends D1. Amends D2. Amends D12. Amended by D17. Amended by D47 |
 | D17 | [Each target is a Go module of its own, tagged as resvg tags its modules](D017-each-target-is-a-go-module-of-its-own-tagged-as-resvg-tags-its-modules.md) | Decided. Amends D1. Amends D2. Amends D16. Amended by D47 |
@@ -80,9 +80,12 @@ D32 set the project up as a port of libmagic.
 | D57 | [CI passes before a tag](D057-ci-passes-before-a-tag.md) | Decided |
 | D58 | [CI runs no oracle](D058-ci-runs-no-oracle.md) | Decided. Amends D30. Amends D48. Amends D49 |
 | D59 | [The walker fixes a bug of binwalk with a decision, and so does the oracle](D059-the-walker-fixes-a-bug-of-binwalk-with-a-decision-and-so-does-the-oracle.md) | Decided. Amends D49. Amended by D60 |
-| D60 | [The walker follows binwalk-ng](D060-the-walker-follows-binwalk-ng.md) | Decided. Amends D49. Amends D59 |
+| D60 | [The walker follows binwalk-ng](D060-the-walker-follows-binwalk-ng.md) | Decided. Amends D49. Amends D59. Amended by D68 |
 | D61 | [The decoders for ivy are packages of compress that do not register](D061-the-decoders-for-ivy-are-packages-of-compress-that-do-not-register.md) | Decided |
 | D62 | [The reader of Compound Files for ivy is the package cfb](D062-the-reader-of-compound-files-for-ivy-is-the-package-cfb.md) | Decided |
 | D63 | [The decoders of LZFSE and ADC for ivy follow D61](D063-the-decoders-of-lzfse-and-adc-for-ivy-follow-d61.md) | Decided |
 | D64 | [A package for ivy names the formats that libmagic names as their container](D064-a-package-for-ivy-names-the-formats-that-libmagic-names-as-their-container.md) | Decided |
 | D65 | [The package container names the format inside a container](D065-the-package-container-names-the-format-inside-a-container.md) | Decided |
+| D66 | [The engine keeps the error text of libmagic](D066-the-engine-keeps-the-error-text-of-libmagic.md) | Decided |
+| D67 | [Rules beyond libmagic are the option WithExtraRules](D067-rules-beyond-libmagic-are-the-option-withextrarules.md) | Proposed |
+| D68 | [The walker uses the decoders of compress](D068-the-walker-uses-the-decoders-of-compress.md) | Decided. Amends D60 |

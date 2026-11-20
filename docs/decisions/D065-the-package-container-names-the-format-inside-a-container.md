@@ -71,8 +71,10 @@ container that holds none of the formats. A program then keeps the answer of
 `container: `, as D61 says for the packages for ivy.
 
 The package returns a format only where libmagic does not name it, or names
-it only in the description. A MOBI book with no KF8 part, an EPUB or an
-OpenDocument file is `Unknown`, because libmagic names it.
+it only in the description. A MOBI book with no KF8 part or an EPUB is
+`Unknown`, because libmagic names it. An OpenDocument file is `Unknown`
+when libmagic names it, as the section The formats added on 2026-11-20
+says.
 
 ### The MIME types and the descriptions
 
@@ -174,3 +176,44 @@ A damaged or hostile file must not crash `Detect` or make it hang:
 
 On 2026-11-18 the maintainers accepted the name `container` and the API
 above, and answered question 27.
+
+## The formats added on 2026-11-20
+
+A maintainer asked on 2026-11-20 to close items 29 to 32 of
+`docs/BACKLOG.md`, which a run on the corpus of ivy found. `container` now
+names these formats, with 27 new values of `Format`:
+
+1. An OpenDocument file, from its member `mimetype`, or when it has none,
+   from the media type of the `file-entry` whose `full-path` is "/" in
+   `META-INF/manifest.xml`. There is one format for each type of
+   OpenDocument that libmagic names, templates included. The file is
+   `Unknown` when its first member is `mimetype`, stored, with no extra
+   field, because libmagic then names it.
+2. An Office Open XML file, from the content type of the main part in
+   `[Content_Types].xml`: `DOCX`, `XLSX`, `PPTX` or `VSDX`. A template, an
+   add-in, a file with macros and a binary sheet of Excel take the format of
+   their program, as `msooxml` of file does. The file is `Unknown` when
+   `msooxml` finds the folder of its program in the first members, and
+   `container` copies that walk of the members to know.
+3. The files of iWork: `Pages`, `Numbers` and `Keynote`. For iWork 2013 and
+   later, a member `Index/Slide*.iwa` or `Index/MasterSlide*.iwa` gives
+   Keynote, and otherwise the type of the first object of
+   `Index/Document.iwa` decides: 10000 gives Pages, and 1 gives Numbers. For
+   iWork 2005 to 2009, the root element of `index.xml`, `index.apxl` or
+   `presentation.apxl` decides. The facts come from Apache Tika and from
+   obriensp/iWorkFileFormat.
+4. A Visio drawing of 2003 to 2010 (`VSD`) and a Publisher file (`PUB`),
+   from the class ID of the root storage, as `ole2compounddocs` of file gives
+   it, or from the stream `VisioDocument`, or the stream `Contents` with the
+   storage `Quill`.
+
+Item 2 of The limits changes: `Detect` reads at most one member for each
+rule, at most `MemberSize` bytes of each: `mimetype`, `_rels/.rels` or 1,024
+of its pieces, `[Content_Types].xml`, `META-INF/manifest.xml`, the first
+1 KiB of `Index/Document.iwa`, and the index of old iWork. It also keeps the
+offsets and two facts of the names of the first 16 members, for the walk of
+`msooxml`.
+
+Question 29 of `docs/PLAN.md` asks the maintainers to accept two rules of
+this section: the number of formats, and when `container` names a file that
+libmagic also names.

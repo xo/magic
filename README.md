@@ -103,6 +103,24 @@ The options change how a call detects:
 | `WithFollowSymlinks()` | identifies the target of a link | `MAGIC_SYMLINK` |
 | `WithDevices()` | reads a device | `MAGIC_DEVICES` |
 | `WithoutCheck(c)` | turns off one built-in test, such as `CheckJSON` | `MAGIC_NO_CHECK_*` |
+| `WithExtraRules()` | adds the rules of magic that libmagic does not have | none |
+
+### Rules that libmagic does not have
+
+By default, each answer is the one of libmagic. `WithExtraRules` adds the
+rules of magic, which give a more exact answer for a format that libmagic
+names in general terms (D67). A rule replaces the description, the MIME type
+or the extensions where it gives one. The charset, and each form that the
+rule does not give, stay as libmagic gives them:
+
+| Format | libmagic | `WithExtraRules` |
+| --- | --- | --- |
+| FictionBook 2 (`.fb2`) | `text/xml`, "XML 1.0 document" | `application/x-fictionbook+xml`, "FictionBook document", `fb2` |
+| EMF | `application/octet-stream`, "Windows Enhanced Metafile (EMF) image data" | `image/emf`, the same description, `emf` |
+
+```go
+r, err := magic.DetectFile(ctx, "book.fb2", magic.WithExtraRules())
+```
 
 ### Compressed data
 
@@ -165,9 +183,11 @@ document, a comic book archive (CBZ) and most Android packages as a zip file,
 an encrypted Office Open XML file as an encrypted Compound File, and an AZW3
 book as a Mobipocket book. The package `container` reads the container and
 names the format inside: XPS, OpenXPS, an encrypted Office Open XML file,
-AZW3, CBZ, APK, IPA, Krita and OpenRaster. It reads only the directory of
-the container and at most two small members. magic does not import it
-(D64, D65):
+AZW3, CBZ, APK, IPA, Krita and OpenRaster. It also names OpenDocument and
+Office Open XML files whose members libmagic does not read, the files of
+iWork (Pages, Numbers and Keynote), and Visio and Publisher files. It reads
+only the directory of the container and a few small members. magic does not
+import it (D64, D65):
 
 ```go
 f, err := container.Detect(r, size, container.Limits{})
@@ -180,7 +200,11 @@ if f != container.Unknown {
 ```
 
 For a file that holds none of the formats, `Detect` returns
-`container.Unknown`, and the result of `magic.Detect` stands.
+`container.Unknown`, and the result of `magic.Detect` stands. Ask
+`container` when `magic.Detect` gives `application/octet-stream` with the
+description "Microsoft OOXML", or names a zip file, a Compound File or a
+Mobipocket book. libmagic names an XPS document "Microsoft OOXML" or a zip
+file, as the first member of the document decides.
 
 ## Walk a firmware image
 
@@ -226,8 +250,8 @@ for `zstd`.
 ## How it is tested
 
 The test module builds libmagic from the source of `file`, at the commit
-that the port follows, and compares the package with it, on 2,471 files and
-damaged copies of them, with 14 combinations of flags, as bytes and as files.
+that the port follows, and compares the package with it, on 473 files and
+2,260 damaged copies of them, with 14 combinations of flags, as bytes and as files.
 Every answer is the same, except 50 where a decoder of Go reads damaged
 compressed data in another way than the library of C. All 113 tests of
 `file` pass. `CONTRIBUTING.md` says how to run the tests.

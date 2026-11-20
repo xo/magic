@@ -8,6 +8,7 @@ package walk
 import (
 	"fmt"
 	"io/fs"
+	"math"
 	"path"
 	"slices"
 	"strings"
@@ -32,8 +33,9 @@ type Output struct {
 }
 
 // budget is the bytes that an output and its sub-outputs can still write.
+// A hole in a file is not written, so it does not count.
 type budget struct {
-	limit int64 // the most bytes that the files of the output can hold
+	limit int64 // the most bytes that the output can write
 	n     int64 // the bytes written
 }
 
@@ -47,6 +49,12 @@ type sink interface {
 	readlink(name string) (string, bool)
 	create(name string, data []byte) error
 	append(name string, data []byte) error
+	// writeAt writes data at off in the regular file name, which exists.
+	// A write past the end leaves a hole.
+	writeAt(name string, data []byte, off int64) error
+	// truncate sets the length of the regular file name, which exists. A
+	// larger length adds a hole at the end.
+	truncate(name string, size int64) error
 	mkdirAll(name string) error
 	symlink(name, target string) error
 	chmod(name string, add fs.FileMode) error
@@ -115,6 +123,34 @@ func (o *Output) AppendFile(name string, data []byte) bool {
 		return false
 	}
 	return o.sink.append(p, data) == nil
+}
+
+// WriteFileAt writes data at the offset off of a file that exists, through a
+// link at its path. An extractor of binwalk-ng does this when it seeks in
+// the file of create_file_writer and then writes.
+//
+// A write past the end of the file leaves a hole before data, as a seek
+// does. The hole reads as zeros and holds no bytes, in memory and on a disk
+// that keeps sparse files. Only the bytes of data count against the limit
+// of the output.
+func (o *Output) WriteFileAt(name string, data []byte, off int64) bool {
+	p, ok := o.full(name, true)
+	if !ok || off < 0 || off > math.MaxInt64-int64(len(data)) || !o.reserve(len(data)) {
+		return false
+	}
+	return o.sink.writeAt(p, data, off) == nil
+}
+
+// TruncateFile is set_len of a file that create_file_writer gave: it sets
+// the length of a file that exists, through a link at its path. A larger
+// length adds a hole at the end, as WriteFileAt does, and a hole does not
+// count against the limit of the output.
+func (o *Output) TruncateFile(name string, size int64) bool {
+	p, ok := o.full(name, true)
+	if !ok || size < 0 {
+		return false
+	}
+	return o.sink.truncate(p, size) == nil
 }
 
 // CreateDirectory is create_directory: it makes a folder and its parents.

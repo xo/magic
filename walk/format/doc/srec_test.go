@@ -3,6 +3,7 @@
 package doc_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"io"
@@ -108,4 +109,43 @@ func srecMember(t *testing.T, data []byte) string {
 	}
 	t.Fatal("expected a member s-record.bin, got none")
 	return ""
+}
+
+// TestSRecordHole decodes a record at the address 16 MiB under a limit of
+// 1 KiB. binwalk-ng seeks to the address, so the gap before the record is
+// a hole, and the limit counts only the 4 bytes of the record.
+func TestSRecordHole(t *testing.T) {
+	t.Parallel()
+	const addr = 1 << 24
+	ctx := context.Background()
+	data := []byte(srecHeader + "S3090100000001020304EB\nS70500000000FA\n")
+	n := 0
+	for e, err := range walk.WalkBytes(ctx, data, walk.WithFormats("srecord_generic"), walk.WithMaxOutput(1<<10)) {
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		for m, err := range e.Members(ctx) {
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			n++
+			if m.Size != addr+4 {
+				t.Errorf("expected %d, got: %d", addr+4, m.Size)
+			}
+			r, err := m.Open()
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			b, err := io.ReadAll(r)
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			if !bytes.Equal(b[addr:], []byte{1, 2, 3, 4}) || bytes.ContainsFunc(b[:addr], func(r rune) bool { return r != 0 }) {
+				t.Errorf("expected %d zeros and 01020304, got: %x at the end", addr, b[max(0, len(b)-8):])
+			}
+		}
+	}
+	if n != 1 {
+		t.Errorf("expected 1 member, got: %d", n)
+	}
 }

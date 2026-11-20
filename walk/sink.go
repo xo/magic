@@ -1,6 +1,7 @@
 package walk
 
 import (
+	"cmp"
 	"errors"
 	"io/fs"
 	"os"
@@ -14,6 +15,7 @@ var (
 	errNoFolder  = errors.New("walk: the folder of the path does not exist")
 	errNotFolder = errors.New("walk: a part of the path is not a folder")
 	errNotFound  = errors.New("walk: the path does not exist")
+	errNotFile   = errors.New("walk: the path is not a regular file")
 )
 
 // memSink is an output in memory. It keeps the members in the order that
@@ -63,7 +65,9 @@ func (s *memSink) create(name string, data []byte) error {
 	if err := s.parent(name); err != nil {
 		return err
 	}
-	s.add(&Member{Name: name, Mode: 0o644, Size: int64(len(data)), data: slices.Clone(data)})
+	m := &Member{Name: name, Mode: 0o644}
+	m.write(data, 0)
+	s.add(m)
 	return nil
 }
 
@@ -75,8 +79,31 @@ func (s *memSink) append(name string, data []byte) error {
 	if !m.Mode.IsRegular() {
 		return errNotFolder
 	}
-	m.data = append(m.data, data...)
-	m.Size = int64(len(m.data))
+	m.write(data, m.Size)
+	return nil
+}
+
+func (s *memSink) writeAt(name string, data []byte, off int64) error {
+	m, ok := s.members[name]
+	switch {
+	case !ok:
+		return errNotFound
+	case !m.Mode.IsRegular():
+		return errNotFile
+	}
+	m.write(data, off)
+	return nil
+}
+
+func (s *memSink) truncate(name string, size int64) error {
+	m, ok := s.members[name]
+	switch {
+	case !ok:
+		return errNotFound
+	case !m.Mode.IsRegular():
+		return errNotFile
+	}
+	m.truncate(size)
 	return nil
 }
 
@@ -142,11 +169,105 @@ func (s *memSink) reset() {
 
 func (s *memSink) extracted() bool {
 	for _, m := range s.members {
-		if !m.Mode.IsRegular() || len(m.data) > 0 {
+		if !m.Mode.IsRegular() || m.Size > 0 {
 			return true
 		}
 	}
 	return false
+}
+
+// settle puts the data of each file in order, when the extraction is done,
+// so that a Member does not change while it is read.
+func (s *memSink) settle() {
+	for _, m := range s.members {
+		m.settle()
+	}
+}
+
+// extent is a run of bytes at an offset of a file in memory. The bytes
+// between the extents of a file are a hole, which reads as zeros.
+type extent struct {
+	off int64
+	b   []byte
+}
+
+// end returns the offset after the last byte of x.
+func (x extent) end() int64 {
+	return x.off + int64(len(x.b))
+}
+
+// write writes b at off in the data of m. Until settle, the extents of m
+// are in the order of the writes, so a write costs no copy of the file. A
+// write at the end of the last write grows that extent.
+func (m *Member) write(b []byte, off int64) {
+	if len(b) == 0 {
+		return
+	}
+	m.Size = max(m.Size, off+int64(len(b)))
+	if n := len(m.extents); n > 0 && m.extents[n-1].end() == off {
+		m.extents[n-1].b = append(m.extents[n-1].b, b...)
+		return
+	}
+	m.extents = append(m.extents, extent{off: off, b: slices.Clone(b)})
+}
+
+// truncate sets the size of m. It drops the bytes past size, and a larger
+// size adds a hole at the end.
+func (m *Member) truncate(size int64) {
+	kept := m.extents[:0]
+	for _, x := range m.extents {
+		if x.off >= size {
+			continue
+		}
+		if x.end() > size {
+			x.b = x.b[: size-x.off : size-x.off]
+		}
+		kept = append(kept, x)
+	}
+	clear(m.extents[len(kept):])
+	m.extents = kept
+	m.Size = size
+}
+
+// settle puts the extents of m in order of offset, with no overlap. Where
+// two writes overlap, the later one wins, as on a file system.
+func (m *Member) settle() {
+	settled := true
+	for i := 1; i < len(m.extents) && settled; i++ {
+		settled = m.extents[i].off >= m.extents[i-1].end()
+	}
+	if settled {
+		return
+	}
+	// order holds the index of each write, in order of offset. A group is
+	// a run of order whose writes overlap, and becomes one extent.
+	order := make([]int, len(m.extents))
+	for i := range order {
+		order[i] = i
+	}
+	slices.SortStableFunc(order, func(i, j int) int { return cmp.Compare(m.extents[i].off, m.extents[j].off) })
+	out := make([]extent, 0, len(m.extents))
+	for i := 0; i < len(order); {
+		start, end := m.extents[order[i]].off, m.extents[order[i]].end()
+		j := i + 1
+		for ; j < len(order) && m.extents[order[j]].off < end; j++ {
+			end = max(end, m.extents[order[j]].end())
+		}
+		if j == i+1 {
+			out = append(out, m.extents[order[i]])
+			i = j
+			continue
+		}
+		group := slices.Clone(order[i:j])
+		slices.Sort(group)
+		b := make([]byte, end-start)
+		for _, k := range group {
+			copy(b[m.extents[k].off-start:], m.extents[k].b)
+		}
+		out = append(out, extent{off: start, b: b})
+		i = j
+	}
+	m.extents = out
 }
 
 // rootSink writes an output under an os.Root, which refuses every path
@@ -195,6 +316,31 @@ func (s *rootSink) append(name string, data []byte) error {
 	}
 	s.note(name)
 	_, err = f.Write(data)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	return err //nolint:wrapcheck // Output reports only false
+}
+
+func (s *rootSink) writeAt(name string, data []byte, off int64) error {
+	f, err := s.root.OpenFile(name, os.O_WRONLY, 0)
+	if err != nil {
+		return err //nolint:wrapcheck // Output reports only false
+	}
+	// A write past the end makes a hole on a file system that has them.
+	_, err = f.WriteAt(data, off)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	return err //nolint:wrapcheck // Output reports only false
+}
+
+func (s *rootSink) truncate(name string, size int64) error {
+	f, err := s.root.OpenFile(name, os.O_WRONLY, 0)
+	if err != nil {
+		return err //nolint:wrapcheck // Output reports only false
+	}
+	err = f.Truncate(size)
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}

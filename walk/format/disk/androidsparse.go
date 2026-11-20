@@ -168,8 +168,9 @@ func extractAndroidSparse(data []byte, off int, out *walk.Output) walk.Extractio
 		previous = next
 		next += sparseChunk.Size() + c.dataSize
 	}
-	// binwalk-ng sets the length of the file to the end of the last hole.
-	if w != nil && !w.flush() {
+	// binwalk-ng sets the length of the file to its position, so that the
+	// file ends with the last hole.
+	if w != nil && !w.out.TruncateFile(w.name, w.pos) {
 		return walk.Extraction{}
 	}
 	// Every chunk that the header counts must be valid.
@@ -179,15 +180,13 @@ func extractAndroidSparse(data []byte, off int, out *walk.Output) walk.Extractio
 	return walk.Extraction{OK: true, Size: next - off, HasSize: true}
 }
 
-// sparseWriter writes unsparsed.img. binwalk-ng seeks over the blocks of
-// zeros, which makes a hole in the file, and sets the length of the file at
-// the end. The Output has no holes, so sparseWriter counts the zeros of a
-// hole, and writes them before the next data and at the end. The bytes of
-// the file are the same.
+// sparseWriter writes unsparsed.img. As binwalk-ng, it seeks over the
+// blocks of zeros, which leaves a hole in the file, and writes the other
+// blocks at its position.
 type sparseWriter struct {
 	out  *walk.Output
 	name string
-	hole uint64 // the zeros that are not written yet
+	pos  int64 // the position in the file, as stream_position
 }
 
 // chunk is extract_chunk: it adds the blocks of one chunk to the file. A
@@ -198,8 +197,9 @@ func (w *sparseWriter) chunk(blockSize int, c sparseChunkHeader, b []byte) bool 
 		// A raw chunk holds its blocks as they are.
 		return w.write(b)
 	case c.dontCare || c.fill && !slices.ContainsFunc(b, func(x byte) bool { return x != 0 }):
-		// write_hole: the blocks are zeros.
-		w.hole += uint64(c.blockCount) * uint64(blockSize)
+		// write_hole: the blocks are zeros. The header holds the blocks of
+		// the file to 16 GiB, so the sum cannot overflow.
+		w.pos += int64(c.blockCount) * int64(blockSize)
 		return true
 	case c.fill:
 		// A fill chunk repeats its 4 bytes over each block.
@@ -216,27 +216,14 @@ func (w *sparseWriter) chunk(blockSize int, c sparseChunkHeader, b []byte) bool 
 	return true
 }
 
-// write adds the zeros of the hole, then b, to the file.
+// write writes b at the position, as write_all.
 func (w *sparseWriter) write(b []byte) bool {
-	if !w.flush() {
+	if len(b) == 0 {
+		return true
+	}
+	if !w.out.WriteFileAt(w.name, b, w.pos) {
 		return false
 	}
-	return len(b) == 0 || w.out.AppendFile(w.name, b)
-}
-
-// flush adds the zeros of the hole to the file.
-func (w *sparseWriter) flush() bool {
-	const chunk = 1 << 20
-	var zeros []byte
-	for w.hole > 0 {
-		n := min(w.hole, chunk)
-		if zeros == nil {
-			zeros = make([]byte, n)
-		}
-		if !w.out.AppendFile(w.name, zeros[:n]) {
-			return false
-		}
-		w.hole -= n
-	}
+	w.pos += int64(len(b))
 	return true
 }

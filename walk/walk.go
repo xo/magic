@@ -112,6 +112,14 @@ func WithDepth(n int) Option {
 // WithMaxOutput sets the most bytes that one extraction writes, in memory
 // for the walk of members and Entry.Members, and on disk for Extract. An
 // extraction that reaches it fails. A compression bomb stops there.
+//
+// A hole is not written, so it does not count. An extractor leaves a hole
+// where binwalk-ng seeks past the end of a file: the chunks of zeros of an
+// Android sparse image, and the gaps between S-records. Thus a header of a
+// few bytes can declare a file much larger than the limit, up to 16 GiB for
+// an Android sparse image. A hole holds no memory in a Member. The walk of
+// members reads a member into memory with its holes, up to the limit of
+// WithMaxInput. Extract writes a sparse file, see Extract.
 func WithMaxOutput(n int64) Option {
 	return func(o *options) error {
 		if n <= 0 {
@@ -152,6 +160,11 @@ func WithSearchAll() Option {
 // WithMaxInput sets the most bytes that Walk reads into memory. A larger
 // input is an error. WalkFile maps a file into memory where the system can,
 // and the limit holds only where it cannot.
+//
+// The limit holds for each member that the walk of members reads, with its
+// holes as zeros. A larger member is not walked, and the walk yields an
+// error for it. With WithDepth(n), the walk can hold n such members in
+// memory at the same time, one for each level.
 func WithMaxInput(n int64) Option {
 	return func(o *options) error {
 		if n <= 0 {
@@ -323,10 +336,18 @@ func walkInput(ctx context.Context, sc *scanner, data []byte, o *options, parent
 		}
 		for _, name := range s.order {
 			mem := s.members[name]
-			if !mem.Mode.IsRegular() || len(mem.data) == 0 {
+			if !mem.Mode.IsRegular() || mem.Size == 0 {
 				continue
 			}
-			if !walkInput(ctx, sc, mem.data, o, e, name, yield) {
+			// A hole holds no memory in the member, but the walk reads the
+			// member as one slice, so the limit of the input holds.
+			if mem.Size > o.maxInput {
+				if !yield(nil, fmt.Errorf("walk: the member %s of %s at %#x has %d bytes, above the limit of %d bytes", name, e.Format, e.Offset, mem.Size, o.maxInput)) {
+					return false
+				}
+				continue
+			}
+			if !walkInput(ctx, sc, mem.bytes(), o, e, name, yield) {
 				return false
 			}
 		}

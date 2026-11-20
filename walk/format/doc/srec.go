@@ -8,7 +8,6 @@ package doc
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/xo/magic/walk"
 )
@@ -72,14 +71,8 @@ func parseSRecord(data []byte, off int) (walk.Match, error) {
 }
 
 // extractSRecord is extract_srec: it decodes the data records to
-// s-record.bin. Each record goes to its address in the file, and a gap
-// between records holds zero bytes.
-//
-// binwalk-ng writes each record at its address with a seek. Output has no
-// seek, so the extractor collects the records, and then writes the file in
-// order of address with AppendFile. It allocates no more than the bytes of
-// the records, so an address near 4 GiB cannot make it allocate 4 GiB. The
-// limit of the output stops the zero bytes of such a gap.
+// s-record.bin. As binwalk-ng, it writes each record at its address in the
+// file, so a gap between records is a hole, which reads as zeros.
 func extractSRecord(data []byte, off int, out *walk.Output) walk.Extraction {
 	const name = "s-record.bin"
 	if out != nil && !out.CreateFile(name, nil) {
@@ -87,7 +80,6 @@ func extractSRecord(data []byte, off int, out *walk.Output) walk.Extraction {
 	}
 	rest := data[off:]
 	sawData := false
-	var writes []srecWrite
 	for {
 		r, next, ok := takeSRecord(rest)
 		if !ok || !r.checksumValid() {
@@ -95,8 +87,8 @@ func extractSRecord(data []byte, off int, out *walk.Output) walk.Extraction {
 		}
 		if r.typ.isData() {
 			sawData = true
-			if len(r.hexData) > 0 {
-				writes = append(writes, srecWrite{addr: int(r.addr), data: r.decode()})
+			if len(r.hexData) > 0 && out != nil && !out.WriteFileAt(name, r.decode(), int64(r.addr)) {
+				return walk.Extraction{}
 			}
 		}
 		rest = next
@@ -104,66 +96,8 @@ func extractSRecord(data []byte, off int, out *walk.Output) walk.Extraction {
 			break
 		}
 	}
-	if out != nil && !writeSRecords(out, name, writes) {
-		return walk.Extraction{}
-	}
 	consumed := len(data) - off - len(rest)
 	return walk.Extraction{OK: consumed > 0 && sawData, Size: consumed, HasSize: true}
-}
-
-// srecWrite is the data of one data record, and its address.
-type srecWrite struct {
-	addr int
-	data []byte
-}
-
-// writeSRecords appends the image of the writes to the file name. A later
-// write replaces the bytes of an earlier one at the same address, as the
-// writes of binwalk-ng in order do.
-func writeSRecords(out *walk.Output, name string, writes []srecWrite) bool {
-	// spans are the ranges of addresses that the writes cover, merged.
-	type span struct {
-		start, end int
-		writes     []srecWrite
-	}
-	sorted := make([]srecWrite, len(writes))
-	copy(sorted, writes)
-	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].addr < sorted[j].addr })
-	var spans []*span
-	for _, w := range sorted {
-		end := w.addr + len(w.data)
-		if n := len(spans); n > 0 && w.addr <= spans[n-1].end {
-			spans[n-1].end = max(spans[n-1].end, end)
-			continue
-		}
-		spans = append(spans, &span{start: w.addr, end: end})
-	}
-	// Give each write to its span, in the order of the records.
-	for _, w := range writes {
-		i := sort.Search(len(spans), func(i int) bool { return spans[i].end > w.addr })
-		spans[i].writes = append(spans[i].writes, w)
-	}
-	const chunk = 64 << 10
-	zeros := make([]byte, chunk)
-	pos := 0
-	for _, s := range spans {
-		for pos < s.start {
-			n := min(chunk, s.start-pos)
-			if !out.AppendFile(name, zeros[:n]) {
-				return false
-			}
-			pos += n
-		}
-		b := make([]byte, s.end-s.start)
-		for _, w := range s.writes {
-			copy(b[w.addr-s.start:], w.data)
-		}
-		if !out.AppendFile(name, b) {
-			return false
-		}
-		pos = s.end
-	}
-	return true
 }
 
 // srecType is RecordType: the digit after the "S" of a record.

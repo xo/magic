@@ -1,0 +1,22 @@
+Stop extract_dtb on a node that does not fit (D59).
+
+parse_dtb_node returns an error when the token of a node, or the structure
+of a property, does not fit in the data. extract_dtb then reads the same
+entry again, with no end. The walker rejects the blob there, and this patch
+makes binwalk-ng reject it too. test/corpus/testdata/walk/dtb-6.bin and
+dtb-7.bin hold such blobs.
+
+--- a/src/formats/dtb.rs
++++ b/src/formats/dtb.rs
+@@ -360,6 +360,11 @@
+                     // Update offsets to parse the next DTB structure entry
+                     previous_entry_offset = Some(entry_offset);
+                     entry_offset += node.total_size;
++                } else {
++                    // The token or the property structure does not fit in
++                    // the data. Without this break, the loop reads the same
++                    // entry again with no end.
++                    break;
+                 }
+             }
+         }

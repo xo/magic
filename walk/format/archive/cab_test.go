@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -253,19 +254,143 @@ func TestCABLZX(t *testing.T) {
 	}
 
 	files := cabTestFiles()
-	c := makeLZXCAB(files)
-	_, lines = walkOne(t, slices.Concat(noise(64), c), "cab")
 	var exp []string
 	for _, f := range files {
 		exp = append(exp, strings.ReplaceAll(f.name, `\`, "/")+" -rw-r--r-- "+f.data)
 	}
 	exp = slices.Insert(exp, 1, "dir drwxr-xr-x", "dir/sub drwxr-xr-x")
-	check(t, lines, exp...)
-	if want, ok := cabextract(t, c); ok {
-		got := slices.Clone(lines)
-		slices.Sort(got)
-		if !slices.Equal(got, want) {
-			t.Errorf("expected %q, got: %q", want, got)
+	// The CFDATA blocks hold one frame each, then 20000 bytes of the stream
+	// each, so that frames start and end inside blocks.
+	for _, cut := range []int{0, 20000} {
+		c := makeLZXCAB(files, cut)
+		_, lines = walkOne(t, slices.Concat(noise(64), c), "cab")
+		check(t, lines, exp...)
+		if want, ok := cabextract(t, c); ok {
+			got := slices.Clone(lines)
+			slices.Sort(got)
+			if !slices.Equal(got, want) {
+				t.Errorf("cut %d: expected %q, got: %q", cut, want, got)
+			}
+		}
+	}
+}
+
+// TestCABLZXReads holds the reads of cabextract. With blocks of 5001
+// bytes, the last block starts after the first 69632 bytes, which
+// cabextract has read when the last frame starts, so the frame has 32768
+// bytes and fails. When the last block lacks 1 or 2 bytes, cabextract reads
+// 0 in their place, and it fails when the block lacks 3 bytes.
+func TestCABLZXReads(t *testing.T) {
+	t.Parallel()
+	files := cabTestFiles()
+	frames, sizes := lzxStream(files)
+	short := func(k int) []byte {
+		blocks := slices.Clone(frames)
+		blocks[len(blocks)-1] = blocks[len(blocks)-1][:len(blocks[len(blocks)-1])-k]
+		return lzxCAB(files, blocks, sizes, 16)
+	}
+	for _, tt := range []struct {
+		name string
+		c    []byte
+		// last is the data of the last file, or "" when the cabinet fails.
+		last string
+	}{
+		{"blocks of 5001 bytes", makeLZXCAB(files, 5001), ""},
+		{"1 byte less", short(1), "latin1\x00"},
+		{"2 bytes less", short(2), "latin\x00\x00"},
+		{"3 bytes less", short(3), ""},
+	} {
+		e := walkEntry(t, slices.Concat(noise(64), tt.c), "cab")
+		var got []string
+		var gotErr error
+		for m, err := range e.Members(context.Background()) {
+			if err != nil {
+				gotErr = err
+				break
+			}
+			if m.Mode.IsRegular() {
+				rc, err := m.Open()
+				if err != nil {
+					t.Fatalf("expected no error, got: %v", err)
+				}
+				b, _ := io.ReadAll(rc)
+				got = append(got, m.Name+" "+string(b))
+			}
+		}
+		if tt.last == "" {
+			if !errors.Is(gotErr, walk.ErrNotExtracted) {
+				t.Errorf("%s: expected %q, got: %q", tt.name, walk.ErrNotExtracted, fmt.Sprint(gotErr))
+			}
+			if cabextractFails(t, tt.c) == 0 {
+				t.Errorf("%s: expected cabextract to fail", tt.name)
+			}
+			continue
+		}
+		if want := "caf\xe9.txt " + tt.last; gotErr != nil || len(got) != 4 || got[3] != want {
+			t.Errorf("%s: expected %q, got: %q, %v", tt.name, want, got, gotErr)
+		}
+		if cabextractFails(t, tt.c) == 1 {
+			t.Errorf("%s: expected cabextract to extract the files", tt.name)
+		}
+	}
+}
+
+// cabextractFails tests the cabinet c with cabextract. It returns 1 when
+// cabextract fails, 0 when it does not, and -1 when cabextract is not on
+// PATH.
+func cabextractFails(t *testing.T, c []byte) int {
+	t.Helper()
+	if _, err := exec.LookPath("cabextract"); err != nil {
+		return -1
+	}
+	p := filepath.Join(t.TempDir(), "a.cab")
+	if err := os.WriteFile(p, c, 0o644); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := exec.Command("cabextract", "-q", "-t", p).Run(); err != nil {
+		return 1
+	}
+	return 0
+}
+
+// TestCABLZXOverrun extracts a cabinet whose first frame ends with a match
+// that ends at the end of the frame, and fails on cabinets where the match
+// passes the end by 1 and by 2 bytes, as cabextract 1.11 fails.
+func TestCABLZXOverrun(t *testing.T) {
+	t.Parallel()
+	lits := make([]int, cabFrameSize)
+	for i := range lits {
+		lits[i] = 'a' + i*7%26
+	}
+	for over := range 3 {
+		first := append(slices.Clone(lits[:cabFrameSize-3+over]), lzxMatch)
+		stream, text := lzxLiteralStream([][]int{first, lits[:100-over]})
+		files := []cabTestFile{{"a.txt", string(text[:20000])}, {"b.txt", string(text[20000:])}}
+		c := lzxCAB(files, [][]byte{stream[:3001], stream[3001:]}, []int{cabFrameSize, 100}, 15)
+		e := walkEntry(t, slices.Concat(noise(64), c), "cab")
+		var got []string
+		var gotErr error
+		for m, err := range e.Members(context.Background()) {
+			if err != nil {
+				gotErr = err
+				break
+			}
+			got = append(got, m.Name)
+		}
+		if over == 0 {
+			if gotErr != nil || len(got) != 2 {
+				t.Errorf("over %d: expected 2 files, got: %q, %v", over, got, gotErr)
+			}
+			if want, ok := cabextract(t, c); ok && len(want) != 2 {
+				t.Errorf("over %d: expected 2 files, got: %q", over, want)
+			}
+			continue
+		}
+		if !errors.Is(gotErr, walk.ErrNotExtracted) {
+			t.Errorf("over %d: expected %q, got: %q", over, walk.ErrNotExtracted, fmt.Sprint(gotErr))
+		}
+		if cabextractFails(t, c) == 0 {
+			t.Errorf("over %d: expected cabextract to fail", over)
 		}
 	}
 }
@@ -288,12 +413,13 @@ func (w *lzxWriter) bits(v uint32, k uint) {
 	}
 }
 
-// makeLZXCAB returns a cabinet of one folder of LZX, with a window of
-// 2^16 bytes, that holds files. The data is in uncompressed blocks of LZX.
-// The first block has an odd size and ends in the first frame, so a byte of
-// padding follows it. The second block holds the rest, over the other
-// frames. The stream has E8 translation, and the data has no byte 0xE8.
-func makeLZXCAB(files []cabTestFile) []byte {
+// lzxStream returns the frames of a stream of LZX, for a window of 2^16
+// bytes, that holds the data of files, and the size of each frame after
+// decoding. The data is in uncompressed blocks of LZX. The first block has
+// an odd size and ends in the first frame, so a byte of padding follows it.
+// The second block holds the rest, over the other frames. The stream has E8
+// translation, and the data has no byte 0xE8.
+func lzxStream(files []cabTestFile) (frames [][]byte, sizes []int) {
 	var all []byte
 	for _, f := range files {
 		all = append(all, f.data...)
@@ -307,8 +433,6 @@ func makeLZXCAB(files []cabTestFile) []byte {
 			w.out = binary.LittleEndian.AppendUint32(w.out, 1)
 		}
 	}
-	var data []byte
-	var blocks int
 	for p := 0; p < len(all); p += cabFrameSize {
 		chunk := all[p:min(p+cabFrameSize, len(all))]
 		w := &lzxWriter{}
@@ -324,13 +448,52 @@ func makeLZXCAB(files []cabTestFile) []byte {
 		} else {
 			w.out = append(w.out, chunk...)
 		}
+		frames = append(frames, w.out)
+		sizes = append(sizes, len(chunk))
+	}
+	return frames, sizes
+}
+
+// makeLZXCAB returns a cabinet of one folder of LZX that holds files, in the
+// stream of lzxStream. Each CFDATA block holds one frame when cut is 0, or
+// else cut bytes of the stream.
+func makeLZXCAB(files []cabTestFile, cut int) []byte {
+	frames, sizes := lzxStream(files)
+	if cut == 0 {
+		return lzxCAB(files, frames, sizes, 16)
+	}
+	// Only the sum of the sizes after decoding counts, so each block but
+	// the last gets the same share.
+	var blocks [][]byte
+	stream := slices.Concat(frames...)
+	for p := 0; p < len(stream); p += cut {
+		blocks = append(blocks, stream[p:min(p+cut, len(stream))])
+	}
+	length := 0
+	for _, n := range sizes {
+		length += n
+	}
+	share := length / len(blocks)
+	sizes = sizes[:0]
+	for range blocks {
+		sizes = append(sizes, share)
+	}
+	sizes[len(sizes)-1] = length - share*(len(blocks)-1)
+	return lzxCAB(files, blocks, sizes, 16)
+}
+
+// lzxCAB returns a cabinet of one folder of LZX, with a window of 2^window
+// bytes, that holds files. Each block holds its data, with its size after
+// decoding from sizes, and a checksum.
+func lzxCAB(files []cabTestFile, blocks [][]byte, sizes []int, window uint16) []byte {
+	var data []byte
+	for i, b := range blocks {
 		h := make([]byte, 8)
-		binary.LittleEndian.PutUint16(h[4:], uint16(len(w.out)))
-		binary.LittleEndian.PutUint16(h[6:], uint16(len(chunk)))
-		binary.LittleEndian.PutUint32(h, cabChecksum(h[4:8], cabChecksum(w.out, 0)))
+		binary.LittleEndian.PutUint16(h[4:], uint16(len(b)))
+		binary.LittleEndian.PutUint16(h[6:], uint16(sizes[i]))
+		binary.LittleEndian.PutUint32(h, cabChecksum(h[4:8], cabChecksum(b, 0)))
 		data = append(data, h...)
-		data = append(data, w.out...)
-		blocks++
+		data = append(data, b...)
 	}
 	h := make([]byte, 36)
 	copy(h, "MSCF")
@@ -338,8 +501,8 @@ func makeLZXCAB(files []cabTestFile) []byte {
 	binary.LittleEndian.PutUint16(h[26:], 1)
 	binary.LittleEndian.PutUint16(h[28:], uint16(len(files)))
 	folder := make([]byte, 8)
-	binary.LittleEndian.PutUint16(folder[4:], uint16(blocks))
-	binary.LittleEndian.PutUint16(folder[6:], cabMethodLZX|16<<8)
+	binary.LittleEndian.PutUint16(folder[4:], uint16(len(blocks)))
+	binary.LittleEndian.PutUint16(folder[6:], cabMethodLZX|window<<8)
 	var entries []byte
 	off := 0
 	for _, f := range files {
@@ -355,4 +518,75 @@ func makeLZXCAB(files []cabTestFile) []byte {
 	b := slices.Concat(h, folder, entries, data)
 	binary.LittleEndian.PutUint32(b[8:], uint32(len(b)))
 	return b
+}
+
+// lzxMatch is the token of lzxLiteralStream for a match of 3 bytes from the
+// last match offset, which is 1 at the start of a stream.
+const lzxMatch = -1
+
+// lzxLiteralStream returns a stream of LZX of one verbatim block, for a
+// window of 2^15 bytes. Its main code gives 8 bits to each literal but 255,
+// and 9 bits to 255 and to the one match symbol, lzxMatch. Each frame holds
+// the literals and matches of its tokens, and ends at the end of a word.
+// text is the data of the stream.
+func lzxLiteralStream(frames [][]int) (stream, text []byte) {
+	total := 0
+	for _, f := range frames {
+		for _, v := range f {
+			if total++; v == lzxMatch {
+				total += 2
+			}
+		}
+	}
+	w := &lzxWriter{}
+	w.bits(0, 1) // no E8 translation
+	w.bits(1, 3) // a verbatim block
+	w.bits(uint32(total), 24)
+	// The pretree gives 1 bit to 9, which makes a length of 8 from 0, and 2
+	// bits to 0, which keeps a length of 0, and to 8, which makes 9.
+	pretree := func() {
+		for s := range 20 {
+			w.bits(map[int]uint32{9: 1, 0: 2, 8: 2}[s], 4)
+		}
+	}
+	pre := map[int][2]uint32{9: {0, 1}, 0: {2, 2}, 8: {3, 2}}
+	put := func(s int) { w.bits(pre[s][0], uint(pre[s][1])) }
+	pretree()
+	for range 255 {
+		put(9)
+	}
+	put(8)
+	// The match symbol is 257: slot 0, and a length of 3.
+	pretree()
+	for i := range 8 * 30 {
+		if i == 1 {
+			put(8)
+		} else {
+			put(0)
+		}
+	}
+	pretree()
+	for range 249 {
+		put(0)
+	}
+	for _, f := range frames {
+		for _, v := range f {
+			switch v {
+			case lzxMatch:
+				w.bits(511, 9)
+				last := text[len(text)-1]
+				text = append(text, last, last, last)
+			case 255:
+				w.bits(510, 9)
+				text = append(text, 255)
+			default:
+				w.bits(uint32(v), 8)
+				text = append(text, byte(v))
+			}
+		}
+		if w.n > 0 {
+			w.bits(0, 16-w.n)
+		}
+	}
+	return w.out, text
 }

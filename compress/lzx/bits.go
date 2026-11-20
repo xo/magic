@@ -2,7 +2,9 @@
 //
 // This file translates src/bitstream.rs of lzxd, at the commit that
 // docs/upstream/upstreams.tsv names (D61). The reader loads two words at a
-// time, and the bytes past the end of a frame read as 0, as lzxd peeks them.
+// time. A word past the end of a frame, or a word that has only 1 byte, reads
+// as 0, as lzxd peeks it. To read a bit of such a word is an error, as lzxd
+// returns UnexpectedEof when it loads it.
 
 package lzx
 
@@ -26,11 +28,8 @@ type bitReader struct {
 func (b *bitReader) fill() {
 	for b.n <= 16 {
 		var w uint32
-		if b.pos < len(b.src) {
-			w = uint32(b.src[b.pos])
-		}
 		if b.pos+1 < len(b.src) {
-			w |= uint32(b.src[b.pos+1]) << 8
+			w = uint32(b.src[b.pos]) | uint32(b.src[b.pos+1])<<8
 		}
 		b.buf |= w << (16 - b.n)
 		b.n += 16
@@ -45,12 +44,15 @@ func (b *bitReader) peek(k uint) uint32 {
 }
 
 // skip reads k bits, k from 0 to 16. It fails when they pass the end of
-// the frame.
+// the last whole word of the frame. The words start at an odd byte after an
+// uncompressed block of an odd size, so the last whole word ends at the end
+// of the frame, or 1 byte before it.
 func (b *bitReader) skip(k uint) error {
 	b.fill()
 	b.buf <<= k
 	b.n -= k
-	if b.pos*8-int(b.n) > len(b.src)*8 {
+	end := len(b.src) - (len(b.src)-b.pos)&1
+	if b.pos*8-int(b.n) > end*8 {
 		return errShort
 	}
 	return nil
@@ -96,4 +98,11 @@ func (b *bitReader) bytes(k int) ([]byte, error) {
 	v := b.src[b.pos : b.pos+k]
 	b.pos += k
 	return v, nil
+}
+
+// used returns the number of bytes that the reader read, up to the end of the
+// word that holds the last bit that it read. It leaves out the words that
+// fill loaded and that hold no bit that the reader read.
+func (b *bitReader) used() int {
+	return b.pos - 2*int(b.n/16)
 }

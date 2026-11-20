@@ -14,6 +14,11 @@ modules of their own, so that the root module requires neither. Any other
 module from outside this repository needs the approval of the maintainers,
 and a decision records it.
 
+The test module (D30) may require the modules that the decoder modules
+require, `github.com/ulikunitz/xz` and `github.com/klauspost/compress`, and
+its tests may import them. The maintainers approved this on 2026-11-20, and
+answered question 30 of `docs/PLAN.md`.
+
 `TestEveryRequireIsApproved`, in `gomod_test.go`, holds this rule. It reads
 each `go.mod` of the repository, and fails on a `require` line for a module
 that no decision approves.

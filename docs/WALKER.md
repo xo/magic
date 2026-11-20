@@ -107,7 +107,7 @@ Archives:
 | --- | --- |
 | `zip`, `7zip`, `cpio`, `arj` | `7z`. The walker has no decoder for `arj` |
 | `tarball`, `dahua_zip` (a zip file with a changed header) | binwalk-ng |
-| `cab` | `cabextract`. The walker reads the folders that are stored, or compressed with MSZIP or LZX. It decodes LZX with `compress/lzx`, one block as one frame, which gives the files of cabextract when each block but the last holds one whole frame (D68). It has no decoder of Quantum |
+| `cab` | `cabextract`. The walker reads the folders that are stored, or compressed with MSZIP or LZX. It decodes LZX with `compress/lzx`, as one stream over the blocks of a folder, as cabextract reads it (D68). It has no decoder of Quantum |
 | `rar` | binwalk-ng, with the crate `rars`. The walker only finds it |
 | `deb` | none |
 

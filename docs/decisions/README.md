@@ -87,5 +87,5 @@ D32 set the project up as a port of libmagic.
 | D64 | [A package for ivy names the formats that libmagic names as their container](D064-a-package-for-ivy-names-the-formats-that-libmagic-names-as-their-container.md) | Decided |
 | D65 | [The package container names the format inside a container](D065-the-package-container-names-the-format-inside-a-container.md) | Decided |
 | D66 | [The engine keeps the error text of libmagic](D066-the-engine-keeps-the-error-text-of-libmagic.md) | Decided |
-| D67 | [Rules beyond libmagic are the option WithExtraRules](D067-rules-beyond-libmagic-are-the-option-withextrarules.md) | Proposed |
+| D67 | [Rules beyond libmagic are the option WithExtraRules](D067-rules-beyond-libmagic-are-the-option-withextrarules.md) | Decided |
 | D68 | [The walker uses the decoders of compress](D068-the-walker-uses-the-decoders-of-compress.md) | Decided. Amends D60 |

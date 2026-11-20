@@ -38,7 +38,12 @@ on 2026-11-17, as the answer to question 24.
      next frame, and `(*Decoder).Reset()` starts the stream again.
      `lzx.Section` holds the fields of the content of a CHM file, and
      `(*Section).Decode(dst []byte, off int64, n int)` decodes any part of
-     it, from the reset before that part.
+     it, from the reset before that part. `(*Decoder).Used`,
+     `(*Decoder).Overrun` and `(*Decoder).Uncompressed` describe the last
+     frame: the bytes of input that it read, the bytes that its last match
+     wrote past its end, and whether it ended in an uncompressed block. A
+     caller then reads a stream of frames that spans blocks, as the walker
+     reads a folder of a CAB file (D68).
 4. Hostile data must not crash a decoder or make it hang. Each decoder stops
    at a limit of output, or decodes at most one frame of 32768 bytes. Each
    one checks every copy from earlier output and every index of a table. On

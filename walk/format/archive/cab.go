@@ -5,7 +5,8 @@
 // This file translates src/formats/cab.rs of binwalk-ng. binwalk-ng
 // extracts a cabinet with cabextract, and extractCAB writes the files that
 // cabextract writes, for the folders that are stored or compressed with
-// MSZIP or LZX. It decodes LZX with github.com/xo/magic/compress/lzx (D68).
+// MSZIP or LZX. It decodes LZX with github.com/xo/magic/compress/lzx (D68),
+// as one stream over the blocks of a folder, as cabextract reads it.
 
 package archive
 
@@ -114,6 +115,13 @@ const (
 	cabFlagReserve = 4
 
 	cabFrameSize = 32768
+
+	// cabInputMax is the most bytes that cabextract takes in a block of
+	// data, 32768 bytes and 6144 more. cabReadSize is the number of bytes
+	// that it reads at a time from the data of a folder of LZX. Tests of
+	// cabextract 1.11 showed both.
+	cabInputMax = 38912
+	cabReadSize = 4096
 )
 
 // cabFolder is a CFFOLDER entry.
@@ -279,40 +287,43 @@ func (s *cabSink) add(b []byte) bool {
 	return true
 }
 
+// cabBlock reads the next CFDATA block of a folder: its data and the size
+// of the data after decoding. It fails when the block passes the end of the
+// cabinet, or has a bad checksum. A checksum of 0 is not checked.
+func cabBlock(r *cabReader, reserve int) (block []byte, usize int, ok bool) {
+	sum := uint32(r.u32())
+	head := r.next(4)
+	size, usize := int(binary.LittleEndian.Uint16(head)), int(binary.LittleEndian.Uint16(head[2:]))
+	r.next(reserve)
+	block = r.next(size)
+	if r.bad || sum != 0 && cabChecksum(head, cabChecksum(block, 0)) != sum {
+		return nil, 0, false
+	}
+	return block, usize, true
+}
+
 // cabDecode decodes the blocks of folder f of the cabinet b up to the end
 // of the last of its files, and gives the data to s. It fails as
 // libmspack fails: on a bad checksum, a block that does not decode, or
 // data that ends before the files end.
 func cabDecode(b []byte, f cabFolder, reserve, end int, s *cabSink) bool {
+	if f.method == cabMethodLZX {
+		return cabLZX(b, f, reserve, end, s)
+	}
 	r := &cabReader{b: b, p: f.start}
 	var window []byte
-	var dec *lzx.Decoder
-	if f.method == cabMethodLZX {
-		// The window of LZX in a cabinet has 2^15 to 2^21 bytes.
-		var err error
-		if dec, err = lzx.NewDecoder(1 << f.window); err != nil {
-			return false
-		}
-	}
-	for i := range f.blocks {
+	for range f.blocks {
 		if s.pos >= end {
 			return true
 		}
-		sum := uint32(r.u32())
-		head := r.next(4)
-		size, usize := int(binary.LittleEndian.Uint16(head)), int(binary.LittleEndian.Uint16(head[2:]))
-		r.next(reserve)
-		block := r.next(size)
-		if r.bad {
-			return false
-		}
-		if sum != 0 && cabChecksum(head, cabChecksum(block, 0)) != sum {
+		block, usize, ok := cabBlock(r, reserve)
+		if !ok {
 			return false
 		}
 		var out []byte
 		switch f.method {
 		case cabMethodNone:
-			if size != usize {
+			if len(block) != usize {
 				return false
 			}
 			out = block
@@ -335,23 +346,6 @@ func cabDecode(b []byte, f cabFolder, reserve, end int, s *cabSink) bool {
 				window = make([]byte, cabFrameSize)
 			}
 			copy(window, out)
-		case cabMethodLZX:
-			// cabextract reads the LZX data of the blocks of a folder as one
-			// stream, in frames of 32768 bytes. The walker decodes each
-			// block as one frame, which is the same when each block but the
-			// last holds a whole frame and nothing more. A block that holds
-			// fewer bytes fails, and the walker writes nothing for it. A
-			// block that holds a frame and more bytes cannot be found, because
-			// compress/lzx does not tell how many bytes a frame reads, so
-			// there the files of the walker differ from those of cabextract
-			// (D68).
-			if usize != cabFrameSize && i < f.blocks-1 {
-				return false
-			}
-			var err error
-			if out, err = dec.Decode(nil, block, usize); err != nil {
-				return false
-			}
 		default:
 			return false
 		}
@@ -360,6 +354,91 @@ func cabDecode(b []byte, f cabFolder, reserve, end int, s *cabSink) bool {
 		}
 	}
 	return s.pos >= end
+}
+
+// cabLZX decodes folder f of LZX as cabextract 1.11 decodes it. Tests of
+// cabinets made for the purpose showed these facts:
+//
+//   - The data of the blocks of the folder is one stream of frames of 32768
+//     bytes. A frame can start in one block and end in another.
+//   - A frame ends at the end of a word, and the next frame starts at the next
+//     word, or at the next byte after an uncompressed block. lzx.Decoder.Used
+//     gives that offset.
+//   - A frame whose last match passes its end is an error. lzx.Decoder.Overrun
+//     tells this.
+//   - The sizes of the blocks after decoding count only in their sum, which
+//     is the size of the stream after decoding. A block of 0 or more than
+//     32768 bytes after decoding is an error, and so is a block of more than
+//     cabInputMax bytes.
+//   - cabextract reads the stream 4096 bytes at a time, over the ends of the
+//     blocks, and fails when it reads a bad block, whether or not a frame
+//     needs its data. At the end of a frame, it has read 2 bytes past the
+//     frame, or 0 when the frame ends in an uncompressed block.
+//     lzx.Decoder.Uncompressed tells this.
+//   - After the last block, cabextract reads 2 bytes of 0, and fails when
+//     it reads more.
+//   - The sum of the sizes is known when cabextract has read the last block.
+//     It sets the size of each frame from then on: 32768 bytes, or the bytes
+//     that are left in the stream. The size of a frame is set at its start,
+//     or after the first read for the first frame. Until then, each frame
+//     has 32768 bytes.
+func cabLZX(b []byte, f cabFolder, reserve, end int, s *cabSink) bool {
+	// The window of LZX in a cabinet has 2^15 to 2^21 bytes.
+	dec, err := lzx.NewDecoder(1 << f.window)
+	if err != nil {
+		return false
+	}
+	// stream holds the data of the blocks up to the first bad block, which
+	// starts at the offset bad of the stream, or at -1 when no block is bad.
+	// last is the offset of the last block, or -1 when it is bad.
+	r := &cabReader{b: b, p: f.start}
+	var stream []byte
+	total, bad, last := 0, -1, -1
+	for i := range f.blocks {
+		block, usize, ok := cabBlock(r, reserve)
+		if !ok || usize == 0 || usize > cabFrameSize || len(block) > cabInputMax {
+			bad = len(stream)
+			break
+		}
+		if i == f.blocks-1 {
+			last = len(stream)
+		}
+		stream = append(stream, block...)
+		total += usize
+	}
+	if bad < 0 {
+		stream = append(stream, 0, 0)
+	}
+	// p is the start of the next frame in stream, and n is the end of the
+	// bytes that cabextract has read. Before the first frame, it reads the
+	// first 4096 bytes.
+	var out []byte
+	p, n := 0, cabReadSize
+	for s.pos < end {
+		if bad >= 0 && n > bad {
+			return false
+		}
+		size := lzx.FrameSize
+		if last >= 0 && last < n {
+			size = min(size, total-s.pos)
+		}
+		if size <= 0 {
+			return false
+		}
+		if out, err = dec.Decode(out[:0], stream[p:], size); err != nil || dec.Overrun() > 0 || !s.add(out) {
+			return false
+		}
+		p += dec.Used()
+		i := p
+		if !dec.Uncompressed() {
+			i += 2
+		}
+		if i > len(stream) {
+			return false
+		}
+		n = max(n, (i+cabReadSize-1)/cabReadSize*cabReadSize)
+	}
+	return bad < 0 || n <= bad
 }
 
 // extractCAB writes the files of the cabinet at off, as cabextract writes

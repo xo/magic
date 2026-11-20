@@ -110,18 +110,8 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     decoders with the programs that write the formats. The limit of
     64 phrases that hold one another, in `compress/huffcdic`, is not measured
     on such a book either. Source: D61.
-19. lzxd has one commit on codeberg.org after the base, `aa723fd`, "Fix
-    errors from fuzzer". The ledger has it as `pending`. `compress/lzx`
-    already reads past the end as 0, and fails on a short block that is not
-    compressed, so the port can change little. Compare the two. Source: D61.
 20. `compress/lzx` does not decode LZX DELTA, the form of [MS-PATCH] with
     windows over 2 MiB and matches over 257 bytes. Source: D61.
-21. The walker decodes cab with LZX with `compress/lzx`, one block of CFDATA
-    as one frame (D68). cabextract reads the LZX of a folder as one stream of
-    frames of 32768 bytes, so the two differ on a block that holds more than
-    its frame. To follow cabextract on every cabinet, `compress/lzx` needs a
-    method that gives the bytes of input that the last frame read. Source:
-    D61, D68.
 22. No test of `cfb` reads a document with a thumbnail, or an encrypted
     document, that Office wrote. The tests read property sets that the
     writer of the tests made, and the summaries of the corpus, which have
@@ -145,25 +135,7 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     the samples of D64 and the files that the tests write. With such files
     that the repository can hold, a test can check the rules of D65 on
     them. Source: D65.
-28. On 2026-11-20 `magic.DetectFile` and `container.Detect` read the 292 files
-    of the corpus of the review of ivy. They name most files as ivy does.
-    Items 33 and 34 hold the files where they do not. The program that read
-    them is a short loop over `test/review/corpus.tsv` of ivy, and the files
-    are in the cache of that review. Source: the corpus of ivy.
-33. The 12 FictionBook files of the corpus of ivy (`.fb2`) are `text/xml`.
-    libmagic has no rule for the root element `FictionBook` of the namespace
-    `http://www.gribuser.ru/xml/fictionbook/2.0`. shared-mime-info gives
-    `application/x-fictionbook+xml`. Such a rule is not a container, so it
-    needs a decision of the maintainers on where magic puts a rule that
-    libmagic does not have. D67 proposes the option `WithExtraRules`, which
-    gives `application/x-fictionbook+xml`. Remove this item when the
-    maintainers accept D67. Source: the corpus of ivy.
-34. An EMF file is `application/octet-stream`, with the description "Windows
-    Enhanced Metafile (EMF) image data", as in libmagic. The MIME type
-    `image/emf` is registered with IANA. The corpus of ivy has 5 EMF files.
-    This change also needs a decision, because it differs from libmagic.
-    With `WithExtraRules` of D67, EMF is `image/emf`. Remove this item when
-    the maintainers accept D67. Source: the corpus of ivy.
+
 ## The binary walker
 
 The maintainers want magic to do the work of binwalk too: walk a binary file,
@@ -194,8 +166,7 @@ that made it. These are left:
      dmg2img keeps what it decodes from damaged data, so the walker cannot
      write its bytes (D68).
 2. Parts of formats that the walker does not extract: 7-Zip with AES or
-   the filter RISCV; cab with Quantum. The walker decodes cab with LZX one
-   block as one frame, which item 21 says more of. The walker reads SquashFS 1.x,
+   the filter RISCV; cab with Quantum. The walker reads SquashFS 1.x,
    2.x and 3.x in both byte orders, with each decompressor that sasquatch
    tries, in its order: gzip, lzo, lz4, xz, zstd, LZMA, and the LZMA of
    vendors (adaptive, Broadcom and DD-WRT). sasquatch skips a file whose

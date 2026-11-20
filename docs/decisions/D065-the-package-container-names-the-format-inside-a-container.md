@@ -214,6 +214,8 @@ of its pieces, `[Content_Types].xml`, `META-INF/manifest.xml`, the first
 offsets and two facts of the names of the first 16 members, for the walk of
 `msooxml`.
 
-Question 29 of `docs/PLAN.md` asks the maintainers to accept two rules of
-this section: the number of formats, and when `container` names a file that
-libmagic also names.
+On 2026-11-20 the maintainers accepted the two rules of this section, and
+answered question 29 of `docs/PLAN.md`. `container` has one format for each
+type of OpenDocument that libmagic names, and one format for each program of
+Office Open XML. It names an Office Open XML file only where `msooxml` of
+file does not name it.

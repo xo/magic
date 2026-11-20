@@ -8,10 +8,12 @@
 //     bytes. lzxd also takes the larger windows of LZX DELTA. It has no
 //     extra match length of LZX DELTA, as lzxd has none.
 //   - A match can write past the end of a frame. The bytes past it start the
-//     next frame. lzxd does not stop when a match passes the end.
+//     next frame, and Overrun gives their number. lzxd does not stop when a
+//     match passes the end.
 //   - An uncompressed block of an odd size is followed by a byte of padding
 //     in the same frame. When the block ends with the frame, the next frame
-//     starts with no padding. lzxd always skips a byte before the next block.
+//     starts with no padding, and Used counts the byte of padding in the
+//     frame that ends. lzxd always skips a byte before the next block.
 //   - E8 translation changes a value of 0 to the negative of the position.
 //     lzxd tests for a value over 0, and changes 0 by the translation size.
 //   - Every match offset is checked against the bytes decoded since the
@@ -21,6 +23,10 @@
 // CHM help files use. A frame of LZX holds 32768 bytes of output, and the last
 // frame can hold fewer. The decoder reads one frame at a time, and keeps the
 // window and the Huffman codes from one frame to the next, until a reset.
+// Decoder.Used gives the bytes that a frame read, so a caller finds where the
+// next frame starts in a stream, such as the data of a folder of a CAB file.
+// Decoder.Overrun tells when the last match of a frame passed its end, and
+// Decoder.Uncompressed tells whether the frame ended in an uncompressed block.
 //
 // Section reads the content of a CHM file, which resets the decoder at a fixed
 // interval of frames. It can start at any reset, so it can read any part of
@@ -108,6 +114,12 @@ type Decoder struct {
 	// pad is true when an uncompressed block of an odd size ended in this
 	// frame, so that a byte of padding comes before the next block.
 	pad bool
+	// used is the number of bytes of src that the last frame read, for Used,
+	// over is the number of bytes that it wrote past its end, for Overrun,
+	// and raw is true when it ended in an uncompressed block, for
+	// Uncompressed.
+	used, over int
+	raw        bool
 	// err is the error that broke the stream. Reset clears it.
 	err error
 }
@@ -153,6 +165,7 @@ func (d *Decoder) Decode(dst, src []byte, n int) ([]byte, error) {
 	if n < 0 || n > FrameSize {
 		return dst, fmt.Errorf("lzx: the frame size %d is not from 0 to %d", n, FrameSize)
 	}
+	d.used, d.over, d.raw = 0, 0, false
 	if d.err != nil {
 		return dst, d.err
 	}
@@ -178,6 +191,35 @@ func (d *Decoder) Decode(dst, src []byte, n int) ([]byte, error) {
 	}
 	d.pos += int64(n)
 	return dst, nil
+}
+
+// Used returns the number of bytes of src that the last call of Decode read,
+// or 0 when it failed. In a stream whose frames follow one another, as in the
+// data of a folder of a CAB file, the next frame starts at that offset of
+// src. The bits of a frame are in 16-bit words, so a frame that ends inside a
+// word reads all of it. When an uncompressed block of an odd size ends with
+// the frame, the frame reads the byte of padding after the block too, if src
+// holds it. cabextract 1.11 reads a stream of frames in this way.
+func (d *Decoder) Used() int {
+	return d.used
+}
+
+// Overrun returns the number of bytes that the last match of the last frame
+// wrote past the end of the frame, or 0 when Decode failed. Decode keeps
+// them, and they start the next frame. cabextract 1.11 fails on a frame
+// whose last match passes its end, so a caller that reads as cabextract
+// fails when Overrun is not 0.
+func (d *Decoder) Overrun() int {
+	return d.over
+}
+
+// Uncompressed reports whether the last frame ended with the bytes of an
+// uncompressed block, which the decoder copies, and not with the bits of a
+// compressed block. It is false when Decode failed. A reader of bits that
+// loads a word before it needs it, as cabextract 1.11 does, has read 2 bytes
+// past Used after bits, and none after the bytes of an uncompressed block.
+func (d *Decoder) Uncompressed() bool {
+	return d.raw
 }
 
 // frame decodes until win holds the n bytes of the frame.
@@ -229,6 +271,10 @@ func (d *Decoder) frame(src []byte, n int) error {
 		if err := d.symbol(b); err != nil {
 			return err
 		}
+	}
+	d.used, d.over, d.raw = b.used(), int(d.written-d.emitted)-n, d.kind == uncompressed
+	if d.pad {
+		d.used = min(d.used+1, len(src))
 	}
 	return nil
 }

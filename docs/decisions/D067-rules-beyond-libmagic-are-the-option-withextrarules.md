@@ -1,12 +1,12 @@
 # D67. Rules beyond libmagic are the option WithExtraRules
 
-Status: Proposed.
+Status: Decided.
 
 On 2026-11-20 the maintainers decided that magic holds rules that libmagic
 does not have, as an option. `magic.Detect` and the other entries keep the
 output of libmagic by default, so the gates of D11 and D48 still hold. Items
-33 and 34 of `docs/BACKLOG.md` give the first two rules. This decision
-proposes the option, how it changes each form of a `Result`, and how a rule
+33 and 34 of `docs/BACKLOG.md` gave the first two rules. This decision
+gives the option, how it changes each form of a `Result`, and how a rule
 is added.
 
 ## The option
@@ -111,3 +111,6 @@ same, the maintainers choose which stays.
 The package `container` (D64, D65) is not an alternative. It names the
 format inside a container, and magic does not import it. FictionBook and
 EMF are not in a container.
+
+The maintainers accepted this decision on 2026-11-20, and answered question
+28 of `docs/PLAN.md`.

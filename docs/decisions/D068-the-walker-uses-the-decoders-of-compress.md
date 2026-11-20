@@ -32,27 +32,43 @@ needs these formats too.
    binwalk-ng. `test/corpus/testdata/walk/lzfse-3.bin` holds two blocks of
    version 2, from `compress/lzfse/testdata/text.lzfse`.
 2. `cab` with LZX. binwalk-ng runs cabextract. The walker decodes a folder
-   of LZX with `compress/lzx`, and decodes each CFDATA block as one frame.
+   of LZX with `compress/lzx`, as one stream over its blocks, as cabextract
+   reads it.
    `test/corpus/testdata/walk/cab-4.bin` holds
    `compress/lzx/testdata/sample.cab`, with the checksums of its blocks set.
    A folder of Quantum still fails, because `compress/` has no decoder of
    Quantum.
 
-## Where the walker and cabextract differ on LZX
+## How the walker reads LZX as cabextract reads it
 
-On 2026-11-20, tests with cabextract 1.11 showed that it reads the LZX data
-of a folder as one stream over all its blocks, in frames of 32768 bytes. A
-frame can start in one block and end in the next. Thus the walker writes the
-files of cabextract only when each block but the last holds one whole frame
-of 32768 bytes and nothing more. The walker fails on a block other than the last that holds fewer than 32768 bytes. It
-cannot find a block that holds more bytes than its frame, because
-`compress/lzx` does not tell how many bytes of input a frame reads. For such
-a block, the walker writes other bytes, or fails, where cabextract decodes the
-bytes of the next frame. On 2000 damaged copies of `sample.cab` with no
-checksums, the files differed 64 times. The checksums of `cab-4.bin` make
-cabextract and the walker fail on each damaged block, so the gate shows no
-difference. A method of `compress/lzx` that gives the bytes that the last
-frame read lets the walker follow the stream.
+On 2026-11-20, tests with cabextract 1.11 on cabinets made for them showed
+how it reads LZX. The walker now reads it in the same way:
+
+1. The data of the blocks of a folder is one stream of frames of 32768
+   bytes. A frame can start in one block and end in another.
+2. A frame ends at a boundary of a 16-bit word. After an uncompressed block
+   of an odd length that ends with the frame, the next frame starts after
+   the byte of padding. A frame that ends inside an uncompressed block goes
+   on at the next byte.
+3. A frame whose last match passes its end fails.
+4. Only the sum of the uncompressed sizes of the blocks counts. A block
+   fails when its uncompressed size is 0 or over 32768, or when it holds
+   more than 38912 bytes of data.
+5. cabextract reads 4096 bytes at a time across the ends of blocks, and
+   fails on any bad block that it reads, even one that no frame needs.
+   After a frame, it has read 2 bytes ahead after compressed bits, and none
+   after uncompressed data.
+6. After the last block, it reads 2 bytes of zeros, and fails if it needs
+   more.
+7. It knows the size of the last frame only when it has read the last
+   block. Until then, every frame is 32768 bytes.
+
+Three methods of `compress/lzx` give what the walker needs: `Used`, the
+bytes of input that the last frame read; `Overrun`, the bytes that its last
+match wrote past its end; and `Uncompressed`, whether it ended in an
+uncompressed block. On damaged copies of `sample.cab`, of `cab-4.bin` with
+its checksums cleared, and of 233 random cabinets with LZX, the walker and
+cabextract differed 37, 37 and 741 times before, and 0 times after.
 
 ## Why the walker does not extract dmg
 

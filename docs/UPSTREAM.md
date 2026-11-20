@@ -52,14 +52,9 @@ git clone https://github.com/lzfse/lzfse.git upstream/lzfse
 ```
 
 lzxd moved from GitHub to codeberg.org on 2026-02-09, and its ledger follows
-codeberg.org. Its base commit, `4f477bd`, is the last commit on GitHub, and
-codeberg.org does not hold it. That commit changes only `README.md`. After
-you clone lzxd, fetch the base commit from GitHub, so that
-`TestTheLedgerIsComplete` finds it:
-
-```bash
-git -C upstream/lzxd fetch https://github.com/Lonami/lzxd.git master:refs/remotes/github/master
-```
+codeberg.org. codeberg.org does not hold `4f477bd`, the last commit on
+GitHub, which the port followed first. Its base is `e38ce31`, which has the
+same `src/` (question 31 of `docs/PLAN.md`).
 
 Before you port anything, make sure that the checkout is clean. This command
 must print nothing:

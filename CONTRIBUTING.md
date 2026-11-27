@@ -5,6 +5,14 @@ rules for a coding agent, in more detail. `docs/decisions/` holds every
 decision and the reason for it, and `docs/PLAN.md` holds the plan of the
 port.
 
+## Questions, problems and changes
+
+The repository on GitHub takes no issues and no pull requests. To ask a
+question, report a problem or propose a change, start a discussion in
+[Discussions](https://github.com/xo/magic/discussions). If the problem is a
+wrong result, give the file, or the first bytes of it, the result of `magic`
+and the result of `file`.
+
 ## Build and test
 
 The package is pure Go. Run these commands in the repository root:

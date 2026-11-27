@@ -29,13 +29,18 @@
 
 # magic
 
-`magic` is a Go package that identifies the type of a file or of bytes, as
-the `file` command does. It is a port of
-[libmagic](https://astron.com/pub/file/), the library of `file`, to pure Go.
+`magic` is a pure Go port of [libmagic](https://astron.com/pub/file/) and of
+[binwalk-ng](https://github.com/binwalk-ng/binwalk-ng). It needs no cgo.
 
-It gives the output of libmagic 5.48, with the commits of `file` after the
-release, to the commit in `docs/upstream/upstreams.tsv`: the same
-description, MIME type, charset, extensions and Apple code. The rules of
+1. The package `magic` identifies the type and the MIME type of a file or of
+   bytes, as the `file` command does. libmagic is the library of `file`.
+2. The package `walk` finds the files that are embedded in a binary file,
+   such as a firmware image, and extracts them, as binwalk-ng does. The
+   section [Walk a firmware image](#walk-a-firmware-image) tells how.
+
+The package `magic` gives the output of libmagic 5.48, with the commits of
+`file` after the release, to the commit in `docs/upstream/upstreams.tsv`:
+the same description, MIME type, charset, extensions and Apple code. The rules of
 `file` are compiled into the package. You need only Go 1.27 or later. You do
 not need a C compiler or libmagic, and a program that imports magic builds
 for every target of Go.

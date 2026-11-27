@@ -26,13 +26,15 @@ import (
 // internal are the signatures that binwalk-ng extracts with its own code
 // and that the walker extracts. binwalk-ng also extracts rar and qnx_ifs
 // with its own code, through crates, which the walker does not (D60). The
-// walker extracts lzfse with the decoder of compress/lzfse (D68).
+// walker extracts lzfse with the decoder of compress/lzfse, and the chunks of
+// minifs with the decoders of compress/xz (D68).
 var internal = []string{
 	"android_sparse", "arcadyan", "autel", "bmp", "bzip2", "csman",
 	"dahua_zip", "dkbs", "dlink_fw", "dms", "dlink_tlv", "dlke", "dtb", "dxbc",
 	"encfw", "encrpted_img", "eva", "gif", "gpg_signed", "gzip", "jboot_sch2",
-	"jpeg", "lz4", "lzfse", "lzma", "matter_ota", "mbr", "mh01", "openssl", "pcapng",
-	"pem_certificate", "pem_private_key", "pem_public_key", "png",
+	"jpeg", "lz4", "lzfse", "lzma", "matter_ota", "mbr", "mh01", "minifs",
+	"openssl", "pcapng", "pem_certificate", "pem_private_key",
+	"pem_public_key", "png",
 	"program_store", "riff", "romfs", "shrs", "srecord", "srecord_generic",
 	"svg", "tarball", "trx", "uimage", "vxworks_symtab", "wince", "xz",
 	"zlib", "zstd",

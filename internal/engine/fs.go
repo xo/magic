@@ -84,8 +84,8 @@ func (e *Engine) FileContext(ctx context.Context, path string, c Call) (string, 
 	}
 	f, err := os.Open(path)
 	if err != nil {
-		if fi, serr := os.Stat(path); serr == nil {
-			st.unreadable(path, fi)
+		if fi, serr := os.Stat(path); serr == nil && !st.unreadable(path, fi) {
+			return st.result(-1)
 		}
 		return st.result(1)
 	}
@@ -120,8 +120,12 @@ func (e *Engine) FileContext(ctx context.Context, path string, c Call) (string, 
 }
 
 // unreadable is unreadable_info: a file that libmagic can stat and not
-// open.
-func (st *state) unreadable(path string, fi fs.FileInfo) {
+// open. With the flag Error, it is an error, and it returns false.
+func (st *state) unreadable(path string, fi fs.FileInfo) bool {
+	if st.flags&Error != 0 {
+		st.errorf("Unreadable file")
+		return false
+	}
 	if writable(path) {
 		st.printf("writable, ")
 	}
@@ -132,6 +136,7 @@ func (st *state) unreadable(path string, fi fs.FileInfo) {
 		st.printf("regular file, ")
 	}
 	st.printf("no read permission")
+	return true
 }
 
 // statMode returns st_mode for fi.
@@ -197,14 +202,13 @@ func (st *state) fsmagic(fn string) int {
 	m := fi.Mode()
 	ret := 1
 	if mime == 0 && !silent {
-		// pr_flags of fsmagic.c prints each name before its comma, so two
-		// flags print as "setuidsetgid, ".
+		// pr_flags of fsmagic.c prints the comma before each name.
 		for _, f := range []struct {
 			mode fs.FileMode
 			name string
 		}{{fs.ModeSetuid, "setuid"}, {fs.ModeSetgid, "setgid"}, {fs.ModeSticky, "sticky"}} {
 			if m&f.mode != 0 {
-				st.printf("%s%s", f.name, comma())
+				st.printf("%s%s", comma(), f.name)
 			}
 		}
 	}

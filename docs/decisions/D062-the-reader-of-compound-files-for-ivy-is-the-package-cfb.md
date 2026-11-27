@@ -75,12 +75,12 @@ answer to question 25.
 6. The engine keeps its own reader in `internal/engine/cdf.go`, and does not
    use `cfb`. The engine must give the output of libmagic, and that output
    names the step at which the reader of libmagic fails, such as "Can't read
-   SAT" (D34). The engine keeps the limits of libmagic and the bug of commit
-   `bcbb6064`, which reads no property on Linux (D48, item 17 of
-   `docs/BACKLOG.md`). `cfb` follows the specifications. It reads some files
-   that libmagic refuses, and it refuses some that libmagic reads. If the
-   engine uses `cfb`, the API of `cfb` must carry the faults of libmagic, or
-   the output of the port changes.
+   SAT" (D34). The engine keeps the limits of libmagic. It also kept the bug
+   of commit `bcbb6064`, which read no property on Linux, until upstream
+   fixed it in `fcb7b503` (D48). `cfb` follows the specifications. It reads
+   some files that libmagic refuses, and it refuses some that libmagic
+   reads. If the engine uses `cfb`, the API of `cfb` must carry the faults
+   of libmagic, or the output of the port changes.
 
 ## The sources
 

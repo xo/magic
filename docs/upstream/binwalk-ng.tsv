@@ -526,3 +526,16 @@ d38927a2bc80de033b9ddcda23056f19fdbb5766	2026-10-30	not-applicable		Merge pull r
 281dd57e61adf7e9546b5f801253b0c296d56e56	2026-10-31	not-applicable		Update prek.toml. It changes prek.toml. Not applicable: it changes no code of binwalk-ng
 8c1418b3e3304f608635cf14d82cb6648f3f778a	2026-10-31	not-applicable		Revert "Update docker base image to ubuntu:26.10". It changes Dockerfile. Not applicable: it changes no code of binwalk-ng
 02835ae0f4761f583a90f61a85e442fe410f526e	2026-10-31	not-applicable		Merge pull request #163 from binwalk-ng/update-deps. Not applicable: a merge, whose changes are in the commits that it merges
+cd70606c39384c6171e2139f1339bc1ca6cf7f68	2026-11-12	not-applicable		build(deps): bump docker/login-action from 4.7.0 to 4.8.0. It changes .github/. Not applicable: it changes no code of binwalk-ng
+670131eca16181a2f22db2f2de2fe657f0ee3643	2026-11-12	pending		Added MINIFS support. It changes src/. The walker ports MINIFS with the last of its commits
+c7fcf7150a87e9a82eb066de0b64263b86d55184	2026-11-14	pending		code review changes, zerocopy. It changes src/
+4e172660a9bb96ed124c0ce565d9e7e7b37ed145	2026-11-18	pending		Code review changes. It changes src/
+8d472156eaaed5c7e0750257aa5a519f0bf54bc7	2026-11-20	not-applicable		Merge pull request #165 from binwalk-ng/dependabot/github_actions/docker/login-action-4.8.0. Not applicable: a merge, whose changes are in the commits that it merges
+f594675271fe76851bae47d124dff69157db1435	2026-11-20	not-applicable		Update deps. It changes Cargo.toml, Cargo.lock, src/. Not applicable: new versions of crates and of the API of jiff. The gates show no change
+3fbd0a1ca152b40f0147f49cd7c2bdd61ea8e52d	2026-11-20	not-applicable		Fix Cargo.toml formatting for Python tomllib. It changes Cargo.toml. Not applicable: it changes no code of binwalk-ng
+86c0765d682af9637e84ee2dd7229c96c253f491	2026-11-20	not-applicable		Adjust RAR v4 tests for rars 0.13.0 end-of-archive blocks. It changes src/. Not applicable: unit tests of binwalk-ng
+76d6fa9fe1edf1aa68e470cfa750e7f7d10a083b	2026-11-20	pending		Code review changes. It changes src/
+cab270a4e76253bb871be5f1f1871b816ae92bea	2026-11-20	pending		Stop DTB extraction when a node does not fit in the data. It changes src/. The walker already stops there, and the patch of the oracle goes
+282a23878e0e6f23be93c3eae20dcc6b5771eac4	2026-11-20	not-applicable		Merge pull request #172 from kenshaw/fix-dtb-extract-loop. Not applicable: a merge, whose changes are in the commits that it merges
+9c08f70e094421b79f640c999e7712bba72cc40c	2026-11-20	not-applicable		Merge pull request #173 from binwalk-ng/update-deps. Not applicable: a merge, whose changes are in the commits that it merges
+d41a0a2c432143eb9da6b8aa07aef0a7781643fd	2026-11-20	not-applicable		Merge pull request #170 from bat-serjo/main. Not applicable: a merge, whose changes are in the commits that it merges

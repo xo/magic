@@ -78,17 +78,18 @@ extracts with a program needs Go code in magic, or magic only finds it.
 
 ### The formats
 
-binwalk-ng has 114 signatures: the 111 of binwalk 3, and `eva`,
-`program_store` and `dlink_fw`. Its own code extracts 51 of them, 13 outside
-programs extract 24, and it finds the other 39 and does not extract them. In
-the tables, "binwalk-ng" means that its own code extracts the format, a
-program name means that program extracts it, and "none" means that
-binwalk-ng only finds it. A short signature has "(short)" after its name.
-The walker extracts every format of binwalk-ng's own code but `rar` and
-`qnx_ifs`, which need decoders that the walker does not have (D60). It
-decodes `lzfse` with `compress/lzfse` (D68). It also extracts 15 of the 24
-formats of the programs. It does not extract `arj`, `apfs`, `efigpt`, `ntfs`,
-`dmg`, `linux_kernel`, `pchrom`, `uefi_capsule` and `uefi_pi_volume`.
+binwalk-ng has 115 signatures: the 111 of binwalk 3, and `eva`,
+`program_store`, `dlink_fw` and `minifs`. Its own code extracts 52 of them,
+13 outside programs extract 24, and it finds the other 39 and does not
+extract them. In the tables, "binwalk-ng" means that its own code extracts
+the format, a program name means that program extracts it, and "none" means
+that binwalk-ng only finds it. A short signature has "(short)" after its
+name. The walker extracts every format of binwalk-ng's own code but `rar`
+and `qnx_ifs`, which need decoders that the walker does not have (D60). It
+decodes `lzfse` with `compress/lzfse`, and the chunks of `minifs` with
+`compress/xz` (D68). It also extracts 15 of the 24 formats of the programs.
+It does not extract `arj`, `apfs`, `efigpt`, `ntfs`, `dmg`, `linux_kernel`,
+`pchrom`, `uefi_capsule` and `uefi_pi_volume`.
 
 Compressed data:
 
@@ -124,6 +125,7 @@ File systems and disk images:
 | `ubifs` | `ubireader_extract_files` |
 | `ext`, `fat` (short), `ntfs` | `tsk_recover`, of The Sleuth Kit |
 | `romfs`, `mbr` (short), `android_sparse` | binwalk-ng |
+| `minifs` (TP-Link) | binwalk-ng, with liblzma. The walker decodes its chunks of xz and LZMA with `compress/xz` (D68) |
 | `qnx_ifs` | binwalk-ng, with the crate `qnx-ifs`. The walker only finds it |
 | `dmg` | `dmg2img`. The walker only finds it, because dmg2img keeps what it decodes from damaged data (D68) |
 | `btrfs`, `logfs`, `luks`, `qcow` (short) | none |
@@ -398,9 +400,9 @@ The walker follows binwalk-ng as the port follows libmagic (D49, D60):
 2. `test/oracle/build-binwalk.sh` builds binwalk-ng at that commit into
    `test/.binwalk/`, with cargo. It needs the toolchain of Rust. It applies
    the patches in `test/oracle/patches/` first, if any, which fix the bugs
-   of binwalk-ng that the walker fixes too (D59). Today there is one:
-   `0001-dtb-loop.patch` stops `extract_dtb` on a node that does not fit in
-   the data, where binwalk-ng loops without end.
+   of binwalk-ng that the walker fixes too (D59). Today there is none, so
+   the folder does not exist. binwalk-ng took the last fix, of a loop in
+   `extract_dtb`, as `cab270a`.
 3. `TestWalkMatchesBinwalk` in `test/diff` runs binwalk on each input with
    `-l -` and `--include=` with the formats that the walker has. It compares
    the offset, the size, the name, the confidence and the description of each

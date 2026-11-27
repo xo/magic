@@ -100,6 +100,26 @@ func TestStrncmp(t *testing.T) {
 			t.Errorf("%q, %q, %#x: expected %d, got: %d", test.a, test.b, test.flags, test.want, got)
 		}
 	}
+	// The byte after a full word is past maxlen, so strncmp does not read it.
+	if got := strncmp([]byte("abc"), []byte("abcd"), 3, 3, rules.StrFullWord); got != 0 {
+		t.Errorf("expected 0, got: %d", got)
+	}
+}
+
+func TestFmtDateTime(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		v    int64
+		want string
+	}{
+		{0, "Thu Jan  1 00:00:00 1970"},
+		{253402300799, "Fri Dec 31 23:59:59 9999"},
+		{-100000000000, "*Invalid datetime*"}, // the year -1199 does not fit in asctime_r
+	} {
+		if got := fmtDateTime(uint64(test.v), 0); got != test.want {
+			t.Errorf("expected %q, got: %q", test.want, got)
+		}
+	}
 }
 
 func TestEncoding(t *testing.T) {

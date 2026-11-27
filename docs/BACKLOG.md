@@ -92,14 +92,6 @@ Phases 2 to 4 found these. None of them changes an answer of the gates.
     runs outside programs. The port copies the first part and never runs a
     program (D36, D45).
 
-17. Report two bugs of file to upstream (D48). Since `bcbb6064`,
-    `cdf_read_property_info` checks the length of a section against its copy
-    of the header on the stack, so on Linux it reads no property of a Compound
-    Document. Since `7fdb7bf9`, `file_fsmagic` prints the name of each flag of
-    the mode before its comma. The port copies both until upstream fixes them.
-    Both reports are drafted and wait for the maintainers to approve their
-    text. Source: phase 5.
-
 ## The packages for ivy
 
 18. No test reads a MOBI book that Mobipocket wrote, or a CHM file that the
@@ -147,12 +139,12 @@ Phases W1 to W5 of D52 ported the 111 signatures of binwalk 3, in the
 packages under `walk/format/`. D60 moved the walker to binwalk-ng, the fork
 that is maintained, with its 114 signatures and its fixes, and with no new
 decoder. D68 lets it use the decoders of `compress/` that exist. The walker
-extracts 49 of the 51 formats that binwalk-ng extracts with its own code,
-and 15 of the 24 formats that it extracts with programs. The three gates in
-`test/diff` give the same matches, files and walks as binwalk-ng on 2339
-inputs, and a test for each
-file system and archive compares its files with a tool or with the tree
-that made it. These are left:
+extracts 50 of the 52 formats that binwalk-ng extracts with its own code,
+and 15 of the 24 formats that it extracts with programs. binwalk-ng added
+`minifs` on 2026-11-20, its 115th signature. The three gates in `test/diff`
+give the same matches, files and walks as binwalk-ng on 2366 inputs, and a
+test for each file system and archive compares its files with a tool or with
+the tree that made it. These are left:
 
 1. Formats that the walker finds and does not extract:
    - `rar` and `qnx_ifs`, which binwalk-ng extracts with crates of its own.
@@ -182,12 +174,6 @@ that made it. These are left:
    walker writes nothing for a stream with an error, so the extraction gate
    accepts fewer members on a damaged copy of `7zip` or `xz` data. To write
    the same bytes, the walker needs a decoder that stops where 7z stops.
-4. binwalk-ng loops without end on a `dtb` whose node token or property
-   structure does not fit in the data. The walker rejects the match.
-   `test/oracle/patches/0001-dtb-loop.patch` makes the oracle reject it
-   too, and `test/corpus/testdata/walk/dtb-6.bin` and `dtb-7.bin` hold such
-   blobs (D59). The bug is not reported to binwalk-ng yet. When binwalk-ng
-   fixes it, the ledger takes the fix, and the patch goes.
 5. cabextract searches the carved file for every cabinet, so on the run
    over the data to the end of the input it can extract a later cabinet
    into the folder of a damaged one. The walker reads only the cabinet at

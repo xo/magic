@@ -6,13 +6,14 @@
 // extracts with jefferson, YAFFS2, which binwalk-ng extracts with unyaffs,
 // CramFS and ISO 9660, which binwalk-ng extracts with 7z, and UBI and
 // UBIFS, which binwalk-ng extracts with ubireader_extract_images and
-// ubireader_extract_files.
+// ubireader_extract_files, and MINIFS, which binwalk-ng extracts with its
+// own code.
 package filesystem
 
 import "github.com/xo/magic/walk"
 
 func init() {
-	walk.Register(SquashFS, RomFS, JFFS2, YAFFS, CramFS, ISO9660, UBI, UBIFS)
+	walk.Register(SquashFS, RomFS, JFFS2, YAFFS, CramFS, ISO9660, UBI, UBIFS, MINIFS)
 }
 
 // endianName is the text of Endianness of binwalk-ng, which a description

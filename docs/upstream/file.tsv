@@ -89,3 +89,16 @@ b778217dbd35291d3539abb446e50b43a972a5fc	2026-11-09	not-applicable		Clamp parama
 e21714a4377210bbf651496d6130c51b037b460a	2026-11-14	ported	74ab2ee	PR/193: cheznewa Add Sunway (custom unofficial number for the Sunway/SW-64 instruction set). It changes magic/
 4c98a9ea7d8f6ae10bc88a1aaed5f9e7ed348474	2026-11-14	ported	74ab2ee	fix sunway. It changes magic/
 bbffb78dc8d764a707aa20f5c7a3b74c40c2b27c	2026-11-14	ported	74ab2ee	PR/194: 0xdevalias: Add Apple Photos property list journal magic. It changes magic/
+32b180f3e3e40ce0a4042e85462ae51162c7d011	2026-11-20	pending		PR/199: Kenneth Shaw: Fix comma printing, and incorrect constant inside ifdef. It changes src/
+fcb7b503ecccdfd8562a3e1f6bc6a5c8294527ed	2026-11-20	pending		PR/198: Kenneth Shaw: Fix bug introduced with the unaligned cdf fix, and add tests. It changes src/, tests/
+cdce0661ea1baf58317d24904648f0a58814b599	2026-11-20	not-applicable		PR/197: soma0212: use futimens() to prevent TOCTOU where is available. It changes src/, configure.ac. Not applicable: MAGIC_PRESERVE_ATIME, which the port does not have
+3bdd224d1d6dfa4b40982200e02a092a22d21c22	2026-11-20	pending		PR/196: soma0212: prevent reads past end of buffer in the /f case. It changes src/
+6da1ce89184d82787b1d02c2d5c2c62cf7c365b4	2026-11-20	pending		PR/195: soma0212: check for tm->year bounds. It changes src/, tests/
+d4cb4f64435d34bcde07f7246a5c7bdb6cc1c340	2026-11-20	pending		Add v8 support for RV565 (Ayushman Bhattacharya). It changes magic/, tests/
+981b43708f8283e378619f071f5bc97178141eb5	2026-11-21	not-applicable		Use the head of the lha package. the older tag does not build anymore with recent versions of gcc because of -Wimpilicit-int. It changes .github/. Not applicable: CI of file
+dc7ba2122c8eb3a257aa6d05c315b19ed812a820	2026-11-21	not-applicable		remove the empty env. It changes .github/. Not applicable: CI of file
+dc8e874a92d37134f365f764eedfc18471583c68	2026-11-24	not-applicable		PR/200: soma0212: treat O_CREAT and O_TRUNC as writes in the open rules. It changes src/. Not applicable: seccomp of the file command
+4fd573d0b159667fb6ba01c11e79e4276ae9bc5b	2026-11-24	pending		PR/201: soma0212: terminate p->s before strtoull for .o indirect offsets in mget. It changes src/
+2f859db9f7e45923e1a5ae8c5b56889f2019d93c	2026-11-26	pending		PR/202: soma0212: fix misaligned loads in cdf_read_property_info and cdf_unpack_catalog. It changes src/. The port reads the same values, so its code does not change
+ac156c8bb92be55198b92e5752dc9a51acac790c	2026-11-26	pending		When -E error out for unreadable files as documented (leoli236). It changes src/
+b693eed3f033426a8f2bf88e9ef4c51ce64dc929	2026-11-26	not-applicable		Check the parameter values for -P for validity (leoli236). It changes src/file.c. Not applicable: the -P flag of the file command, which cmd/file does not copy

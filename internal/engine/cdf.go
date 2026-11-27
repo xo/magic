@@ -486,13 +486,6 @@ func readPropertyInfo(sst *cdfStream, offs uint32, info *[]cdfProperty) bool {
 	if shLen > cdfShLenLimit {
 		return false
 	}
-	// From commit bcbb6064 on, file checks the length of the section from
-	// its copy of the header on the stack, not from the stream. On Linux
-	// the stack is far above the heap, so the check always fails, and file
-	// reads no property. The port gives the same answer (D33).
-	if followsStackCheck {
-		return false
-	}
 	if !sst.checkOffset(sho, shLen) {
 		return false
 	}
@@ -1097,8 +1090,3 @@ func asciiLower(s string) string {
 	}
 	return string(b)
 }
-
-// followsStackCheck is set while the port follows the commits of file that
-// check a section of properties against the stack. readPropertyInfo says
-// why.
-const followsStackCheck = true

@@ -216,7 +216,7 @@ file, as the first member of the document decides.
 The package `walk` finds the files that are embedded in a binary file, such
 as a firmware image, as binwalk does, and extracts them. It follows
 [binwalk-ng](https://github.com/binwalk-ng/binwalk-ng), the fork of binwalk
-that is maintained. It has the 114 signatures of binwalk-ng, with the same
+that is maintained. It has the 115 signatures of binwalk-ng, with the same
 names and descriptions, and gives the same matches, at the commit of
 binwalk-ng that `docs/upstream/upstreams.tsv` names:
 
@@ -255,11 +255,11 @@ for `zstd`.
 ## How it is tested
 
 The test module builds libmagic from the source of `file`, at the commit
-that the port follows, and compares the package with it, on 473 files and
-2,260 damaged copies of them, with 14 combinations of flags, as bytes and as files.
-Every answer is the same, except 50 where a decoder of Go reads damaged
-compressed data in another way than the library of C. All 113 tests of
-`file` pass. `CONTRIBUTING.md` says how to run the tests.
+that the port follows, and compares the package with it, on 162 files and
+2,623 cut, damaged and compressed copies of them, with 14 combinations of
+flags, as bytes and as files. Every answer is the same, except 30 where a
+decoder of Go reads damaged compressed data in another way than the library
+of C. All 116 tests of `file` pass. `CONTRIBUTING.md` says how to run the tests.
 
 ## Versions
 

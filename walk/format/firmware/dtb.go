@@ -151,8 +151,8 @@ var (
 
 // parseDTBNode is parse_dtb_node. A node that it cannot read has none of
 // its flags set. When the token or the property structure does not fit,
-// parse_dtb_node of binwalk-ng returns an error, and extract_dtb then reads
-// the same node again with no end. The walker rejects the blob there.
+// parse_dtb_node of binwalk-ng returns an error, and extract_dtb stops
+// there and fails, as the walker does.
 func parseDTBNode(h dtbHeader, data []byte, off int) dtbNode {
 	var n dtbNode
 	nd, ok := binwalk.From(data, off)

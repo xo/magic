@@ -297,7 +297,9 @@ func fmtDateTime(v uint64, flags int) string {
 	if flags&timeLocal != 0 {
 		tm = time.Unix(t, 0).Local()
 	}
-	if y := int64(tm.Year()) - 1900; y < -1<<31 || y > 1<<31-1-1900 {
+	// asctime_r fits only a year of four characters in its buffer, and
+	// maxCtime does not cover a negative time or the local time zone.
+	if y := tm.Year(); y < -999 || y > 9999 {
 		return invalid
 	}
 	return asctime(tm)

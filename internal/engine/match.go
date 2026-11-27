@@ -748,7 +748,7 @@ func (st *state) mget(t *table, idx int, b, bb *buffer, o uint64, contLevel int,
 				if offsetOOB(nbytes, int64(offset), int(m.Vallen)) {
 					return 0
 				}
-				off = sext(sgn, 64, strtoull8(st.val[:]))
+				off = sext(sgn, 64, strtoull8(st.val[:len(st.val)-1]))
 			default:
 				return 0
 			}
@@ -813,7 +813,7 @@ func (st *state) mget(t *table, idx int, b, bb *buffer, o uint64, contLevel int,
 			if !need(int(m.Vallen)) {
 				return 0
 			}
-			lhs = sext(sgn, 64, strtoull8(st.val[:]))
+			lhs = sext(sgn, 64, strtoull8(st.val[:len(st.val)-1]))
 		default:
 			return 0
 		}
@@ -1247,7 +1247,7 @@ func strncmp(a, b []byte, length, maxlen int, flags uint32) uint64 {
 		length--
 	}
 	if length == 0 && v == 0 && flags&rules.StrFullWord != 0 {
-		if c := at(b, bi); c != 0 && !isSpace(c) {
+		if c := at(b, bi); bi < maxlen && c != 0 && !isSpace(c) {
 			v = 1
 		}
 	}

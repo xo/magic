@@ -147,7 +147,7 @@ func rank(name string) int {
 // order is the order of the signatures in src/magic.rs of binwalk-ng.
 var order = []string{
 	"gzip", "deb", "7zip", "xz", "tarball", "squashfs", "dlob", "lzma", "eva",
-	"bmp", "bzip2", "uimage", "packimg", "crc32", "sha256", "cpio", "iso9660",
+	"bmp", "bzip2", "uimage", "minifs", "packimg", "crc32", "sha256", "cpio", "iso9660",
 	"linux_kernel", "linux_boot_image", "linux_arm_zimage", "zstd", "zip",
 	"pchrom", "uefi_pi_volume", "uefi_capsule", "pdf", "elf", "cramfs",
 	"qnx_ifs", "romfs", "ext", "cab", "jffs2", "yaffs", "lz4", "lzop", "pe",

@@ -239,7 +239,9 @@ func (z *zipFillReader) ReadByte() (byte, error) {
 func zipDecoder(raw io.Reader, method int, size int64) io.Reader {
 	switch method {
 	case int(zip.Store):
-		return raw
+		// 7z copies at most the unpacked size of a stored member, even when
+		// its packed size is larger.
+		return io.LimitReader(raw, size)
 	case int(zip.Deflate):
 		return io.LimitReader(flate.NewReader(&zipFillReader{r: bufio.NewReader(raw)}), size)
 	}

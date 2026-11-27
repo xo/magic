@@ -34,3 +34,12 @@ included, because the reference is the answer (D33, D34). Phase 5 found two:
 
 Both are worth a report to upstream. When upstream fixes one, the port takes
 the fix with the commit that makes it.
+
+## Both bugs are fixed upstream (2026-11-28)
+
+The maintainers sent a fix for each bug to file, and upstream took both on
+2026-11-20. `fcb7b503` (PR/198) checks the section against the stream again,
+and `32b180f3` (PR/199) prints the comma before each flag. The port took both
+fixes with the commits that make them, as this decision says. The engine no
+longer has `followsStackCheck`, and it reads the properties of a Compound
+Document again.

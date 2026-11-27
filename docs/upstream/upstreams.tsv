@@ -1,5 +1,5 @@
 repository	url	checkout	ports	magic	policy	base	matched
-file	https://github.com/file/file	upstream/file	libmagic (src/), the rules (magic/Magdir), the tests (tests/)	., internal/, compress/	port	eb754ace19fed5481d8142426543100a2d6bae4e	bbffb78dc8d764a707aa20f5c7a3b74c40c2b27c
-binwalk-ng	https://github.com/binwalk-ng/binwalk-ng	upstream/binwalk-ng	the formats (src/formats), the scan (src/binwalk_ng.rs), the extraction (src/extractors)	walk/	port	beda1ffb79330d1807b959f541dd564fc97cc03a	02835ae0f4761f583a90f61a85e442fe410f526e
+file	https://github.com/file/file	upstream/file	libmagic (src/), the rules (magic/Magdir), the tests (tests/)	., internal/, compress/	port	eb754ace19fed5481d8142426543100a2d6bae4e	b693eed3f033426a8f2bf88e9ef4c51ce64dc929
+binwalk-ng	https://github.com/binwalk-ng/binwalk-ng	upstream/binwalk-ng	the formats (src/formats), the scan (src/binwalk_ng.rs), the extraction (src/extractors)	walk/	port	beda1ffb79330d1807b959f541dd564fc97cc03a	d41a0a2c432143eb9da6b8aa07aef0a7781643fd
 lzxd	https://codeberg.org/Lonami/lzxd	upstream/lzxd	the LZX decoder (src/)	compress/lzx/	port	e38ce31f6a782c8594e5b7b81f81c0b72b1ad56c	aa723fd8135d556b3f0ea9c32d60a43eadebe8df
 lzfse	https://github.com/lzfse/lzfse	upstream/lzfse	the decoder of LZFSE and LZVN (src/)	compress/lzfse/	port	e634ca58b4821d9f3d560cdc6df5dec02ffc93fd	e634ca58b4821d9f3d560cdc6df5dec02ffc93fd
